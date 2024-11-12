@@ -2,20 +2,20 @@
 pragma solidity ^0.8.7;
 
 import "./interfaces/ISFC.sol";
-import "./interfaces/IERC20Burnable.sol";
+import "./StakedS.sol";
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import "hardhat/console.sol";
+import {console} from "forge-std/console.sol";
 
 interface IRateProvider {
     function getRate() external view returns (uint256 _rate);
 }
 
 /**
- * @title S Staking Contract
+ * @title Sonic Staking Contract
  * @author Beets
  * @notice Main point of interaction with Beets liquid staking for Sonic
  */
@@ -36,9 +36,9 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     mapping(uint256 => uint256) public currentDelegations;
 
     /**
-     * @dev A reference to the SONICX ERC20 token contract
+     * @dev A reference to the StkS ERC20 token contract
      */
-    IERC20Burnable public SONICX;
+    StakedS public stkS;
 
     /**
      * @dev A reference to the SFC contract
@@ -102,7 +102,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     event LogMaintenancePausedUpdated(address indexed owner, bool newValue);
     event LogDepositLimitUpdated(address indexed owner, uint256 low, uint256 high);
 
-    event LogDeposited(address indexed user, uint256 amount, uint256 sonicxAmount);
+    event LogDeposited(address indexed user, uint256 amount, uint256 stkSAmount);
     event LogDelegated(uint256 indexed toValidator, uint256 amount);
     event LogUndelegated(address indexed user, uint256 wrID, uint256 amountS, uint256 fromValidator);
     event LogWithdrawn(address indexed user, uint256 wrID, uint256 totalAmount, bool emergency);
@@ -112,12 +112,12 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
     /**
      * @notice Initializer
-     * @param _sonicx_ the address of the FTM token contract (is NOT modifiable)
+     * @param _stks_ the address of the FTM token contract (is NOT modifiable)
      * @param _sfc_ the address of the SFC contract (is NOT modifiable)
      * @param _treasury_ The address of the treasury where fees are sent to (is modifiable)
      */
-    function initialize(IERC20Burnable _sonicx_, ISFC _sfc_, address _treasury_) public initializer {
-        SONICX = _sonicx_;
+    function initialize(StakedS _stks_, ISFC _sfc_, address _treasury_) public initializer {
+        stkS = _stks_;
         SFC = _sfc_;
         treasury = _treasury_;
         epochDuration = 3600; // one hour
@@ -154,16 +154,16 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     }
 
     /**
-     * @notice Returns the amount of S equivalent 1 SONICX (with 18 decimals)
+     * @notice Returns the amount of S equivalent 1 StkS (with 18 decimals)
      */
     function getExchangeRate() public view returns (uint256) {
         uint256 totalS = totalSWorth();
-        uint256 totalSONICX = SONICX.totalSupply();
+        uint256 totalStkS = stkS.totalSupply();
 
-        if (totalS == 0 || totalSONICX == 0) {
+        if (totalS == 0 || totalStkS == 0) {
             return 1 * DECIMAL_UNIT;
         }
-        return (totalS * DECIMAL_UNIT) / totalSONICX;
+        return (totalS * DECIMAL_UNIT) / totalStkS;
     }
 
     function getRate() public view override returns (uint256) {
@@ -171,17 +171,17 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     }
 
     /**
-     * @notice Returns the amount of SONICX equivalent to the provided S
+     * @notice Returns the amount of StkS equivalent to the provided S
      * @param sAmount the amount of S
      */
-    function getSONICXAmountForS(uint256 sAmount) public view returns (uint256) {
+    function getStkSAmountForS(uint256 sAmount) public view returns (uint256) {
         uint256 totalS = totalSWorth();
-        uint256 totalSONICX = SONICX.totalSupply();
+        uint256 totalStkS = stkS.totalSupply();
 
-        if (totalS == 0 || totalSONICX == 0) {
+        if (totalS == 0 || totalStkS == 0) {
             return sAmount;
         }
-        return (sAmount * totalSONICX) / totalS;
+        return (sAmount * totalStkS) / totalS;
     }
 
     /**********************
@@ -210,7 +210,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     }
 
     /**
-     * @notice Undelegate SONICX, corresponding S can then be withdrawn to the pool after `withdrawalDelay`
+     * @notice Undelegate StkS, corresponding S can then be withdrawn to the pool after `withdrawalDelay`
      * @param amountToUndelegate the amount of S to undelegate from given validator
      * @param fromValidator the validator to undelegate from
      */
@@ -328,31 +328,31 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      **********************/
 
     /**
-     * @notice Deposit S, and mint SONICX
+     * @notice Deposit S, and mint StkS
      */
     function deposit() external payable {
         uint256 amount = msg.value;
         require(amount >= minDeposit && amount <= maxDeposit, "ERR_AMOUNT_OUTSIDE_LIMITS");
 
-        uint256 SONICXAmount = getSONICXAmountForS(amount);
-        SONICX.mint(msg.sender, SONICXAmount);
+        uint256 StkSAmount = getStkSAmountForS(amount);
+        stkS.mint(msg.sender, StkSAmount);
 
         totalPool += amount;
 
-        emit LogDeposited(msg.sender, msg.value, SONICXAmount);
+        emit LogDeposited(msg.sender, msg.value, StkSAmount);
     }
 
     /**
-     * @notice Undelegate SONICX, corresponding S can then be withdrawn after `withdrawalDelay`
-     * @param amountSONICX the amount of SONICX to undelegate
+     * @notice Undelegate StkS, corresponding S can then be withdrawn after `withdrawalDelay`
+     * @param amountStkS the amount of StkS to undelegate
      * @param fromValidators an array of validator IDs to undelegate from
      */
-    function undelegate(uint256 amountSONICX, uint256[] calldata fromValidators) external {
+    function undelegate(uint256 amountStkS, uint256[] calldata fromValidators) external {
         require(!undelegatePaused, "ERR_UNDELEGATE_IS_PAUSED");
-        require(amountSONICX > 0, "ERR_ZERO_AMOUNT");
+        require(amountStkS > 0, "ERR_ZERO_AMOUNT");
 
-        uint256 amountToUndelegate = (getExchangeRate() * amountSONICX) / DECIMAL_UNIT;
-        SONICX.burnFrom(msg.sender, amountSONICX);
+        uint256 amountToUndelegate = (getExchangeRate() * amountStkS) / DECIMAL_UNIT;
+        stkS.burnFrom(msg.sender, amountStkS);
 
         totalSStaked -= amountToUndelegate;
 
