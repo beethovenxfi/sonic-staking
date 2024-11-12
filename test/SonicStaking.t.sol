@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.7;
 
 import {Test, console} from "forge-std/Test.sol";
 
@@ -25,7 +25,6 @@ contract SonicStakingTest is Test {
 
     function setUp() public {
         // deploy the contract
-        
     }
 
     function setB(uint256 value) public {
