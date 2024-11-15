@@ -14,8 +14,7 @@ deploy to fork
 ## Todo
 
 1. Add timelock for admin and test
-2. Test upgrade of contract
-3. Think about dealing with slashed validators on an operator level, i.e. could operator withdraw and add funds at the same time to keep rate. Or could operator withdraw and let the rate decrease.
+2. Think about dealing with slashed validators on an operator level, i.e. could operator withdraw and add funds at the same time to keep rate. Or could operator withdraw and let the rate decrease.
 
 ## SFC
 
