@@ -14,7 +14,7 @@ deploy to fork
 ## Todo
 
 1. Add timelock for admin and test
-2. Think about dealing with slashed validators on an operator level, i.e. could operator withdraw and add funds at the same time to keep rate. Or could operator withdraw and let the rate decrease.
+2. Think about dealing with slashed validators on an operator level, i.e. could operator withdraw and add funds at the same time to keep rate. Or could operator withdraw and let the rate decrease. Currently, the users pay it since they will withdraw less $S that what they are entitled to.
 
 ## SFC
 
@@ -52,6 +52,7 @@ Pending rewards can be queried via [pendingRewards()](https://github.com/Fantom-
 ## Sonic Staking
 
 This contract handles all operations for the LST $stkS. In general, a user deposits $S into the contract and receives $stkS in returned, based on the current rate.
+The contract is kept upgradable because the SFC we are integrating against is also upgradable.
 
 ### deposit (user function)
 
