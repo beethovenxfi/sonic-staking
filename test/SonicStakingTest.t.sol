@@ -12,24 +12,15 @@ contract SonicStakingTest is Test {
     address TREASURY_ADDRESS = 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7;
     address SONIC_STAKING_OPERATOR;
     address SONIC_STAKING_OWNER;
-    ISFC SFC = ISFC(0xFC00FACE00000000000000000000000000000000);
     SonicStaking sonicStaking;
     StakedS stakedS;
+
+    ISFC SFC;
 
     string FANTOM_FORK_URL = "https://rpc.fantom.network";
     uint256 INITIAL_FORK_BLOCK_NUMBER = 97094615;
 
     uint256 fantomFork;
-
-    // function beforeTestSetup(bytes4 testSelector) public pure returns (bytes[] memory beforeTestCalldata) {
-    //     // always deploy the contract
-    //     beforeTestCalldata = new bytes[](2);
-    //     beforeTestCalldata[0] = abi.encodePacked(this.testDeploySonicStaking.selector);
-
-    //     if (testSelector == this.testDelegate.selector) {
-    //         beforeTestCalldata[1] = abi.encodePacked(this.testDeposit.selector);
-    //     }
-    // }
 
     function setUp() public {
         // deploy the contract
@@ -40,37 +31,47 @@ contract SonicStakingTest is Test {
 
         DeploySonicStaking sonicStakingDeploy = new DeploySonicStaking();
         sonicStaking =
-            sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
+            sonicStakingDeploy.run(address(getSFC()), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
 
         stakedS = sonicStaking.stkS();
 
+        // somehow the renouncing in the DeploySonicStaking script doesn't work when called from the test, so we renounce here
         try stakedS.renounceRole(stakedS.MINTER_ROLE(), address(this)) {
             console.log("renounce minter role");
-        } catch (bytes memory reason) {
+        } catch (bytes memory) {
             console.log("fail renounce minter role");
         }
         try stakedS.renounceRole(stakedS.DEFAULT_ADMIN_ROLE(), address(this)) {
             console.log("renounce admin role");
-        } catch (bytes memory reason) {
+        } catch (bytes memory) {
             console.log("fail renounce admin role");
         }
         try sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this)) {
             console.log("renounce admin role from staking contract");
-        } catch (bytes memory reason) {
+        } catch (bytes memory) {
             console.log("fail renounce admin role from staking contract");
         }
     }
 
+    function getSFC() public virtual returns (ISFC) {
+        // return the real SFC address
+        SFC = ISFC(0xFC00FACE00000000000000000000000000000000);
+        return SFC;
+    }
+
     function testInitialization() public view {
+        // make sure roles are set properly
         assertEq(sonicStaking.owner(), SONIC_STAKING_OWNER);
         assertTrue(sonicStaking.hasRole(sonicStaking.OPERATOR_ROLE(), SONIC_STAKING_OPERATOR));
         assertTrue(sonicStaking.hasRole(sonicStaking.DEFAULT_ADMIN_ROLE(), SONIC_STAKING_OWNER));
         assertFalse(sonicStaking.hasRole(sonicStaking.OPERATOR_ROLE(), address(this)));
         assertFalse(sonicStaking.hasRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this)));
 
+        // make sure addresses are set properly
         assertEq(address(sonicStaking.SFC()), address(SFC));
         assertEq(address(sonicStaking.stkS()), address(stakedS));
 
+        // make sure initital set is set properly
         assertEq(sonicStaking.treasury(), TREASURY_ADDRESS);
         assertEq(sonicStaking.protocolFeeBIPS(), 1000);
         assertEq(sonicStaking.minDeposit(), 1 ether);

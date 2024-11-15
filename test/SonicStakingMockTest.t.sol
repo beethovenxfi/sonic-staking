@@ -7,53 +7,18 @@ import {SonicStaking} from "src/SonicStaking.sol";
 import {StakedS} from "src/StakedS.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import {SFCMock} from "src/mock/SFCMock.sol";
+import {SonicStakingTest} from "./SonicStakingTest.t.sol";
+import {ISFC} from "src/interfaces/ISFC.sol";
 
-contract SonicStakingTest is Test {
-    address TREASURY_ADDRESS = 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7;
-    address SONIC_STAKING_OPERATOR;
-    address SONIC_STAKING_OWNER;
+contract SonicStakingMockTest is Test, SonicStakingTest {
     SFCMock sfcMock;
-    SonicStaking sonicStaking;
-    StakedS stakedS;
 
-    uint256 fantomFork;
-
-    // use fork testing as we need SFC to test against
-    // forge test --fork-url https://rpc.fantom.network --fork-block-number 97094615
-
-    // function beforeTestSetup(bytes4 testSelector) public pure returns (bytes[] memory beforeTestCalldata) {
-    //     // always deploy the contract
-    //     beforeTestCalldata = new bytes[](2);
-    //     beforeTestCalldata[0] = abi.encodePacked(this.testDeploySonicStaking.selector);
-
-    //     if (testSelector == this.testDelegate.selector) {
-    //         beforeTestCalldata[1] = abi.encodePacked(this.testDeposit.selector);
-    //     }
-    // }
-
-    function setUp() public {
-        // deploy the contract
+    // we inherit from SonicStakingTest and override the getSFC function to return a mock SFC contract
+    // we then inherit from SonicStakingTest so we can run all tests defined there also with the mock SFC
+    function getSFC() public override returns (ISFC) {
         sfcMock = new SFCMock();
-
-        SONIC_STAKING_OPERATOR = vm.addr(1);
-        SONIC_STAKING_OWNER = vm.addr(2);
-
-        DeploySonicStaking sonicStakingDeploy = new DeploySonicStaking();
-        sonicStaking =
-            sonicStakingDeploy.run(address(sfcMock), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
-
-        stakedS = sonicStaking.stkS();
-
-        try stakedS.renounceRole(stakedS.MINTER_ROLE(), address(this)) {
-            console.log("renounce minter role");
-        } catch (bytes memory reason) {
-            console.log("fail renounce minter role");
-        }
-        try stakedS.renounceRole(stakedS.DEFAULT_ADMIN_ROLE(), address(this)) {
-            console.log("renounce admin role");
-        } catch (bytes memory reason) {
-            console.log("fail renounce admin role");
-        }
+        SFC = ISFC(address(sfcMock));
+        return ISFC(sfcMock);
     }
 
     function testRewardAccumulation() public {
@@ -235,25 +200,6 @@ contract SonicStakingTest is Test {
         makeDepositFromSpecifcUser(newUserDepositAmount, newUser);
         assertLt(stakedS.balanceOf(newUser), newUserDepositAmount); // got less stkS than S (rate is <1)
         assertApproxEqAbs(stakedS.balanceOf(newUser) * sonicStaking.getRate() / 1e18, newUserDepositAmount, 1); // balance multiplied by rate should be equal to deposit amount
-    }
-
-    function makeDepositFromSpecifcUser(uint256 amount, address user) public {
-        vm.prank(user);
-        vm.deal(user, amount);
-        sonicStaking.deposit{value: amount}();
-    }
-
-    function makeDeposit(uint256 amount) public returns (address) {
-        address user = vm.addr(200);
-        vm.prank(user);
-        vm.deal(user, amount);
-        sonicStaking.deposit{value: amount}();
-        return user;
-    }
-
-    function delegate(uint256 amount, uint256 validatorId) public {
-        vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.delegate(amount, validatorId);
     }
 
     function getState()

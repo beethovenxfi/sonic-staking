@@ -2,6 +2,21 @@
 
 This repository includes all contracts used for the LST Staked S ($stkS) by Beets.
 
+## Dev notes
+
+Need node version >18, otherwise solidity-ast error
+
+run tests with `forge clean && forge test -vvv`
+
+deploy to fork
+`forge script DeploySonicStaking --fork-url https://rpc.fantom.network --fork-block-number 97094615 --force 0xFC00FACE00000000000000000000000000000000 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7 --sig 'run(address,address,address)'`
+
+## Todo
+
+1. Add timelock for admin and test
+2. Test upgrade of contract
+3. Think about dealing with slashed validators on an operator level, i.e. could operator withdraw and add funds at the same time to keep rate. Or could operator withdraw and let the rate decrease.
+
 ## SFC
 
 Staking on Sonic is done via the Special Fees Contract (SFC) as per this [repo](https://github.com/Fantom-foundation/opera-sfc). Our LST implements against [this commit](https://github.com/Fantom-foundation/opera-sfc/tree/8c700e0ef1224cdb29e8afed6ea89eacdfba9dd7).
@@ -74,18 +89,3 @@ If a validator has an issue, i.e. is not online anymore, it doesnt produce rewar
 
 Once unboding time is ower, the undelegated $S can be withdrawn into the pool.
 ![stks withdraw to pool](images/sonicstaking_withdrawToPool.png)
-
-## Dev notes
-
-Need node version >18, otherwise solidity-ast error
-
-run tests with `forge clean && forge test -vvv`
-
-deploy to fork
-`forge script DeploySonicStaking --fork-url https://rpc.fantom.network --fork-block-number 97094615 --force 0xFC00FACE00000000000000000000000000000000 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7 --sig 'run(address,address,address)'`
-
-## Todo
-
-1. Add timelock for admin and test
-2. Test upgrade of contract
-3. Think about dealing with slashed validators on an operator level, i.e. could operator withdraw and add funds at the same time to keep rate. Or could operator withdraw and let the rate decrease.

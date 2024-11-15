@@ -47,17 +47,17 @@ contract SonicStakingTest is Test {
 
         try stakedS.renounceRole(stakedS.MINTER_ROLE(), address(this)) {
             console.log("renounce minter role");
-        } catch (bytes memory reason) {
+        } catch (bytes memory) {
             console.log("fail renounce minter role");
         }
         try stakedS.renounceRole(stakedS.DEFAULT_ADMIN_ROLE(), address(this)) {
             console.log("renounce admin role");
-        } catch (bytes memory reason) {
+        } catch (bytes memory) {
             console.log("fail renounce admin role");
         }
         try sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this)) {
             console.log("renounce admin role from staking contract");
-        } catch (bytes memory reason) {
+        } catch (bytes memory) {
             console.log("fail renounce admin role from staking contract");
         }
     }

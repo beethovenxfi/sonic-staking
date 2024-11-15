@@ -28,7 +28,7 @@ contract DeploySonicStaking is Script {
         sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), sonicStakingOwner);
         try sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), msg.sender) {
             console.log("renounce default admin role role in deployscript");
-        } catch (bytes memory reason) {
+        } catch (bytes memory) {
             console.log("fail renounce default admin role in deployscript");
         }
 
@@ -36,12 +36,12 @@ contract DeploySonicStaking is Script {
         stakedS.grantRole(stakedS.MINTER_ROLE(), sonicStakingAddress);
         try stakedS.renounceRole(stakedS.MINTER_ROLE(), msg.sender) {
             console.log("renounce minter role in deployscript");
-        } catch (bytes memory reason) {
+        } catch (bytes memory) {
             console.log("fail renounce minter role in deployscript");
         }
         try stakedS.renounceRole(stakedS.DEFAULT_ADMIN_ROLE(), msg.sender) {
             console.log("renounce admin role in deployscript");
-        } catch (bytes memory reason) {
+        } catch (bytes memory) {
             console.log("fail renounce admin role in deployscript");
         }
         vm.stopBroadcast();
