@@ -23,15 +23,21 @@ contract SonicStakingTest is Test {
     uint256 fantomFork;
 
     function setUp() public {
+        deploySonicStaking();
+    }
+
+    function deploySonicStaking() public virtual {
         // deploy the contract
         fantomFork = vm.createSelectFork(FANTOM_FORK_URL, INITIAL_FORK_BLOCK_NUMBER);
 
         SONIC_STAKING_OPERATOR = vm.addr(1);
         SONIC_STAKING_OWNER = vm.addr(2);
 
+        SFC = ISFC(0xFC00FACE00000000000000000000000000000000);
+
         DeploySonicStaking sonicStakingDeploy = new DeploySonicStaking();
         sonicStaking =
-            sonicStakingDeploy.run(address(getSFC()), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
+            sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
 
         stakedS = sonicStaking.stkS();
 
@@ -51,12 +57,6 @@ contract SonicStakingTest is Test {
         } catch (bytes memory) {
             console.log("fail renounce admin role from staking contract");
         }
-    }
-
-    function getSFC() public virtual returns (ISFC) {
-        // return the real SFC address
-        SFC = ISFC(0xFC00FACE00000000000000000000000000000000);
-        return SFC;
     }
 
     function testInitialization() public view {

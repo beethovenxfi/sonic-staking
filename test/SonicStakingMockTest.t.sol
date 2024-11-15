@@ -13,12 +13,39 @@ import {ISFC} from "src/interfaces/ISFC.sol";
 contract SonicStakingMockTest is Test, SonicStakingTest {
     SFCMock sfcMock;
 
-    // we inherit from SonicStakingTest and override the getSFC function to return a mock SFC contract
+    // we inherit from SonicStakingTest and override the deploySonicStaking function to setup the SonicStaking contract with the mock SFC.
     // we then inherit from SonicStakingTest so we can run all tests defined there also with the mock SFC
-    function getSFC() public override returns (ISFC) {
+    function deploySonicStaking() public virtual override {
+        // deploy the contract
+        fantomFork = vm.createSelectFork(FANTOM_FORK_URL, INITIAL_FORK_BLOCK_NUMBER);
         sfcMock = new SFCMock();
         SFC = ISFC(address(sfcMock));
-        return ISFC(sfcMock);
+
+        SONIC_STAKING_OPERATOR = vm.addr(1);
+        SONIC_STAKING_OWNER = vm.addr(2);
+
+        DeploySonicStaking sonicStakingDeploy = new DeploySonicStaking();
+        sonicStaking =
+            sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
+
+        stakedS = sonicStaking.stkS();
+
+        // somehow the renouncing in the DeploySonicStaking script doesn't work when called from the test, so we renounce here
+        try stakedS.renounceRole(stakedS.MINTER_ROLE(), address(this)) {
+            console.log("renounce minter role");
+        } catch (bytes memory) {
+            console.log("fail renounce minter role");
+        }
+        try stakedS.renounceRole(stakedS.DEFAULT_ADMIN_ROLE(), address(this)) {
+            console.log("renounce admin role");
+        } catch (bytes memory) {
+            console.log("fail renounce admin role");
+        }
+        try sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this)) {
+            console.log("renounce admin role from staking contract");
+        } catch (bytes memory) {
+            console.log("fail renounce admin role from staking contract");
+        }
     }
 
     function testRewardAccumulation() public {
