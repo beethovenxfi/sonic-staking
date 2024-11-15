@@ -10,16 +10,41 @@ import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import "forge-std/Script.sol";
 
 contract DeploySonicStaking is Script {
-    address sonicStaking;
-    ISFC SFC = ISFC(0xFC00FACE00000000000000000000000000000000);
-    address TREASURY_ADDRESS = 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7;
-
-    function run() public {
+    function run(address sfcAddress, address treasuryAddress, address sonicStakingOwner, address sonicStakingOperator)
+        public
+        returns (SonicStaking)
+    {
         vm.startBroadcast();
         StakedS stakedS = new StakedS();
-        sonicStaking = Upgrades.deployUUPSProxy(
-            "SonicStaking.sol", abi.encodeCall(SonicStaking.initialize, (stakedS, SFC, TREASURY_ADDRESS))
+        address sonicStakingAddress = Upgrades.deployUUPSProxy(
+            "SonicStaking.sol:SonicStaking",
+            abi.encodeCall(SonicStaking.initialize, (stakedS, ISFC(sfcAddress), treasuryAddress))
         );
+        SonicStaking sonicStaking = SonicStaking(payable(sonicStakingAddress));
+
+        // setup sonicStaking access control
+        sonicStaking.transferOwnership(sonicStakingOwner);
+        sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), sonicStakingOperator);
+        sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), sonicStakingOwner);
+        try sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), msg.sender) {
+            console.log("renounce default admin role role in deployscript");
+        } catch (bytes memory reason) {
+            console.log("fail renounce default admin role in deployscript");
+        }
+
+        // setup stakedS access control
+        stakedS.grantRole(stakedS.MINTER_ROLE(), sonicStakingAddress);
+        try stakedS.renounceRole(stakedS.MINTER_ROLE(), msg.sender) {
+            console.log("renounce minter role in deployscript");
+        } catch (bytes memory reason) {
+            console.log("fail renounce minter role in deployscript");
+        }
+        try stakedS.renounceRole(stakedS.DEFAULT_ADMIN_ROLE(), msg.sender) {
+            console.log("renounce admin role in deployscript");
+        } catch (bytes memory reason) {
+            console.log("fail renounce admin role in deployscript");
+        }
         vm.stopBroadcast();
+        return sonicStaking;
     }
 }
