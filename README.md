@@ -2,6 +2,17 @@
 
 This repository includes all contracts used for the LST Staked S ($stkS) by Beets.
 
+In general, $stkS will earn yield from delegating underlying $S to validators. Delegated $S earns rewards (in $S) for helping secure the network. The rewards can be claimed and will increase the amount of $S in the system hence increasing the price of $stkS against $S. There is a protocol fee applied on the claimed rewards.
+
+The general flow of this LST is the following:
+- User deposits $S into the contract and receives $stkS for it, according to the current rate.
+- Deposited $S will be accumulated in the "pool" first
+- An Operator delegates the deposited $S to a validator where it will earn rewards
+- An Operator will claim rewards from specific validators to increase the $stkS/$S rate.
+- A protocol fee is deducted from the rewards, the remainder is added to the pool.
+- A user can undelegate $stkS and can withdraw the $S two weeks later.
+
+
 ## Dev notes
 
 Need node version >18, otherwise solidity-ast error
