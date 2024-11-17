@@ -29,7 +29,7 @@ deploy to fork
 3. Add test to withdraw from slashed validator (emergency withdraw)
 4. Test undelegage when not enough validators are passed as arg
 5. maybe change calc of the pool size to use balance(this) and keep track of pending withdrawals instead of tracking via variables.
-6. Should we track validators that we delegated to (instead of having `currentDelegations`) and query the stake and pending rewards on chain? Could then also create a `claimAllRewards()` function. Would make rate calc more accurate and linear. Would make `currentDelegations` obsolete as we would query SFC for that info. We wont have thousands of validators, max hunders. Dont think this is an issue with gas.
+6. Should we track validators that we delegated to (instead of having `currentDelegations` and `totalDelegated`) and query the stake and pending rewards on chain? Could then also create a `claimAllRewards()` function. Would make rate calc more accurate and linear. Would make `currentDelegations` and `totalDelegated` obsolete as we would query SFC for that info. We wont have thousands of validators, max hunders. Dont think this is an issue with gas.
 
 ## SFC
 
