@@ -127,7 +127,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         stkS = _stks_;
         SFC = _sfc_;
         treasury = _treasury_;
-        epochDuration = 3600; // one hour
+        epochDuration = 3600 * 4; // four hours
         withdrawalDelay = 604800 * 2; // 14 days
         minDeposit = 1 ether;
         maxDeposit = 1_000_000 ether;
@@ -194,7 +194,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      * @param toValidatorId the ID of the validator to delegate to
      */
     function delegate(uint256 amount, uint256 toValidatorId) external onlyRole(OPERATOR_ROLE) {
-        require(_now() >= nextEligibleTimestamp, "ERR_WAIT_FOR_NEXT_EPOCH");
+        require(_now() >= nextEligibleTimestamp, "ERR_WAIT_FOR_NEXT_EPOCH"); // TODO: double check with SFC if needed to wait for delegation
         require(amount > 0 && amount <= totalPool, "ERR_INVALID_AMOUNT");
 
         nextEligibleTimestamp += epochDuration;
