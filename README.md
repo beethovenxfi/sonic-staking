@@ -39,7 +39,14 @@ Below describes functions used by the LST contract for general understanding.
 
 ### Epochs
 
-The SFC defines so-called epochs. Epochs are sealed by the node driver. After an epoch is sealed, total rewards earned in that epoch are calculated. This is used to calculate the rewards received by validators and delegators.
+The SFC defines so-called epochs. Epochs are sealed by the node driver. After an epoch is sealed, total rewards earned in that epoch are calculated, and stored in a snapshot. This is used to calculate the rewards received by validators and delegators.
+
+An epoch can seal when:
+
+- Maximum epoch gas (1.5 billion) is exceeded
+- Maximum epoch duration (4 hours) is exceeded
+- A validator cheating incident is confirmed
+- AdvanceEpoch is signaled from the Driver contract
 
 ### delegate
 
