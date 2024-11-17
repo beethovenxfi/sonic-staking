@@ -26,6 +26,9 @@ deploy to fork
 
 1. Add timelock for admin and test
 2. Think about dealing with slashed validators on an operator level, i.e. could operator withdraw and add funds at the same time to keep rate. Or could operator withdraw and let the rate decrease. Currently, the users pay it since they will withdraw less $S that what they are entitled to.
+3. Add test to withdraw from slashed validator (emergency withdraw)
+4. Test undelegage when not enough validators are passed as arg
+5. maybe change calc of the pool size to use balance(this) and keep track of pending withdrawals instead of tracking via variables. 
 
 ## SFC
 
