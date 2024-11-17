@@ -5,13 +5,13 @@ This repository includes all contracts used for the LST Staked S ($stkS) by Beet
 In general, $stkS will earn yield from delegating underlying $S to validators. Delegated $S earns rewards (in $S) for helping secure the network. The rewards can be claimed and will increase the amount of $S in the system hence increasing the price of $stkS against $S. There is a protocol fee applied on the claimed rewards.
 
 The general flow of this LST is the following:
+
 - User deposits $S into the contract and receives $stkS for it, according to the current rate.
 - Deposited $S will be accumulated in the "pool" first
 - An Operator delegates the deposited $S to a validator where it will earn rewards
 - An Operator will claim rewards from specific validators to increase the $stkS/$S rate.
 - A protocol fee is deducted from the rewards, the remainder is added to the pool.
 - A user can undelegate $stkS and can withdraw the $S two weeks later.
-
 
 ## Dev notes
 
@@ -28,7 +28,8 @@ deploy to fork
 2. Think about dealing with slashed validators on an operator level, i.e. could operator withdraw and add funds at the same time to keep rate. Or could operator withdraw and let the rate decrease. Currently, the users pay it since they will withdraw less $S that what they are entitled to.
 3. Add test to withdraw from slashed validator (emergency withdraw)
 4. Test undelegage when not enough validators are passed as arg
-5. maybe change calc of the pool size to use balance(this) and keep track of pending withdrawals instead of tracking via variables. 
+5. maybe change calc of the pool size to use balance(this) and keep track of pending withdrawals instead of tracking via variables.
+6. Should we track validators that we delegated to (instead of having `currentDelegations`) and query the stake and pending rewards on chain? Could then also create a `claimAllRewards()` function. Would make rate calc more accurate and linear. Would make `currentDelegations` obsolete as we would query SFC for that info. We wont have thousands of validators, max hunders. Dont think this is an issue with gas.
 
 ## SFC
 

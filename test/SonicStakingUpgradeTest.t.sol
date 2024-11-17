@@ -4,7 +4,7 @@ pragma solidity ^0.8.7;
 import {Test, console} from "forge-std/Test.sol";
 import {DeploySonicStaking} from "script/DeploySonicStaking.sol";
 import {SonicStaking} from "src/SonicStaking.sol";
-import {SonicStakingUpgrade} from "src/SonicStakingUpgrade.sol";
+import {SonicStakingUpgrade} from "src/mock/SonicStakingUpgrade.sol";
 import {StakedS} from "src/StakedS.sol";
 import {ISFC} from "src/interfaces/ISFC.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";

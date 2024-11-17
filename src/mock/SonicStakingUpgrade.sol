@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import "./interfaces/ISFC.sol";
-import "./StakedS.sol";
+import "../interfaces/ISFC.sol";
+import "../StakedS.sol";
 
 import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -14,7 +14,7 @@ interface IRateProvider {
 }
 
 /**
- * @title Sonic Staking Contract
+ * @title Sonic Staking Contract. Only used to test the upgrade
  * @author Beets
  * @notice Main point of interaction with Beets liquid staking for Sonic
  */
