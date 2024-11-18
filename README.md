@@ -49,20 +49,20 @@ An epoch can seal when:
 - A validator cheating incident is confirmed
 - AdvanceEpoch is signaled from the Driver contract
 
-### delegate
+### Delegate
 
 The staking system on Sonic, which is handled by the SFC, uses validators and delegators. Validators run validator nodes that secure the network. Validators are required to have at least 50k $S self-staked. Each validator can have up to 15 times their self-staked amount delegated to it. To delegate to a validator, one calls [delegate()](https://github.com/Fantom-foundation/opera-sfc/blob/8c700e0ef1224cdb29e8afed6ea89eacdfba9dd7/contracts/sfc/SFC.sol#L392) on the SFC and passes the amount of $S as a value.
 
 ![sfc delegate](images/sfc_delegate.png)
 
-### undelegate and withdraw
+### Undelegate and withdraw
 
 There is an unbonding period of two weeks. Retrieving delegated funds is a two step process with a two week waiting period in between. You first call [undelegate](https://github.com/Fantom-foundation/opera-sfc/blob/8c700e0ef1224cdb29e8afed6ea89eacdfba9dd7/contracts/sfc/SFC.sol#L466) and after two weeks you can withdraw your $S via [withdraw](https://github.com/Fantom-foundation/opera-sfc/blob/8c700e0ef1224cdb29e8afed6ea89eacdfba9dd7/contracts/sfc/SFC.sol#L398).
 
 ![sfc undelegate](images/sfc_undelegate.png)
 ![sfc withdraw](images/sfc_withdraw.png)
 
-### claim rewards and pending rewards
+### Claim rewards and pending rewards
 
 All rewards are hadled via stashes in SFC. This means that everytime an epoch seals, [rewards are stashed for that particular epoch](https://github.com/Fantom-foundation/opera-sfc/blob/8c700e0ef1224cdb29e8afed6ea89eacdfba9dd7/contracts/sfc/SFC.sol#L308). This is then used to calculate the amount of rewards a delegator receives for a given epoch.
 
@@ -77,7 +77,7 @@ Pending rewards can be queried via [pendingRewards()](https://github.com/Fantom-
 This contract handles all operations for the LST $stkS. In general, a user deposits $S into the contract and receives $stkS in returned, based on the current rate.
 The contract is kept upgradable because the SFC we are integrating against is also upgradable.
 
-### deposit (user function)
+### Deposit (user function)
 
 A user deposits $S into the Sonic Staking contract and receives $stkS based on the current rate. The $S that has been sent to the contract is first added to the pool and is not immediately delegated.
 ![stks deposit](images/sonicstaking_deposit.png)
@@ -100,15 +100,15 @@ $S that has been deposited into the pool will be delegated to the defined valida
 
 ### claimRewards (operator function)
 
-To claim rewards and increase the rate of $stkS against $S, `claimRewards()` needs to be called by the operator. This will claim rewards from the specified validators, deduct the protocol fee and add the remaining funds to the pool, effectively increasing the amount of $S in the system while $stkS supply stays the same.
+To claim rewards and increase the rate of $stkS against $S, the operator calls `claimRewards()`. This will claim rewards from the specified validators, deduct the protocol fee and add the remaining funds to the pool, increasing the amount of $S in the system while the $stkS supply stays the same.
 ![stks claim rewards](images/sonicstaking_claimRewards.png)
 
 ### undelegateToPool (operator function)
 
-If a validator has an issue, i.e. is not online anymore, it doesnt produce rewards for the delegated stake. In that case, it is important that the delegated amount can be withdrawn to the pool and delegated to another validator. This function initiats an undelegation without burning $stkS, as the withdrawn $S will in the end go back t the pool, this should not affect the rate.
+If a validator has an issue, i.e. is not online anymore, it doesn't produce rewards for the delegated stake. In that case, it is important that the delegated amount can be withdrawn to the pool and delegated to another validator. This function initiates an undelegation without burning $stkS, as the withdrawn $S will in the end go back to the pool, this should not affect the rate.
 ![stks undelegate to pool](images/sonicstaking_undelegateToPool.png)
 
 ### withdrawToPool (operator function)
 
-Once unboding time is ower, the undelegated $S can be withdrawn into the pool.
+Once the unbonding time is over, the undelegated $S can be withdrawn into the pool.
 ![stks withdraw to pool](images/sonicstaking_withdrawToPool.png)
