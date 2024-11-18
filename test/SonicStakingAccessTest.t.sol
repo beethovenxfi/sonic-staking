@@ -112,11 +112,6 @@ contract SonicStakingTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.OPERATOR_ROLE())
         );
-        sonicStaking.setEpochDuration(1);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.OPERATOR_ROLE())
-        );
         sonicStaking.setWithdrawalDelay(1);
 
         vm.expectRevert(

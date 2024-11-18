@@ -387,8 +387,6 @@ contract SonicStakingTest is Test {
 
     function testStateSetters() public {
         vm.startPrank(SONIC_STAKING_OPERATOR);
-        sonicStaking.setEpochDuration(1);
-        assertEq(sonicStaking.epochDuration(), 1);
 
         sonicStaking.setWithdrawalDelay(1);
         assertEq(sonicStaking.withdrawalDelay(), 1);

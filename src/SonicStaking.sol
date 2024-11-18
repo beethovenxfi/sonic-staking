@@ -63,16 +63,6 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     uint256 public protocolFeeBIPS;
 
     /**
-     * @dev The last known epoch to prevent wasting gas during reward claim process
-     */
-    uint256 public lastKnownEpoch;
-
-    /**
-     * The duration of an epoch between two successive locks
-     */
-    uint256 public epochDuration;
-
-    /**
      * The delay between undelegation & withdrawal
      */
     uint256 public withdrawalDelay;
@@ -104,7 +94,6 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
     uint256 public wrIdCounter;
 
-    event LogEpochDurationSet(address indexed owner, uint256 duration);
     event LogWithdrawalDelaySet(address indexed owner, uint256 delay);
     event LogUndelegatePausedUpdated(address indexed owner, bool newValue);
     event LogWithdrawPausedUpdated(address indexed owner, bool newValue);
@@ -133,7 +122,6 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         stkS = _stks_;
         SFC = _sfc_;
         treasury = _treasury_;
-        epochDuration = 3600 * 4; // four hours
         withdrawalDelay = 604800 * 2; // 14 days
         minDeposit = 1 ether;
         maxDeposit = 1_000_000 ether;
@@ -200,10 +188,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      * @param toValidatorId the ID of the validator to delegate to
      */
     function delegate(uint256 amount, uint256 toValidatorId) external onlyRole(OPERATOR_ROLE) {
-        require(_now() >= nextEligibleTimestamp, "ERR_WAIT_FOR_NEXT_EPOCH"); // TODO: double check with SFC if needed to wait for delegation
         require(amount > 0 && amount <= totalPool, "ERR_INVALID_AMOUNT");
-
-        nextEligibleTimestamp += epochDuration;
 
         totalPool -= amount;
 
@@ -255,15 +240,6 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         totalDelegated -= withdrawnAmount;
         totalPool += withdrawnAmount;
-    }
-
-    /**
-     * @notice Set epoch duration onlyRole(OPERATOR_ROLE)
-     * @param duration the new epoch duration in seconds
-     */
-    function setEpochDuration(uint256 duration) external onlyRole(OPERATOR_ROLE) {
-        epochDuration = duration;
-        emit LogEpochDurationSet(msg.sender, duration);
     }
 
     /**
@@ -460,14 +436,6 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
     function claimRewards(uint256[] calldata fromValidators) external {
         require(!rewardClaimPaused, "ERR_REWARD_CLAIM_IS_PAUSED");
-
-        uint256 currentEpoch = SFC.currentEpoch();
-
-        if (currentEpoch <= lastKnownEpoch) {
-            return;
-        }
-
-        lastKnownEpoch = currentEpoch;
 
         uint256 balanceBefore = address(this).balance;
 
