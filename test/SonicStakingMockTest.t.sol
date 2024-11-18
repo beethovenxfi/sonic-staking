@@ -124,7 +124,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         // need to increase time to allow for withdrawal
         vm.warp(block.timestamp + 14 days);
 
-        (uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
+        (, uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
             sonicStaking.allWithdrawalRequests(100);
 
         assertEq(validatorId, 0);
@@ -134,7 +134,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking.withdraw(100, false);
         assertEq(address(user).balance, balanceBefore + 9000 ether);
 
-        (validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) = sonicStaking.allWithdrawalRequests(101);
+        (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) = sonicStaking.allWithdrawalRequests(101);
         assertEq(validatorId, 1);
 
         vm.prank(user);

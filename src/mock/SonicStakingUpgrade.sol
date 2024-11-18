@@ -30,7 +30,13 @@ contract SonicStakingUpgrade is
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
+    enum WithdrawalKind {
+        POOL,
+        VALIDATOR
+    }
+
     struct WithdrawalRequest {
+        WithdrawalKind kind;
         uint256 validatorId;
         uint256 amountS;
         bool isWithdrawn;
