@@ -24,7 +24,13 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
+    enum WithdrawalKind {
+        POOL,
+        VALIDATOR
+    }
+
     struct WithdrawalRequest {
+        WithdrawalKind kind;
         uint256 validatorId;
         uint256 amountS;
         bool isWithdrawn;
@@ -419,7 +425,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         uint256 withdrawnAmount = 0;
 
-        if (request.validatorId == 0) {
+        if (request.kind == WithdrawalKind.POOL) {
             withdrawnAmount = request.amountS;
         } else {
             SFC.withdraw(request.validatorId, wrId);
@@ -501,6 +507,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         // create a new withdrawal request
         WithdrawalRequest storage request = allWithdrawalRequests[wrId];
         require(request.requestTimestamp == 0, "ERR_WRID_ALREADY_USED");
+        request.kind = WithdrawalKind.VALIDATOR;
         request.requestTimestamp = _now();
         request.user = msg.sender;
         request.amountS = amount;
@@ -523,6 +530,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         // create a new withdrawal request
         WithdrawalRequest storage request = allWithdrawalRequests[wrId];
         require(request.requestTimestamp == 0, "ERR_WRID_ALREADY_USED");
+        request.kind = WithdrawalKind.POOL;
         request.requestTimestamp = _now();
         request.user = msg.sender;
         request.amountS = amount;
