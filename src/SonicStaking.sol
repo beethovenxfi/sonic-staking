@@ -232,6 +232,9 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         require(!request.isWithdrawn, "ERR_ALREADY_WITHDRAWN");
         request.isWithdrawn = true;
 
+        address user = request.user;
+        require(msg.sender == user, "ERR_UNAUTHORIZED");
+
         uint256 balanceBefore = address(this).balance;
 
         SFC.withdraw(request.validatorId, wrId);
