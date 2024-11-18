@@ -32,9 +32,9 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         address user;
     }
 
-    mapping(uint256 => WithdrawalRequest) public allWithdrawalRequests;
+    mapping(uint256 withdrawId => WithdrawalRequest request) public allWithdrawalRequests;
 
-    mapping(uint256 => uint256) public currentDelegations;
+    mapping(uint256 validatorId => uint256 amountDelegated) public currentDelegations;
 
     /**
      * @dev A reference to the StkS ERC20 token contract
@@ -356,12 +356,16 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         uint256 amountToUndelegate = (getRate() * amountStkS) / DECIMAL_UNIT;
         stkS.burnFrom(msg.sender, amountStkS);
 
-        // always undelegate from pool first
+        // undelegate from the pool first
         if (totalPool > 0) {
-            uint256 undelegateFromPool = amountToUndelegate;
-            if (undelegateFromPool > totalPool) {
+            uint256 undelegateFromPool;
+
+            if (amountToUndelegate > totalPool) {
                 undelegateFromPool = totalPool;
+            } else {
+                undelegateFromPool = amountToUndelegate;
             }
+
             _undelegateFromPool(wrIdCounter++, undelegateFromPool);
             amountToUndelegate -= undelegateFromPool;
         }
