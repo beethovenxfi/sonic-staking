@@ -199,11 +199,12 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         nextEligibleTimestamp += epochDuration;
 
-        SFC.delegate{value: amount}(toValidatorId);
-        currentDelegations[toValidatorId] += amount;
-
-        totalDelegated += amount;
         totalPool -= amount;
+
+        SFC.delegate{value: amount}(toValidatorId);
+
+        currentDelegations[toValidatorId] += amount;
+        totalDelegated += amount;
 
         emit LogDelegated(toValidatorId, amount);
     }
