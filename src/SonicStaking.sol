@@ -98,7 +98,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     event LogUndelegatePausedUpdated(address indexed owner, bool newValue);
     event LogWithdrawPausedUpdated(address indexed owner, bool newValue);
     event LogRewardClaimPausedUpdated(address indexed owner, bool newValue);
-    event LogDepositLimitUpdated(address indexed owner, uint256 low, uint256 high);
+    event LogDepositLimitUpdated(address indexed owner, uint256 min, uint256 max);
 
     event LogDeposited(address indexed user, uint256 amount, uint256 stkSAmount);
     event LogDelegated(uint256 indexed toValidator, uint256 amount);
@@ -281,10 +281,10 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         emit LogRewardClaimPausedUpdated(msg.sender, desiredValue);
     }
 
-    function setDepositLimits(uint256 low, uint256 high) external onlyRole(OPERATOR_ROLE) {
-        minDeposit = low;
-        maxDeposit = high;
-        emit LogDepositLimitUpdated(msg.sender, low, high);
+    function setDepositLimits(uint256 min, uint256 max) external onlyRole(OPERATOR_ROLE) {
+        minDeposit = min;
+        maxDeposit = max;
+        emit LogDepositLimitUpdated(msg.sender, min, max);
     }
 
     /**

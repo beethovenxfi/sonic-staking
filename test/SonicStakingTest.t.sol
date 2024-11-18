@@ -359,13 +359,7 @@ contract SonicStakingTest is Test {
         uint256 toValidatorId1 = 1;
         uint256 toValidatorId2 = 2;
 
-        (
-            uint256 totalDelegatedStart,
-            uint256 totalPoolStart,
-            uint256 totalSWorthStart,
-            uint256 rateStart,
-            uint256 wrIdCounterStart
-        ) = getAmounts();
+        (, uint256 totalPoolStart,,,) = getAmounts();
 
         // make sure we have a deposit
         address user = makeDeposit(depositAmount);
