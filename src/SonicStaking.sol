@@ -336,12 +336,12 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         uint256 amount = msg.value;
         require(amount >= minDeposit && amount <= maxDeposit, "ERR_AMOUNT_OUTSIDE_LIMITS");
 
-        uint256 StkSAmount = getStkSAmountForS(amount);
-        stkS.mint(msg.sender, StkSAmount);
+        uint256 stkSAmount = getStkSAmountForS(amount);
+        stkS.mint(msg.sender, stkSAmount);
 
         totalPool += amount;
 
-        emit LogDeposited(msg.sender, msg.value, StkSAmount);
+        emit LogDeposited(msg.sender, msg.value, stkSAmount);
     }
 
     /**
