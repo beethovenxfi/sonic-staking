@@ -92,7 +92,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
     uint256 public totalPool;
 
-    uint256 public wrIdCounter;
+    uint256 public lastUsedWrId;
 
     event LogWithdrawalDelaySet(address indexed owner, uint256 delay);
     event LogUndelegatePausedUpdated(address indexed owner, bool newValue);
@@ -129,7 +129,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         withdrawPaused = false;
         rewardClaimPaused = false;
         protocolFeeBIPS = 1000;
-        wrIdCounter = 100;
+        lastUsedWrId = 100;
     }
 
     /**
@@ -212,8 +212,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         require(delegatedAmount > 0, "ERR_NO_DELEGATION");
         require(amountToUndelegate <= delegatedAmount, "ERR_AMOUNT_TOO_HIGH");
 
-        uint256 wrId = wrIdCounter++;
-        _undelegateFromValidator(fromValidatorId, wrId, amountToUndelegate);
+        _undelegateFromValidator(fromValidatorId, amountToUndelegate);
 
         // undelegateToPool has no effect on total S in the system and no stkS was burned.
         // In order to keep the rate unchanged, we need to add amount to delegatedAmount again, because it was subtracted in _undelegateFromValidator
@@ -351,7 +350,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
                 undelegateFromPool = amountToUndelegate;
             }
 
-            _undelegateFromPool(wrIdCounter++, undelegateFromPool);
+            _undelegateFromPool(undelegateFromPool);
             amountToUndelegate -= undelegateFromPool;
         }
 
@@ -360,19 +359,15 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
             require(delegatedAmount > 0, "ERR_NO_DELEGATION");
 
             if (amountToUndelegate > 0) {
-                // set current Withdrawal Request ID and increment the counter after assignment
-                // wrIDs need to be unique per delegator<->validator pair
-                uint256 wrId = wrIdCounter++;
-
                 if (amountToUndelegate <= delegatedAmount) {
                     // amountToUndelegate is less than or equal to the amount delegated to this validator, we partially undelegate from the validator.
                     // can undelegate the full `amountToUndelegate` from this validator.
-                    _undelegateFromValidator(fromValidators[i], wrId, amountToUndelegate);
+                    _undelegateFromValidator(fromValidators[i], amountToUndelegate);
                     amountToUndelegate = 0;
                 } else {
                     // `amountToUndelegate` is greater than the amount delegated to this validator, so we fully undelegate from the validator.
                     // `amountToUndelegate` not yet 0 and will need another loop.
-                    _undelegateFromValidator(fromValidators[i], wrId, delegatedAmount);
+                    _undelegateFromValidator(fromValidators[i], delegatedAmount);
                     amountToUndelegate -= delegatedAmount;
                 }
             }
@@ -471,13 +466,14 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     /**
      * @notice Undelegate from the validator.
      * @param validatorId the validator to undelegate
-     * @param wrId the withdrawal ID for the withdrawal request
      * @param amount the amount to unlock
      */
-    function _undelegateFromValidator(uint256 validatorId, uint256 wrId, uint256 amount) internal {
+    function _undelegateFromValidator(uint256 validatorId, uint256 amount) internal {
         // create a new withdrawal request
+        uint256 wrId = lastUsedWrId + 1;
         WithdrawalRequest storage request = allWithdrawalRequests[wrId];
         require(request.requestTimestamp == 0, "ERR_WRID_ALREADY_USED");
+
         request.kind = WithdrawalKind.VALIDATOR;
         request.requestTimestamp = _now();
         request.user = msg.sender;
@@ -486,21 +482,24 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         request.isWithdrawn = false;
 
         SFC.undelegate(validatorId, wrId, amount);
+
         currentDelegations[validatorId] -= amount;
         totalDelegated -= amount;
+        lastUsedWrId = wrId;
 
         emit LogUndelegated(msg.sender, wrId, amount, validatorId);
     }
 
     /**
      * @notice Undelegate from the pool.
-     * @param wrId the withdrawal ID for the withdrawal request
      * @param amount the amount to unlock
      */
-    function _undelegateFromPool(uint256 wrId, uint256 amount) internal {
+    function _undelegateFromPool(uint256 amount) internal {
         // create a new withdrawal request
+        uint256 wrId = lastUsedWrId + 1;
         WithdrawalRequest storage request = allWithdrawalRequests[wrId];
         require(request.requestTimestamp == 0, "ERR_WRID_ALREADY_USED");
+
         request.kind = WithdrawalKind.POOL;
         request.requestTimestamp = _now();
         request.user = msg.sender;
@@ -509,6 +508,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         request.isWithdrawn = false;
 
         totalPool -= amount;
+        lastUsedWrId = wrId;
 
         emit LogUndelegated(msg.sender, wrId, amount, 0);
     }

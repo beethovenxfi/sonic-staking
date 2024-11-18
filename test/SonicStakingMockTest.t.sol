@@ -119,26 +119,26 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         vm.prank(user);
         sonicStaking.undelegate(undelegateAmount, validatorIds);
-        assertEq(sonicStaking.wrIdCounter(), 102);
+        assertEq(sonicStaking.lastUsedWrId(), 102);
 
         // need to increase time to allow for withdrawal
         vm.warp(block.timestamp + 14 days);
 
         (, uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
-            sonicStaking.allWithdrawalRequests(100);
+            sonicStaking.allWithdrawalRequests(101);
 
         assertEq(validatorId, 0);
 
         uint256 balanceBefore = address(user).balance;
         vm.prank(user);
-        sonicStaking.withdraw(100, false);
+        sonicStaking.withdraw(101, false);
         assertEq(address(user).balance, balanceBefore + 9000 ether);
 
-        (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) = sonicStaking.allWithdrawalRequests(101);
+        (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) = sonicStaking.allWithdrawalRequests(102);
         assertEq(validatorId, 1);
 
         vm.prank(user);
-        sonicStaking.withdraw(101, false);
+        sonicStaking.withdraw(102, false);
         assertEq(address(user).balance, balanceBefore + 10000 ether);
     }
 
@@ -154,7 +154,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
             uint256 totalPoolStart,
             uint256 totalSWorthStart,
             uint256 rateStart,
-            uint256 wrIdCounterStart
+            uint256 lastUsedWrIdStart
         ) = getState();
 
         // make sure we have a deposit
@@ -169,19 +169,19 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(totalPoolStart + depositAmount - delegateAmount, sonicStaking.totalPool());
         assertEq(totalSWorthStart + depositAmount, sonicStaking.totalSWorth());
         assertEq(rateStart, sonicStaking.getRate());
-        assertEq(wrIdCounterStart + 1, sonicStaking.wrIdCounter());
+        assertEq(lastUsedWrIdStart + 1, sonicStaking.lastUsedWrId());
 
         // need to increase time to allow for withdrawal
         vm.warp(block.timestamp + 14 days);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.withdrawToPool(100);
+        sonicStaking.withdrawToPool(101);
 
         assertEq(totalDelegatedStart, sonicStaking.totalDelegated());
         assertEq(totalPoolStart + depositAmount, sonicStaking.totalPool());
         assertEq(totalSWorthStart + depositAmount, sonicStaking.totalSWorth());
         assertEq(rateStart, sonicStaking.getRate());
-        assertEq(wrIdCounterStart + 1, sonicStaking.wrIdCounter());
+        assertEq(lastUsedWrIdStart + 1, sonicStaking.lastUsedWrId());
     }
 
     function testConversionRate() public {
@@ -232,12 +232,12 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
     function getState()
         public
         view
-        returns (uint256 totalDelegated, uint256 totalPool, uint256 totalSWorth, uint256 rate, uint256 wrIdCounter)
+        returns (uint256 totalDelegated, uint256 totalPool, uint256 totalSWorth, uint256 rate, uint256 lastUsedWrId)
     {
         totalDelegated = sonicStaking.totalDelegated();
         totalPool = sonicStaking.totalPool();
         totalSWorth = sonicStaking.totalSWorth();
         rate = sonicStaking.getRate();
-        wrIdCounter = sonicStaking.wrIdCounter();
+        lastUsedWrId = sonicStaking.lastUsedWrId();
     }
 }

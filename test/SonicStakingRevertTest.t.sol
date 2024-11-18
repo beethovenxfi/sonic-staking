@@ -104,16 +104,4 @@ contract SonicStakingTest is Test {
         vm.prank(SONIC_STAKING_OPERATOR);
         sonicStaking.delegate(amount, validatorId);
     }
-
-    function getState()
-        public
-        view
-        returns (uint256 totalDelegated, uint256 totalPool, uint256 totalSWorth, uint256 rate, uint256 wrIdCounter)
-    {
-        totalDelegated = sonicStaking.totalDelegated();
-        totalPool = sonicStaking.totalPool();
-        totalSWorth = sonicStaking.totalSWorth();
-        rate = sonicStaking.getRate();
-        wrIdCounter = sonicStaking.wrIdCounter();
-    }
 }

@@ -215,7 +215,7 @@ contract SonicStakingTest is Test {
         assertEq(sonicStaking.stkS().balanceOf(user), depositAmount - undelegateAmount);
 
         (, uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
-            sonicStaking.allWithdrawalRequests(sonicStaking.wrIdCounter() - 1);
+            sonicStaking.allWithdrawalRequests(sonicStaking.lastUsedWrId());
         assertEq(validatorId, 0);
         assertEq(requestTimestamp, block.timestamp);
         assertEq(userAddress, user);
@@ -258,10 +258,10 @@ contract SonicStakingTest is Test {
         assertEq(sonicStaking.totalPool(), 0);
         assertEq(sonicStaking.stkS().balanceOf(user), depositAmount - undelegateAmount);
 
-        assertEq(sonicStaking.wrIdCounter(), 103);
+        assertEq(sonicStaking.lastUsedWrId(), 103);
 
         (, uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
-            sonicStaking.allWithdrawalRequests(sonicStaking.wrIdCounter() - 3);
+            sonicStaking.allWithdrawalRequests(sonicStaking.lastUsedWrId() - 2);
         assertEq(validatorId, 0);
         assertEq(requestTimestamp, block.timestamp);
         assertEq(userAddress, user);
@@ -269,7 +269,7 @@ contract SonicStakingTest is Test {
         assertEq(amountS, undelegatedFromPool);
 
         (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) =
-            sonicStaking.allWithdrawalRequests(sonicStaking.wrIdCounter() - 2);
+            sonicStaking.allWithdrawalRequests(sonicStaking.lastUsedWrId() - 1);
         assertEq(validatorId, 1);
         assertEq(requestTimestamp, block.timestamp);
         assertEq(userAddress, user);
@@ -277,7 +277,7 @@ contract SonicStakingTest is Test {
         assertEq(amountS, 1000 ether);
 
         (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) =
-            sonicStaking.allWithdrawalRequests(sonicStaking.wrIdCounter() - 1);
+            sonicStaking.allWithdrawalRequests(sonicStaking.lastUsedWrId());
         assertEq(validatorId, 2);
         assertEq(requestTimestamp, block.timestamp);
         assertEq(userAddress, user);
@@ -296,7 +296,7 @@ contract SonicStakingTest is Test {
             uint256 totalPoolStart,
             uint256 totalSWorthStart,
             uint256 rateStart,
-            uint256 wrIdCounterStart
+            uint256 lastUsedWrIdStart
         ) = getAmounts();
 
         // make sure we have a deposit
@@ -306,7 +306,7 @@ contract SonicStakingTest is Test {
         assertEq(totalPoolStart + depositAmount, sonicStaking.totalPool());
         assertEq(totalSWorthStart + depositAmount, sonicStaking.totalSWorth());
         assertEq(rateStart, sonicStaking.getRate());
-        assertEq(wrIdCounterStart, sonicStaking.wrIdCounter());
+        assertEq(lastUsedWrIdStart, sonicStaking.lastUsedWrId());
         assertEq(sonicStaking.stkS().balanceOf(user), depositAmount);
 
         delegate(delegateAmount1, toValidatorId1);
@@ -315,7 +315,7 @@ contract SonicStakingTest is Test {
         assertEq(totalPoolStart + depositAmount - delegateAmount1, sonicStaking.totalPool());
         assertEq(totalSWorthStart + depositAmount, sonicStaking.totalSWorth());
         assertEq(rateStart, sonicStaking.getRate());
-        assertEq(wrIdCounterStart, sonicStaking.wrIdCounter());
+        assertEq(lastUsedWrIdStart, sonicStaking.lastUsedWrId());
         assertEq(sonicStaking.stkS().balanceOf(user), depositAmount);
 
         uint256[] memory validatorIds = new uint256[](1);
@@ -323,13 +323,13 @@ contract SonicStakingTest is Test {
 
         vm.prank(user);
         sonicStaking.undelegate(undelegateAmount, validatorIds);
-        assertEq(sonicStaking.wrIdCounter(), 101);
+        assertEq(sonicStaking.lastUsedWrId(), 101);
 
         assertEq(totalDelegatedStart + delegateAmount1, sonicStaking.totalDelegated());
         assertEq(totalPoolStart + depositAmount - delegateAmount1 - undelegateAmount, sonicStaking.totalPool());
         assertEq(totalSWorthStart + depositAmount - undelegateAmount, sonicStaking.totalSWorth());
         assertEq(rateStart, sonicStaking.getRate());
-        assertEq(wrIdCounterStart + 1, sonicStaking.wrIdCounter());
+        assertEq(lastUsedWrIdStart + 1, sonicStaking.lastUsedWrId());
         assertEq(sonicStaking.stkS().balanceOf(user), depositAmount - undelegateAmount);
 
         // need to increase time to allow for withdrawal
@@ -337,17 +337,17 @@ contract SonicStakingTest is Test {
 
         uint256 balanceBefore = address(user).balance;
         vm.prank(user);
-        sonicStaking.withdraw(100, false);
+        sonicStaking.withdraw(101, false);
         assertEq(address(user).balance, balanceBefore + 1000 ether);
 
         assertEq(totalDelegatedStart + delegateAmount1, sonicStaking.totalDelegated());
         assertEq(totalPoolStart + depositAmount - delegateAmount1 - undelegateAmount, sonicStaking.totalPool());
         assertEq(totalSWorthStart + depositAmount - undelegateAmount, sonicStaking.totalSWorth());
         assertEq(rateStart, sonicStaking.getRate());
-        assertEq(wrIdCounterStart + 1, sonicStaking.wrIdCounter());
+        assertEq(lastUsedWrIdStart + 1, sonicStaking.lastUsedWrId());
         assertEq(sonicStaking.stkS().balanceOf(user), depositAmount - undelegateAmount);
 
-        (,,, bool isWithdrawn,,) = sonicStaking.allWithdrawalRequests(100);
+        (,,, bool isWithdrawn,,) = sonicStaking.allWithdrawalRequests(101);
         assertEq(isWithdrawn, true);
     }
 
@@ -449,12 +449,12 @@ contract SonicStakingTest is Test {
     function getAmounts()
         public
         view
-        returns (uint256 totalDelegated, uint256 totalPool, uint256 totalSWorth, uint256 rate, uint256 wrIdCounter)
+        returns (uint256 totalDelegated, uint256 totalPool, uint256 totalSWorth, uint256 rate, uint256 lastUsedWrId)
     {
         totalDelegated = sonicStaking.totalDelegated();
         totalPool = sonicStaking.totalPool();
         totalSWorth = sonicStaking.totalSWorth();
         rate = sonicStaking.getRate();
-        wrIdCounter = sonicStaking.wrIdCounter();
+        lastUsedWrId = sonicStaking.lastUsedWrId();
     }
 }
