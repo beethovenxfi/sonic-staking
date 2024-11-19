@@ -92,6 +92,11 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
     uint256 public totalPool;
 
+    /**
+     * The total amount of S that is pending withdrawal from the operator which will be withdrawn to the pool.
+     */
+    uint256 public pendingOperatorWithdrawal;
+
     uint256 public lastUsedWrId;
 
     event WithdrawalDelaySet(address indexed owner, uint256 delay);
@@ -144,9 +149,10 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      * Considers:
      *  - current staked S
      *  - current unstaked S
+     *  - pending operator withdrawals
      */
     function totalSWorth() public view returns (uint256) {
-        return totalPool + totalDelegated;
+        return totalPool + totalDelegated + pendingOperatorWithdrawal;
     }
 
     /**
@@ -205,7 +211,10 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      * @param amountToUndelegate the amount of S to undelegate from given validator
      * @param fromValidatorId the validator to undelegate from
      */
-    function undelegateToPool(uint256 amountToUndelegate, uint256 fromValidatorId) external onlyRole(OPERATOR_ROLE) {
+    function operatorUndelegateToPool(uint256 amountToUndelegate, uint256 fromValidatorId)
+        external
+        onlyRole(OPERATOR_ROLE)
+    {
         require(amountToUndelegate > 0, "ERR_ZERO_AMOUNT");
 
         uint256 delegatedAmount = currentDelegations[fromValidatorId];
@@ -214,16 +223,14 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         _undelegateFromValidator(fromValidatorId, amountToUndelegate);
 
-        // undelegateToPool has no effect on total S in the system and no stkS was burned.
-        // In order to keep the rate unchanged, we need to add amount to delegatedAmount again, because it was subtracted in _undelegateFromValidator
-        totalDelegated += amountToUndelegate;
+        pendingOperatorWithdrawal += amountToUndelegate;
     }
 
     /**
      * @notice Withdraw undelegated S to the pool
      * @param wrId the unique wrID for the undelegation request
      */
-    function withdrawToPool(uint256 wrId) external onlyRole(OPERATOR_ROLE) {
+    function operatorWithdrawToPool(uint256 wrId) external onlyRole(OPERATOR_ROLE) {
         WithdrawalRequest storage request = allWithdrawalRequests[wrId];
 
         require(request.requestTimestamp > 0, "ERR_WRID_INVALID");
@@ -240,7 +247,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         uint256 withdrawnAmount = address(this).balance - balanceBefore;
 
-        totalDelegated -= withdrawnAmount;
+        pendingOperatorWithdrawal -= withdrawnAmount;
         totalPool += withdrawnAmount;
     }
 
