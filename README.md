@@ -26,9 +26,8 @@ deploy to fork
 
 1. Add timelock for admin and test
 2. Think about dealing with slashed validators on an operator level, i.e. could operator withdraw and add funds at the same time to keep rate. Or could operator withdraw and let the rate decrease. Currently, the users pay it since they will withdraw less $S that what they are entitled to.
-3. Add test to withdraw from slashed validator (emergency withdraw)
-4. maybe change calc of the pool size to use balance(this) and keep track of pending withdrawals instead of tracking via variables.
-5. Should we track validators that we delegated to (instead of having `currentDelegations` and `totalDelegated`) and query the stake and pending rewards on chain? Could then also create a `claimAllRewards()` function. Would make rate calc more accurate and linear. Would make `currentDelegations` and `totalDelegated` obsolete as we would query SFC for that info. We wont have thousands of validators, max hunders. Dont think this is an issue with gas.
+3. maybe change calc of the pool size to use balance(this) and keep track of pending withdrawals instead of tracking via variables.
+4. Should we track validators that we delegated to (instead of having `currentDelegations` and `totalDelegated`) and query the stake and pending rewards on chain? Could then also create a `claimAllRewards()` function. Would make rate calc more accurate and linear. Would make `currentDelegations` and `totalDelegated` obsolete as we would query SFC for that info. We wont have thousands of validators, max hunders. Dont think this is an issue with gas.
 
 ## SFC
 
