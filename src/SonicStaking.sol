@@ -95,15 +95,15 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     uint256 public lastUsedWrId;
 
     event WithdrawalDelaySet(address indexed owner, uint256 delay);
-    event LogUndelegatePausedUpdated(address indexed owner, bool newValue);
-    event LogWithdrawPausedUpdated(address indexed owner, bool newValue);
-    event LogRewardClaimPausedUpdated(address indexed owner, bool newValue);
-    event LogDepositLimitUpdated(address indexed owner, uint256 min, uint256 max);
+    event UndelegatePausedUpdated(address indexed owner, bool newValue);
+    event WithdrawPausedUpdated(address indexed owner, bool newValue);
+    event RewardClaimPausedUpdated(address indexed owner, bool newValue);
+    event DepositLimitUpdated(address indexed owner, uint256 min, uint256 max);
 
-    event LogDeposited(address indexed user, uint256 amount, uint256 stkSAmount);
-    event LogDelegated(uint256 indexed toValidator, uint256 amount);
-    event LogUndelegated(address indexed user, uint256 wrID, uint256 amountS, uint256 fromValidator);
-    event LogWithdrawn(address indexed user, uint256 wrID, uint256 totalAmount, bool emergency);
+    event Deposited(address indexed user, uint256 amount, uint256 stkSAmount);
+    event Delegated(uint256 indexed toValidator, uint256 amount);
+    event Undelegated(address indexed user, uint256 wrID, uint256 amountS, uint256 fromValidator);
+    event Withdrawn(address indexed user, uint256 wrID, uint256 totalAmount, bool emergency);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -197,7 +197,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         currentDelegations[toValidatorId] += amount;
         totalDelegated += amount;
 
-        emit LogDelegated(toValidatorId, amount);
+        emit Delegated(toValidatorId, amount);
     }
 
     /**
@@ -260,7 +260,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     function setUndelegatePaused(bool desiredValue) external onlyRole(OPERATOR_ROLE) {
         require(undelegatePaused != desiredValue, "ERR_ALREADY_DESIRED_VALUE");
         undelegatePaused = desiredValue;
-        emit LogUndelegatePausedUpdated(msg.sender, desiredValue);
+        emit UndelegatePausedUpdated(msg.sender, desiredValue);
     }
 
     /**
@@ -270,7 +270,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     function setWithdrawPaused(bool desiredValue) external onlyRole(OPERATOR_ROLE) {
         require(withdrawPaused != desiredValue, "ERR_ALREADY_DESIRED_VALUE");
         withdrawPaused = desiredValue;
-        emit LogWithdrawPausedUpdated(msg.sender, desiredValue);
+        emit WithdrawPausedUpdated(msg.sender, desiredValue);
     }
 
     /**
@@ -280,13 +280,13 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     function setRewardClaimPaused(bool desiredValue) external onlyRole(OPERATOR_ROLE) {
         require(rewardClaimPaused != desiredValue, "ERR_ALREADY_DESIRED_VALUE");
         rewardClaimPaused = desiredValue;
-        emit LogRewardClaimPausedUpdated(msg.sender, desiredValue);
+        emit RewardClaimPausedUpdated(msg.sender, desiredValue);
     }
 
     function setDepositLimits(uint256 min, uint256 max) external onlyRole(OPERATOR_ROLE) {
         minDeposit = min;
         maxDeposit = max;
-        emit LogDepositLimitUpdated(msg.sender, min, max);
+        emit DepositLimitUpdated(msg.sender, min, max);
     }
 
     /**
@@ -325,7 +325,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         totalPool += amount;
 
-        emit LogDeposited(msg.sender, msg.value, stkSAmount);
+        emit Deposited(msg.sender, msg.value, stkSAmount);
     }
 
     /**
@@ -419,7 +419,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         (bool withdrawnToUser,) = user.call{value: request.amountS}("");
         require(withdrawnToUser, "Failed to withdraw S to user");
 
-        emit LogWithdrawn(user, wrId, request.amountS, emergency);
+        emit Withdrawn(user, wrId, request.amountS, emergency);
     }
 
     /**
@@ -487,7 +487,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         totalDelegated -= amount;
         lastUsedWrId = wrId;
 
-        emit LogUndelegated(msg.sender, wrId, amount, validatorId);
+        emit Undelegated(msg.sender, wrId, amount, validatorId);
     }
 
     /**
@@ -510,7 +510,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         totalPool -= amount;
         lastUsedWrId = wrId;
 
-        emit LogUndelegated(msg.sender, wrId, amount, 0);
+        emit Undelegated(msg.sender, wrId, amount, 0);
     }
 
     function _now() internal view returns (uint256) {
