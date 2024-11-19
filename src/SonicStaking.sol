@@ -94,7 +94,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
     uint256 public lastUsedWrId;
 
-    event LogWithdrawalDelaySet(address indexed owner, uint256 delay);
+    event WithdrawalDelaySet(address indexed owner, uint256 delay);
     event LogUndelegatePausedUpdated(address indexed owner, bool newValue);
     event LogWithdrawPausedUpdated(address indexed owner, bool newValue);
     event LogRewardClaimPausedUpdated(address indexed owner, bool newValue);
@@ -250,7 +250,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
     function setWithdrawalDelay(uint256 delay) external onlyRole(OPERATOR_ROLE) {
         withdrawalDelay = delay;
-        emit LogWithdrawalDelaySet(msg.sender, delay);
+        emit WithdrawalDelaySet(msg.sender, delay);
     }
 
     /**
