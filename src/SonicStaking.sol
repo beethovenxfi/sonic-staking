@@ -40,8 +40,6 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
     mapping(uint256 withdrawId => WithdrawalRequest request) public allWithdrawalRequests;
 
-    mapping(uint256 validatorId => uint256 amountDelegated) public currentDelegations;
-
     /**
      * @dev A reference to the StkS ERC20 token contract
      */
@@ -200,7 +198,6 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         SFC.delegate{value: amount}(toValidatorId);
 
-        currentDelegations[toValidatorId] += amount;
         totalDelegated += amount;
 
         emit Delegated(toValidatorId, amount);
@@ -217,7 +214,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     {
         require(amountToUndelegate > 0, "ERR_ZERO_AMOUNT");
 
-        uint256 delegatedAmount = currentDelegations[fromValidatorId];
+        uint256 delegatedAmount = SFC.getStake(address(this), fromValidatorId);
         require(delegatedAmount > 0, "ERR_NO_DELEGATION");
         require(amountToUndelegate <= delegatedAmount, "ERR_AMOUNT_TOO_HIGH");
 
@@ -362,7 +359,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         }
 
         for (uint256 i = 0; i < fromValidators.length; i++) {
-            uint256 delegatedAmount = currentDelegations[fromValidators[i]];
+            uint256 delegatedAmount = SFC.getStake(address(this), fromValidators[i]);
             require(delegatedAmount > 0, "ERR_NO_DELEGATION");
 
             if (amountToUndelegate > 0) {
@@ -490,7 +487,6 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         SFC.undelegate(validatorId, wrId, amount);
 
-        currentDelegations[validatorId] -= amount;
         totalDelegated -= amount;
         lastUsedWrId = wrId;
 

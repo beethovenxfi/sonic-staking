@@ -78,18 +78,18 @@ contract SonicStakingTest is Test {
     function testUndelegateToPoolRevert() public {
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert("ERR_ZERO_AMOUNT");
-        sonicStaking.undelegateToPool(0, 1);
+        sonicStaking.operatorUndelegateToPool(0, 1);
 
         makeDeposit(100 ether);
         delegate(100 ether, 1);
 
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert("ERR_NO_DELEGATION");
-        sonicStaking.undelegateToPool(100 ether, 2);
+        sonicStaking.operatorUndelegateToPool(100 ether, 2);
 
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert("ERR_AMOUNT_TOO_HIGH");
-        sonicStaking.undelegateToPool(1000 ether, 1);
+        sonicStaking.operatorUndelegateToPool(1000 ether, 1);
     }
 
     function makeDeposit(uint256 amount) public returns (address) {

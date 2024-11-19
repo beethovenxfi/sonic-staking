@@ -121,7 +121,6 @@ contract SonicStakingTest is Test {
         assertEq(sonicStaking.totalPool(), depositAmount - delegateAmount);
         assertEq(sonicStaking.totalDelegated(), delegateAmount);
         assertEq(sonicStaking.totalSWorth(), depositAmount);
-        assertEq(sonicStaking.currentDelegations(toValidatorId), delegateAmount);
         assertEq(SFC.getStake(address(sonicStaking), toValidatorId), delegateAmount);
 
         assertEq(sonicStaking.getRate(), rateBefore);
@@ -138,7 +137,6 @@ contract SonicStakingTest is Test {
         delegate(delegateAmount, toValidatorId);
 
         assertEq(sonicStaking.totalDelegated(), delegateAmount);
-        assertEq(sonicStaking.currentDelegations(toValidatorId), delegateAmount);
         assertEq(sonicStaking.totalSWorth(), depositAmount);
         assertEq(sonicStaking.totalPool(), depositAmount - delegateAmount);
         assertEq(SFC.getStake(address(sonicStaking), toValidatorId), delegateAmount);
@@ -149,7 +147,6 @@ contract SonicStakingTest is Test {
         delegate(delegateAmount, toValidatorId);
 
         assertEq(sonicStaking.totalDelegated(), delegateAmount * 2);
-        assertEq(sonicStaking.currentDelegations(toValidatorId), delegateAmount * 2);
         assertEq(sonicStaking.totalSWorth(), depositAmount);
         assertEq(sonicStaking.totalPool(), depositAmount - delegateAmount * 2);
         assertEq(SFC.getStake(address(sonicStaking), toValidatorId), delegateAmount * 2);
@@ -168,7 +165,6 @@ contract SonicStakingTest is Test {
         delegate(delegateAmount1, toValidatorId1);
 
         assertEq(sonicStaking.totalDelegated(), delegateAmount1);
-        assertEq(sonicStaking.currentDelegations(toValidatorId1), delegateAmount1);
         assertEq(sonicStaking.totalSWorth(), depositAmount);
         assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), delegateAmount1);
 
@@ -178,8 +174,6 @@ contract SonicStakingTest is Test {
         delegate(delegateAmount2, toValidatorId2);
 
         assertEq(sonicStaking.totalDelegated(), delegateAmount1 + delegateAmount2);
-        assertEq(sonicStaking.currentDelegations(toValidatorId2), delegateAmount2);
-        assertEq(sonicStaking.currentDelegations(toValidatorId1), delegateAmount1);
         assertEq(sonicStaking.totalSWorth(), depositAmount);
         assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), delegateAmount1);
         assertEq(SFC.getStake(address(sonicStaking), toValidatorId2), delegateAmount2);
@@ -209,8 +203,8 @@ contract SonicStakingTest is Test {
         sonicStaking.undelegate(undelegateAmount, validatorIds);
 
         assertEq(sonicStaking.totalDelegated(), delegateAmount1 + delegateAmount2);
-        assertEq(sonicStaking.currentDelegations(toValidatorId1), delegateAmount1);
-        assertEq(sonicStaking.currentDelegations(toValidatorId2), delegateAmount2);
+        assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), delegateAmount1);
+        assertEq(SFC.getStake(address(sonicStaking), toValidatorId2), delegateAmount2);
         assertEq(sonicStaking.totalPool(), depositAmount - delegateAmount1 - delegateAmount2 - undelegateAmount);
         assertEq(sonicStaking.stkS().balanceOf(user), depositAmount - undelegateAmount);
 
@@ -253,8 +247,8 @@ contract SonicStakingTest is Test {
         assertEq(
             sonicStaking.totalDelegated(), delegateAmount1 + delegateAmount2 - (undelegateAmount - undelegatedFromPool)
         );
-        assertEq(sonicStaking.currentDelegations(toValidatorId1), 0);
-        assertEq(sonicStaking.currentDelegations(toValidatorId2), 2000 ether);
+        assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), 0);
+        assertEq(SFC.getStake(address(sonicStaking), toValidatorId2), 2000 ether);
         assertEq(sonicStaking.totalPool(), 0);
         assertEq(sonicStaking.stkS().balanceOf(user), depositAmount - undelegateAmount);
 

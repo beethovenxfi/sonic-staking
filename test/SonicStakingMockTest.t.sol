@@ -163,9 +163,9 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         delegate(delegateAmount, toValidatorId);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.undelegateToPool(undelegateAmount, 1);
+        sonicStaking.operatorUndelegateToPool(undelegateAmount, 1);
 
-        assertEq(totalDelegatedStart + delegateAmount, sonicStaking.totalDelegated());
+        assertEq(totalDelegatedStart, sonicStaking.totalDelegated());
         assertEq(totalPoolStart + depositAmount - delegateAmount, sonicStaking.totalPool());
         assertEq(totalSWorthStart + depositAmount, sonicStaking.totalSWorth());
         assertEq(rateStart, sonicStaking.getRate());
@@ -175,7 +175,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         vm.warp(block.timestamp + 14 days);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.withdrawToPool(101);
+        sonicStaking.operatorWithdrawToPool(101);
 
         assertEq(totalDelegatedStart, sonicStaking.totalDelegated());
         assertEq(totalPoolStart + depositAmount, sonicStaking.totalPool());
