@@ -229,6 +229,42 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertApproxEqAbs(stakedS.balanceOf(newUser) * sonicStaking.getRate() / 1e18, newUserDepositAmount, 1); // balance multiplied by rate should be equal to deposit amount
     }
 
+    function testEmergencyWithdraw() public {
+        // make sure we have a delegation that can be slashed
+        uint256 depositAmount = 1000 ether;
+        uint256 delegateAmount = 1000 ether;
+        uint256 toValidatorId = 1;
+        address user = makeDeposit(depositAmount);
+        delegate(delegateAmount, toValidatorId);
+
+        // slash the validator (slash half of the stake)
+        sfcMock.setCheater(toValidatorId, true);
+        sfcMock.setSlashRefundRatio(toValidatorId, 5 * 1e17);
+
+        // undelegate from slashed validator
+        uint256[] memory validatorIds = new uint256[](1);
+        validatorIds[0] = 1;
+
+        vm.prank(user);
+        sonicStaking.undelegate(delegateAmount, validatorIds);
+        assertEq(sonicStaking.lastUsedWrId(), 101);
+
+        // need to increase time to allow for withdrawal
+        vm.warp(block.timestamp + 14 days);
+
+        uint256 balanceBefore = address(user).balance;
+
+        // do not emergency withdraw, will revert
+        vm.prank(user);
+        vm.expectRevert("ERR_NOT_ENOUGH_S");
+        sonicStaking.withdraw(101, false);
+
+        // emergency withdraw
+        vm.prank(user);
+        sonicStaking.withdraw(101, true);
+        assertApproxEqAbs(address(user).balance, balanceBefore + 500 ether, 1);
+    }
+
     function getState()
         public
         view

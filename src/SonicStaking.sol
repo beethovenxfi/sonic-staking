@@ -411,7 +411,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         }
 
         // can never get more S than what is owed
-        require(request.amountS <= withdrawnAmount, "ERR_WITHDRAWN_AMOUNT_TOO_HIGH");
+        require(withdrawnAmount <= request.amountS, "ERR_WITHDRAWN_AMOUNT_TOO_HIGH");
 
         if (!emergency) {
             // protection against deleting the withdrawal request and going back with less S than what is owned
@@ -420,7 +420,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         }
 
         // do transfer after marking as withdrawn to protect against re-entrancy
-        (bool withdrawnToUser,) = user.call{value: request.amountS}("");
+        (bool withdrawnToUser,) = user.call{value: withdrawnAmount}("");
         require(withdrawnToUser, "Failed to withdraw S to user");
 
         emit Withdrawn(user, wrId, request.amountS, emergency);

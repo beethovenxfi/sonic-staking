@@ -61,8 +61,9 @@ contract SFCMock is ISFC {
 
     mapping(uint256 => mapping(uint256 => uint256)) public epochAccumulatedRewardPerToken;
 
-    mapping(uint256 => uint256) public _slashingRefundRatio;
-    mapping(uint256 => bool) public _isSlashed;
+    // validator ID -> slashing refund ratio (allows to withdraw slashed stake)
+    mapping(uint256 validatorID => uint256 refundRatio) public slashingRefundRatio;
+    mapping(uint256 validatorID => bool isCheater) public cheaters;
 
     function currentEpoch() external view override returns (uint256) {
         return _currentEpoch;
@@ -103,6 +104,34 @@ contract SFCMock is ISFC {
     function withdraw(uint256 toValidatorID, uint256 wrID) external override {
         uint256 amount = _pendingWithdrawal[wrID];
         _pendingWithdrawal[wrID] = 0;
-        payable(msg.sender).transfer(amount);
+
+        uint256 penalty = getSlashingPenalty(amount, cheaters[toValidatorID], slashingRefundRatio[toValidatorID]);
+
+        payable(msg.sender).transfer(amount - penalty);
+    }
+
+    /// Get slashing penalty for a stake.
+    function getSlashingPenalty(uint256 amount, bool isCheater, uint256 refundRatio)
+        internal
+        pure
+        returns (uint256 penalty)
+    {
+        if (!isCheater || refundRatio >= 1e18) {
+            return 0;
+        }
+        // round penalty upwards (ceiling) to prevent dust amount attacks
+        penalty = (amount * (1e18 - refundRatio)) / 1e18 + 1;
+        if (penalty > amount) {
+            return amount;
+        }
+        return penalty;
+    }
+
+    function setCheater(uint256 validatorID, bool _isCheater) external {
+        cheaters[validatorID] = _isCheater;
+    }
+
+    function setSlashRefundRatio(uint256 validatorID, uint256 _refundRatio) external {
+        slashingRefundRatio[validatorID] = _refundRatio;
     }
 }
