@@ -95,7 +95,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
     uint256 public pendingOperatorWithdrawal;
 
-    uint256 public lastUsedWrId;
+    uint256 public withdrawCounter;
 
     event WithdrawalDelaySet(address indexed owner, uint256 delay);
     event UndelegatePausedUpdated(address indexed owner, bool newValue);
@@ -132,7 +132,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         withdrawPaused = false;
         rewardClaimPaused = false;
         protocolFeeBIPS = 1000;
-        lastUsedWrId = 100;
+        withdrawCounter = 100;
     }
 
     /**
@@ -474,8 +474,8 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
     function _undelegateFromValidator(uint256 validatorId, uint256 amount) internal {
         // create a new withdrawal request
-        uint256 wrId = lastUsedWrId + 1;
-        WithdrawalRequest storage request = allWithdrawalRequests[wrId];
+        uint256 withdrawId = _incrementWithdrawCounter();
+        WithdrawalRequest storage request = allWithdrawalRequests[withdrawId];
         require(request.requestTimestamp == 0, "ERR_WRID_ALREADY_USED");
 
         request.kind = WithdrawalKind.VALIDATOR;
@@ -485,12 +485,11 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         request.validatorId = validatorId;
         request.isWithdrawn = false;
 
-        SFC.undelegate(validatorId, wrId, amount);
+        SFC.undelegate(validatorId, withdrawId, amount);
 
         totalDelegated -= amount;
-        lastUsedWrId = wrId;
 
-        emit Undelegated(msg.sender, wrId, amount, validatorId);
+        emit Undelegated(msg.sender, withdrawId, amount, validatorId);
     }
 
     /**
@@ -499,8 +498,8 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
     function _undelegateFromPool(uint256 amount) internal {
         // create a new withdrawal request
-        uint256 wrId = lastUsedWrId + 1;
-        WithdrawalRequest storage request = allWithdrawalRequests[wrId];
+        uint256 withdrawId = _incrementWithdrawCounter();
+        WithdrawalRequest storage request = allWithdrawalRequests[withdrawId];
         require(request.requestTimestamp == 0, "ERR_WRID_ALREADY_USED");
 
         request.kind = WithdrawalKind.POOL;
@@ -511,13 +510,18 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         request.isWithdrawn = false;
 
         totalPool -= amount;
-        lastUsedWrId = wrId;
 
-        emit Undelegated(msg.sender, wrId, amount, 0);
+        emit Undelegated(msg.sender, withdrawId, amount, 0);
     }
 
     function _now() internal view returns (uint256) {
         return block.timestamp;
+    }
+
+    function _incrementWithdrawCounter() internal returns (uint256) {
+        withdrawCounter++;
+
+        return withdrawCounter;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

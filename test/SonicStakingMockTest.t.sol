@@ -119,7 +119,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         vm.prank(user);
         sonicStaking.undelegate(undelegateAmount, validatorIds);
-        assertEq(sonicStaking.lastUsedWrId(), 102);
+        assertEq(sonicStaking.withdrawCounter(), 102);
 
         // need to increase time to allow for withdrawal
         vm.warp(block.timestamp + 14 days);
@@ -169,7 +169,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(totalPoolStart + depositAmount - delegateAmount, sonicStaking.totalPool());
         assertEq(totalSWorthStart + depositAmount, sonicStaking.totalSWorth());
         assertEq(rateStart, sonicStaking.getRate());
-        assertEq(lastUsedWrIdStart + 1, sonicStaking.lastUsedWrId());
+        assertEq(lastUsedWrIdStart + 1, sonicStaking.withdrawCounter());
 
         // need to increase time to allow for withdrawal
         vm.warp(block.timestamp + 14 days);
@@ -181,7 +181,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(totalPoolStart + depositAmount, sonicStaking.totalPool());
         assertEq(totalSWorthStart + depositAmount, sonicStaking.totalSWorth());
         assertEq(rateStart, sonicStaking.getRate());
-        assertEq(lastUsedWrIdStart + 1, sonicStaking.lastUsedWrId());
+        assertEq(lastUsedWrIdStart + 1, sonicStaking.withdrawCounter());
     }
 
     function testConversionRate() public {
@@ -247,7 +247,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         vm.prank(user);
         sonicStaking.undelegate(delegateAmount, validatorIds);
-        assertEq(sonicStaking.lastUsedWrId(), 101);
+        assertEq(sonicStaking.withdrawCounter(), 101);
 
         // need to increase time to allow for withdrawal
         vm.warp(block.timestamp + 14 days);
@@ -274,6 +274,6 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         totalPool = sonicStaking.totalPool();
         totalSWorth = sonicStaking.totalSWorth();
         rate = sonicStaking.getRate();
-        lastUsedWrId = sonicStaking.lastUsedWrId();
+        lastUsedWrId = sonicStaking.withdrawCounter();
     }
 }
