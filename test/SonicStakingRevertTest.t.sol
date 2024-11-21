@@ -42,7 +42,7 @@ contract SonicStakingTest is Test {
         sonicStaking =
             sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
 
-        stakedS = sonicStaking.stkS();
+        stakedS = sonicStaking.wrapped();
 
         try stakedS.renounceRole(stakedS.MINTER_ROLE(), address(this)) {
             console.log("renounce minter role");

@@ -30,15 +30,15 @@ contract SonicStakingUpgradeTest is Test, SonicStakingTest {
         sonicStaking =
             sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
 
-        stakedS = sonicStaking.stkS();
+        wrapped = sonicStaking.wrapped();
 
         // somehow the renouncing in the DeploySonicStaking script doesn't work when called from the test, so we renounce here
-        try stakedS.renounceRole(stakedS.MINTER_ROLE(), address(this)) {
+        try wrapped.renounceRole(wrapped.MINTER_ROLE(), address(this)) {
             console.log("renounce minter role");
         } catch (bytes memory) {
             console.log("fail renounce minter role");
         }
-        try stakedS.renounceRole(stakedS.DEFAULT_ADMIN_ROLE(), address(this)) {
+        try wrapped.renounceRole(wrapped.DEFAULT_ADMIN_ROLE(), address(this)) {
             console.log("renounce admin role");
         } catch (bytes memory) {
             console.log("fail renounce admin role");

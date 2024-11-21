@@ -32,7 +32,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     struct WithdrawalRequest {
         WithdrawalKind kind;
         uint256 validatorId;
-        uint256 amountS;
+        uint256 assetAmount;
         bool isWithdrawn;
         uint256 requestTimestamp;
         address user;
@@ -41,9 +41,9 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     mapping(uint256 withdrawId => WithdrawalRequest request) public allWithdrawalRequests;
 
     /**
-     * @dev A reference to the StkS ERC20 token contract
+     * @dev A reference to the wrapped asset ERC20 token contract
      */
-    StakedS public stkS;
+    StakedS public wrapped;
 
     /**
      * @dev A reference to the SFC contract
@@ -76,22 +76,17 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     bool public rewardClaimPaused;
 
     /**
-     * The next timestamp eligible for locking
-     */
-    uint256 public nextEligibleTimestamp;
-
-    /**
-     * The total Ss staked and locked
+     * The total assets delegated to validators
      */
     uint256 public totalDelegated;
 
     /**
-     * The total S that is in the pool and to be staked/locked
+     * The total assets that is in the pool
      */
     uint256 public totalPool;
 
     /**
-     * The total amount of S that is pending withdrawal from the operator which will be withdrawn to the pool.
+     * The total amount of asset that is pending withdrawal from the operator which will be withdrawn to the pool.
      */
     uint256 public pendingOperatorWithdrawal;
 
@@ -103,26 +98,26 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     event RewardClaimPausedUpdated(address indexed owner, bool newValue);
     event DepositLimitUpdated(address indexed owner, uint256 min, uint256 max);
 
-    event Deposited(address indexed user, uint256 amount, uint256 stkSAmount);
-    event Delegated(uint256 indexed toValidator, uint256 amount);
-    event Undelegated(address indexed user, uint256 wrID, uint256 amountS, uint256 fromValidator);
-    event Withdrawn(address indexed user, uint256 wrID, uint256 totalAmount, bool emergency);
+    event Deposited(address indexed user, uint256 assetAmount, uint256 wrappedAmount);
+    event Delegated(uint256 indexed toValidator, uint256 assetAmount);
+    event Undelegated(address indexed user, uint256 wrID, uint256 assetAmount, uint256 fromValidator);
+    event Withdrawn(address indexed user, uint256 wrID, uint256 assetAmount, bool emergency);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
     /**
      * @notice Initializer
-     * @param _stks_ the address of the FTM token contract (is NOT modifiable)
+     * @param _wrappedToken_ the address of the wrapped token contract (is NOT modifiable)
      * @param _sfc_ the address of the SFC contract (is NOT modifiable)
      * @param _treasury_ The address of the treasury where fees are sent to (is modifiable)
      */
-    function initialize(StakedS _stks_, ISFC _sfc_, address _treasury_) public initializer {
+    function initialize(StakedS _wrappedToken_, ISFC _sfc_, address _treasury_) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
-        stkS = _stks_;
+        wrapped = _wrappedToken_;
         SFC = _sfc_;
         treasury = _treasury_;
         withdrawalDelay = 604800 * 2; // 14 days
@@ -142,42 +137,42 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
 
     /**
-     * @notice Returns the current S worth of the protocol
+     * @notice Returns the current asset worth of the protocol
      *
      * Considers:
-     *  - current staked S
-     *  - current unstaked S
+     *  - current staked assets
+     *  - current delegated assets
      *  - pending operator withdrawals
      */
-    function totalSWorth() public view returns (uint256) {
+    function totalAssets() public view returns (uint256) {
         return totalPool + totalDelegated + pendingOperatorWithdrawal;
     }
 
     /**
-     * @notice Returns the amount of S equivalent 1 StkS (with 18 decimals)
+     * @notice Returns the amount of asset equivalent 1 wrapped asset (with 18 decimals)
      */
     function getRate() public view returns (uint256) {
-        uint256 totalS = totalSWorth();
-        uint256 totalStkS = stkS.totalSupply();
+        uint256 assetTotal = totalAssets();
+        uint256 totalWrapped = wrapped.totalSupply();
 
-        if (totalS == 0 || totalStkS == 0) {
+        if (assetTotal == 0 || totalWrapped == 0) {
             return 1 * DECIMAL_UNIT;
         }
-        return (totalS * DECIMAL_UNIT) / totalStkS;
+        return (assetTotal * DECIMAL_UNIT) / totalWrapped;
     }
 
     /**
-     * @notice Returns the amount of StkS equivalent to the provided S
-     * @param sAmount the amount of S
+     * @notice Returns the amount of wrapped asset equivalent to the provided asset
+     * @param assetAmount the amount of asset to convert
      */
-    function getStkSAmountForS(uint256 sAmount) public view returns (uint256) {
-        uint256 totalS = totalSWorth();
-        uint256 totalStkS = stkS.totalSupply();
+    function convertToShares(uint256 assetAmount) public view returns (uint256) {
+        uint256 assetTotal = totalAssets();
+        uint256 totalWrapped = wrapped.totalSupply();
 
-        if (totalS == 0 || totalStkS == 0) {
-            return sAmount;
+        if (assetTotal == 0 || totalWrapped == 0) {
+            return assetAmount;
         }
-        return (sAmount * totalStkS) / totalS;
+        return (assetAmount * totalWrapped) / assetTotal;
     }
 
     /**
@@ -187,8 +182,8 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
 
     /**
-     * @notice Delegate from the pool to a specific validator for MAX_LOCKUP_DURATION
-     * @param amount the amount to lock
+     * @notice Delegate from the pool to a specific validator
+     * @param amount the amount to delegate
      * @param toValidatorId the ID of the validator to delegate to
      */
     function delegate(uint256 amount, uint256 toValidatorId) external onlyRole(OPERATOR_ROLE) {
@@ -204,8 +199,8 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     }
 
     /**
-     * @notice Undelegate StkS, corresponding S can then be withdrawn to the pool after `withdrawalDelay`
-     * @param amountToUndelegate the amount of S to undelegate from given validator
+     * @notice Undelegate assets, assets can then be withdrawn to the pool after `withdrawalDelay`
+     * @param amountToUndelegate the amount of assets to undelegate from given validator
      * @param fromValidatorId the validator to undelegate from
      */
     function operatorUndelegateToPool(uint256 amountToUndelegate, uint256 fromValidatorId)
@@ -224,7 +219,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     }
 
     /**
-     * @notice Withdraw undelegated S to the pool
+     * @notice Withdraw undelegated assets to the pool
      * @param wrId the unique wrID for the undelegation request
      */
     function operatorWithdrawToPool(uint256 wrId) external onlyRole(OPERATOR_ROLE) {
@@ -318,31 +313,31 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
 
     /**
-     * @notice Deposit S, and mint StkS
+     * @notice Deposit assets, and mint wrapped assets
      */
     function deposit() external payable {
         uint256 amount = msg.value;
         require(amount >= minDeposit && amount <= maxDeposit, "ERR_AMOUNT_OUTSIDE_LIMITS");
 
-        uint256 stkSAmount = getStkSAmountForS(amount);
-        stkS.mint(msg.sender, stkSAmount);
+        uint256 wrappedAmount = convertToShares(amount);
+        wrapped.mint(msg.sender, wrappedAmount);
 
         totalPool += amount;
 
-        emit Deposited(msg.sender, msg.value, stkSAmount);
+        emit Deposited(msg.sender, msg.value, wrappedAmount);
     }
 
     /**
-     * @notice Undelegate StkS, corresponding S can then be withdrawn after `withdrawalDelay`
-     * @param amountStkS the amount of StkS to undelegate
+     * @notice Undelegate asset, assets can then be withdrawn after `withdrawalDelay`
+     * @param amountWrappedAsset the amount of wrapped asset to undelegate
      * @param fromValidators an array of validator IDs to undelegate from
      */
-    function undelegate(uint256 amountStkS, uint256[] calldata fromValidators) external {
+    function undelegate(uint256 amountWrappedAsset, uint256[] calldata fromValidators) external {
         require(!undelegatePaused, "ERR_UNDELEGATE_IS_PAUSED");
-        require(amountStkS > 0, "ERR_ZERO_AMOUNT");
+        require(amountWrappedAsset > 0, "ERR_ZERO_AMOUNT");
 
-        uint256 amountToUndelegate = (getRate() * amountStkS) / DECIMAL_UNIT;
-        stkS.burnFrom(msg.sender, amountStkS);
+        uint256 amountToUndelegate = (getRate() * amountWrappedAsset) / DECIMAL_UNIT;
+        wrapped.burnFrom(msg.sender, amountWrappedAsset);
 
         // undelegate from the pool first
         if (totalPool > 0) {
@@ -382,14 +377,14 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     }
 
     /**
-     * @notice Withdraw undelegated S
-     * @param wrId the unique wrID for the undelegation request
-     * @param emergency flag to withdraw without checking the amount, risk to get less S than what is owed
+     * @notice Withdraw undelegated assets
+     * @param withdrawId the unique wrID for the undelegation request
+     * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
-    function withdraw(uint256 wrId, bool emergency) external {
+    function withdraw(uint256 withdrawId, bool emergency) external {
         require(!withdrawPaused, "ERR_WITHDRAW_IS_PAUSED");
 
-        WithdrawalRequest storage request = allWithdrawalRequests[wrId];
+        WithdrawalRequest storage request = allWithdrawalRequests[withdrawId];
 
         require(request.requestTimestamp > 0, "ERR_WRID_INVALID");
         require(_now() >= request.requestTimestamp + withdrawalDelay, "ERR_NOT_ENOUGH_TIME_PASSED");
@@ -404,26 +399,26 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         uint256 withdrawnAmount = 0;
 
         if (request.kind == WithdrawalKind.POOL) {
-            withdrawnAmount = request.amountS;
+            withdrawnAmount = request.assetAmount;
         } else {
-            SFC.withdraw(request.validatorId, wrId);
+            SFC.withdraw(request.validatorId, withdrawId);
             withdrawnAmount = address(this).balance - balanceBefore;
         }
 
-        // can never get more S than what is owed
-        require(withdrawnAmount <= request.amountS, "ERR_WITHDRAWN_AMOUNT_TOO_HIGH");
+        // can never get more assets than what is owed
+        require(withdrawnAmount <= request.assetAmount, "ERR_WITHDRAWN_AMOUNT_TOO_HIGH");
 
         if (!emergency) {
-            // protection against deleting the withdrawal request and going back with less S than what is owned
+            // protection against deleting the withdrawal request and going back with less assets than what is owned
             // can be bypassed by setting emergency to true
-            require(request.amountS == withdrawnAmount, "ERR_NOT_ENOUGH_S");
+            require(request.assetAmount == withdrawnAmount, "ERR_NOT_ENOUGH_ASSETS");
         }
 
         // do transfer after marking as withdrawn to protect against re-entrancy
         (bool withdrawnToUser,) = user.call{value: withdrawnAmount}("");
-        require(withdrawnToUser, "Failed to withdraw S to user");
+        require(withdrawnToUser, "Failed to withdraw asset to user");
 
-        emit Withdrawn(user, wrId, request.amountS, emergency);
+        emit Withdrawn(user, withdrawId, request.assetAmount, emergency);
     }
 
     /**
@@ -470,7 +465,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     /**
      * @notice Undelegate from the validator.
      * @param validatorId the validator to undelegate
-     * @param amount the amount to unlock
+     * @param amount the amount to undelegate
      */
     function _undelegateFromValidator(uint256 validatorId, uint256 amount) internal {
         // create a new withdrawal request
@@ -481,7 +476,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         request.kind = WithdrawalKind.VALIDATOR;
         request.requestTimestamp = _now();
         request.user = msg.sender;
-        request.amountS = amount;
+        request.assetAmount = amount;
         request.validatorId = validatorId;
         request.isWithdrawn = false;
 
@@ -494,7 +489,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
     /**
      * @notice Undelegate from the pool.
-     * @param amount the amount to unlock
+     * @param amount the amount to undelegate
      */
     function _undelegateFromPool(uint256 amount) internal {
         // create a new withdrawal request
@@ -505,7 +500,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         request.kind = WithdrawalKind.POOL;
         request.requestTimestamp = _now();
         request.user = msg.sender;
-        request.amountS = amount;
+        request.assetAmount = amount;
         request.validatorId = 0;
         request.isWithdrawn = false;
 
@@ -527,7 +522,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
-     * @notice To receive S rewards from SFC
+     * @notice To receive native asset rewards from SFC
      */
     receive() external payable {}
 }

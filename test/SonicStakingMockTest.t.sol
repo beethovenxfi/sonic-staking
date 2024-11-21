@@ -28,15 +28,15 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking =
             sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
 
-        stakedS = sonicStaking.stkS();
+        wrapped = sonicStaking.wrapped();
 
         // somehow the renouncing in the DeploySonicStaking script doesn't work when called from the test, so we renounce here
-        try stakedS.renounceRole(stakedS.MINTER_ROLE(), address(this)) {
+        try wrapped.renounceRole(wrapped.MINTER_ROLE(), address(this)) {
             console.log("renounce minter role");
         } catch (bytes memory) {
             console.log("fail renounce minter role");
         }
-        try stakedS.renounceRole(stakedS.DEFAULT_ADMIN_ROLE(), address(this)) {
+        try wrapped.renounceRole(wrapped.DEFAULT_ADMIN_ROLE(), address(this)) {
             console.log("renounce admin role");
         } catch (bytes memory) {
             console.log("fail renounce admin role");
@@ -83,7 +83,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 treasuryBalanceBefore = TREASURY_ADDRESS.balance;
         uint256 rateBefore = sonicStaking.getRate();
         uint256 poolBefore = sonicStaking.totalPool();
-        uint256 totalSWorthBefore = sonicStaking.totalSWorth();
+        uint256 totalSWorthBefore = sonicStaking.totalAssets();
 
         assertEq(rateBefore, 1 ether);
 
@@ -97,7 +97,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(TREASURY_ADDRESS.balance - treasuryBalanceBefore, protocolFee);
 
         assertEq(sonicStaking.totalPool(), poolBefore + (100 ether - protocolFee));
-        assertEq(sonicStaking.totalSWorth(), totalSWorthBefore + (100 ether - protocolFee));
+        assertEq(sonicStaking.totalAssets(), totalSWorthBefore + (100 ether - protocolFee));
 
         assertGt(sonicStaking.getRate(), rateBefore);
     }
@@ -167,7 +167,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         assertEq(totalDelegatedStart, sonicStaking.totalDelegated());
         assertEq(totalPoolStart + depositAmount - delegateAmount, sonicStaking.totalPool());
-        assertEq(totalSWorthStart + depositAmount, sonicStaking.totalSWorth());
+        assertEq(totalSWorthStart + depositAmount, sonicStaking.totalAssets());
         assertEq(rateStart, sonicStaking.getRate());
         assertEq(lastUsedWrIdStart + 1, sonicStaking.withdrawCounter());
 
@@ -179,7 +179,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         assertEq(totalDelegatedStart, sonicStaking.totalDelegated());
         assertEq(totalPoolStart + depositAmount, sonicStaking.totalPool());
-        assertEq(totalSWorthStart + depositAmount, sonicStaking.totalSWorth());
+        assertEq(totalSWorthStart + depositAmount, sonicStaking.totalAssets());
         assertEq(rateStart, sonicStaking.getRate());
         assertEq(lastUsedWrIdStart + 1, sonicStaking.withdrawCounter());
     }
@@ -202,8 +202,8 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 treasuryBalanceBefore = TREASURY_ADDRESS.balance;
         uint256 rateBefore = sonicStaking.getRate();
         uint256 poolBefore = sonicStaking.totalPool();
-        uint256 totalSWorthBefore = sonicStaking.totalSWorth();
-        assertEq(stakedS.balanceOf(user), depositAmount); // minted 1:1
+        uint256 totalSWorthBefore = sonicStaking.totalAssets();
+        assertEq(wrapped.balanceOf(user), depositAmount); // minted 1:1
 
         assertEq(rateBefore, 1 ether);
 
@@ -217,7 +217,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(TREASURY_ADDRESS.balance - treasuryBalanceBefore, protocolFee);
 
         assertEq(sonicStaking.totalPool(), poolBefore + (pendingRewards - protocolFee));
-        assertEq(sonicStaking.totalSWorth(), totalSWorthBefore + (pendingRewards - protocolFee));
+        assertEq(sonicStaking.totalAssets(), totalSWorthBefore + (pendingRewards - protocolFee));
 
         assertGt(sonicStaking.getRate(), rateBefore);
 
@@ -225,8 +225,8 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         address newUser = vm.addr(201);
         uint256 newUserDepositAmount = 100 ether;
         makeDepositFromSpecifcUser(newUserDepositAmount, newUser);
-        assertLt(stakedS.balanceOf(newUser), newUserDepositAmount); // got less stkS than S (rate is <1)
-        assertApproxEqAbs(stakedS.balanceOf(newUser) * sonicStaking.getRate() / 1e18, newUserDepositAmount, 1); // balance multiplied by rate should be equal to deposit amount
+        assertLt(wrapped.balanceOf(newUser), newUserDepositAmount); // got less stkS than S (rate is <1)
+        assertApproxEqAbs(wrapped.balanceOf(newUser) * sonicStaking.getRate() / 1e18, newUserDepositAmount, 1); // balance multiplied by rate should be equal to deposit amount
     }
 
     function testEmergencyWithdraw() public {
@@ -256,7 +256,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         // do not emergency withdraw, will revert
         vm.prank(user);
-        vm.expectRevert("ERR_NOT_ENOUGH_S");
+        vm.expectRevert("ERR_NOT_ENOUGH_ASSETS");
         sonicStaking.withdraw(101, false);
 
         // emergency withdraw
@@ -272,7 +272,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
     {
         totalDelegated = sonicStaking.totalDelegated();
         totalPool = sonicStaking.totalPool();
-        totalSWorth = sonicStaking.totalSWorth();
+        totalSWorth = sonicStaking.totalAssets();
         rate = sonicStaking.getRate();
         lastUsedWrId = sonicStaking.withdrawCounter();
     }

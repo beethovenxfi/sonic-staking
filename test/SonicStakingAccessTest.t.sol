@@ -43,7 +43,7 @@ contract SonicStakingTest is Test {
         sonicStaking =
             sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
 
-        stakedS = sonicStaking.stkS();
+        stakedS = sonicStaking.wrapped();
 
         try stakedS.renounceRole(stakedS.MINTER_ROLE(), address(this)) {
             console.log("renounce minter role");
@@ -70,7 +70,7 @@ contract SonicStakingTest is Test {
         assertFalse(sonicStaking.hasRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this)));
 
         assertEq(address(sonicStaking.SFC()), address(SFC));
-        assertEq(address(sonicStaking.stkS()), address(stakedS));
+        assertEq(address(sonicStaking.wrapped()), address(stakedS));
 
         assertEq(sonicStaking.treasury(), TREASURY_ADDRESS);
         assertEq(sonicStaking.protocolFeeBIPS(), 1000);
@@ -82,9 +82,9 @@ contract SonicStakingTest is Test {
         assertFalse(sonicStaking.rewardClaimPaused());
         assertEq(sonicStaking.totalDelegated(), 0);
         assertEq(sonicStaking.totalPool(), 0);
-        assertEq(sonicStaking.totalSWorth(), 0);
+        assertEq(sonicStaking.totalAssets(), 0);
         assertEq(sonicStaking.getRate(), 1 ether);
-        assertEq(sonicStaking.getStkSAmountForS(1 ether), 1 ether);
+        assertEq(sonicStaking.convertToShares(1 ether), 1 ether);
     }
 
     function testOperatorRole() public {
