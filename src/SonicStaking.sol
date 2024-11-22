@@ -230,19 +230,26 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         require(request.requestTimestamp > 0, "ERR_WRID_INVALID");
         require(_now() >= request.requestTimestamp + withdrawDelay, "ERR_NOT_ENOUGH_TIME_PASSED");
         require(!request.isWithdrawn, "ERR_ALREADY_WITHDRAWN");
+
         request.isWithdrawn = true;
 
-        address user = request.user;
-        require(msg.sender == user, "ERR_UNAUTHORIZED");
+        require(msg.sender == request.user, "ERR_UNAUTHORIZED");
 
         uint256 balanceBefore = address(this).balance;
 
         SFC.withdraw(request.validatorId, wrId);
 
-        uint256 withdrawnAmount = address(this).balance - balanceBefore;
+        // in the instance of a slahing event, the amount withdrawn will not match the request amount.
+        // We track the change of balance for the contract to get the actual amount withdrawn.
+        uint256 actualWithdrawnAmount = address(this).balance - balanceBefore;
 
-        pendingOperatorWithdraw -= withdrawnAmount;
-        totalPool += withdrawnAmount;
+        // we need to subtract the request amount from the pending amount since that is the value that was added during
+        // the operator undelegate
+        pendingOperatorWithdraw -= request.assetAmount;
+
+        // We then account for the actual amount we were able to withdraw
+        // In the instance of a realized slashing event, this will result in a drop in the rate.
+        totalPool += actualWithdrawnAmount;
     }
 
     /**
