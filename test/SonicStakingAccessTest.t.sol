@@ -76,7 +76,7 @@ contract SonicStakingTest is Test {
         assertEq(sonicStaking.protocolFeeBIPS(), 1000);
         assertEq(sonicStaking.minDeposit(), 1 ether);
         assertEq(sonicStaking.maxDeposit(), 1_000_000 ether);
-        assertEq(sonicStaking.withdrawalDelay(), 14 * 24 * 60 * 60);
+        assertEq(sonicStaking.withdrawDelay(), 14 * 24 * 60 * 60);
         assertFalse(sonicStaking.undelegatePaused());
         assertFalse(sonicStaking.withdrawPaused());
         assertFalse(sonicStaking.rewardClaimPaused());
@@ -112,7 +112,7 @@ contract SonicStakingTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.OPERATOR_ROLE())
         );
-        sonicStaking.setWithdrawalDelay(1);
+        sonicStaking.setWithdrawDelay(1);
 
         vm.expectRevert(
             abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.OPERATOR_ROLE())

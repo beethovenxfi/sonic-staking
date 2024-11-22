@@ -24,13 +24,13 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
-    enum WithdrawalKind {
+    enum WithdrawKind {
         POOL,
         VALIDATOR
     }
 
-    struct WithdrawalRequest {
-        WithdrawalKind kind;
+    struct WithdrawRequest {
+        WithdrawKind kind;
         uint256 validatorId;
         uint256 assetAmount;
         bool isWithdrawn;
@@ -38,7 +38,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         address user;
     }
 
-    mapping(uint256 withdrawId => WithdrawalRequest request) public allWithdrawalRequests;
+    mapping(uint256 withdrawId => WithdrawRequest request) public allWithdrawRequests;
 
     /**
      * @dev A reference to the wrapped asset ERC20 token contract
@@ -61,9 +61,9 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     uint256 public protocolFeeBIPS;
 
     /**
-     * The delay between undelegation & withdrawal
+     * The delay between undelegation & withdraw
      */
-    uint256 public withdrawalDelay;
+    uint256 public withdrawDelay;
 
     uint256 public minDeposit;
 
@@ -86,13 +86,13 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     uint256 public totalPool;
 
     /**
-     * The total amount of asset that is pending withdrawal from the operator which will be withdrawn to the pool.
+     * The total amount of asset that is pending withdraw from the operator which will be withdrawn to the pool.
      */
-    uint256 public pendingOperatorWithdrawal;
+    uint256 public pendingOperatorWithdraw;
 
     uint256 public withdrawCounter;
 
-    event WithdrawalDelaySet(address indexed owner, uint256 delay);
+    event withdrawDelaySet(address indexed owner, uint256 delay);
     event UndelegatePausedUpdated(address indexed owner, bool newValue);
     event WithdrawPausedUpdated(address indexed owner, bool newValue);
     event RewardClaimPausedUpdated(address indexed owner, bool newValue);
@@ -101,9 +101,9 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     event Deposited(address indexed user, uint256 assetAmount, uint256 wrappedAmount);
     event Delegated(uint256 indexed toValidator, uint256 assetAmount);
     event Undelegated(
-        address indexed user, uint256 wrID, uint256 assetAmount, uint256 fromValidator, WithdrawalKind kind
+        address indexed user, uint256 wrID, uint256 assetAmount, uint256 fromValidator, WithdrawKind kind
     );
-    event Withdrawn(address indexed user, uint256 wrID, uint256 assetAmount, WithdrawalKind kind, bool emergency);
+    event Withdrawn(address indexed user, uint256 wrID, uint256 assetAmount, WithdrawKind kind, bool emergency);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -122,7 +122,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         wrapped = _wrappedToken_;
         SFC = _sfc_;
         treasury = _treasury_;
-        withdrawalDelay = 604800 * 2; // 14 days
+        withdrawDelay = 604800 * 2; // 14 days
         minDeposit = 1 ether;
         maxDeposit = 1_000_000 ether;
         undelegatePaused = false;
@@ -144,10 +144,10 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      * Considers:
      *  - current staked assets
      *  - current delegated assets
-     *  - pending operator withdrawals
+     *  - pending operator withdraws
      */
     function totalAssets() public view returns (uint256) {
-        return totalPool + totalDelegated + pendingOperatorWithdrawal;
+        return totalPool + totalDelegated + pendingOperatorWithdraw;
     }
 
     /**
@@ -201,7 +201,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     }
 
     /**
-     * @notice Undelegate assets, assets can then be withdrawn to the pool after `withdrawalDelay`
+     * @notice Undelegate assets, assets can then be withdrawn to the pool after `withdrawDelay`
      * @param amountToUndelegate the amount of assets to undelegate from given validator
      * @param fromValidatorId the validator to undelegate from
      */
@@ -217,7 +217,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         _undelegateFromValidator(fromValidatorId, amountToUndelegate);
 
-        pendingOperatorWithdrawal += amountToUndelegate;
+        pendingOperatorWithdraw += amountToUndelegate;
     }
 
     /**
@@ -225,10 +225,10 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      * @param wrId the unique wrID for the undelegation request
      */
     function operatorWithdrawToPool(uint256 wrId) external onlyRole(OPERATOR_ROLE) {
-        WithdrawalRequest storage request = allWithdrawalRequests[wrId];
+        WithdrawRequest storage request = allWithdrawRequests[wrId];
 
         require(request.requestTimestamp > 0, "ERR_WRID_INVALID");
-        require(_now() >= request.requestTimestamp + withdrawalDelay, "ERR_NOT_ENOUGH_TIME_PASSED");
+        require(_now() >= request.requestTimestamp + withdrawDelay, "ERR_NOT_ENOUGH_TIME_PASSED");
         require(!request.isWithdrawn, "ERR_ALREADY_WITHDRAWN");
         request.isWithdrawn = true;
 
@@ -241,17 +241,17 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         uint256 withdrawnAmount = address(this).balance - balanceBefore;
 
-        pendingOperatorWithdrawal -= withdrawnAmount;
+        pendingOperatorWithdraw -= withdrawnAmount;
         totalPool += withdrawnAmount;
     }
 
     /**
-     * @notice Set withdrawal delay onlyRole(OPERATOR_ROLE)
+     * @notice Set withdraw delay onlyRole(OPERATOR_ROLE)
      * @param delay the new delay
      */
-    function setWithdrawalDelay(uint256 delay) external onlyRole(OPERATOR_ROLE) {
-        withdrawalDelay = delay;
-        emit WithdrawalDelaySet(msg.sender, delay);
+    function setWithdrawDelay(uint256 delay) external onlyRole(OPERATOR_ROLE) {
+        withdrawDelay = delay;
+        emit withdrawDelaySet(msg.sender, delay);
     }
 
     /**
@@ -265,7 +265,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     }
 
     /**
-     * @notice Pause/unpause user withdrawals onlyRole(OPERATOR_ROLE)
+     * @notice Pause/unpause user withdraws onlyRole(OPERATOR_ROLE)
      * @param desiredValue the desired value of the switch
      */
     function setWithdrawPaused(bool desiredValue) external onlyRole(OPERATOR_ROLE) {
@@ -330,7 +330,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     }
 
     /**
-     * @notice Undelegate asset, assets can then be withdrawn after `withdrawalDelay`
+     * @notice Undelegate asset, assets can then be withdrawn after `withdrawDelay`
      * @param amountWrappedAsset the amount of wrapped asset to undelegate
      * @param fromValidators an array of validator IDs to undelegate from
      */
@@ -386,10 +386,10 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     function withdraw(uint256 withdrawId, bool emergency) external {
         require(!withdrawPaused, "ERR_WITHDRAW_IS_PAUSED");
 
-        WithdrawalRequest storage request = allWithdrawalRequests[withdrawId];
+        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
 
         require(request.requestTimestamp > 0, "ERR_WRID_INVALID");
-        require(_now() >= request.requestTimestamp + withdrawalDelay, "ERR_NOT_ENOUGH_TIME_PASSED");
+        require(_now() >= request.requestTimestamp + withdrawDelay, "ERR_NOT_ENOUGH_TIME_PASSED");
         require(!request.isWithdrawn, "ERR_ALREADY_WITHDRAWN");
         request.isWithdrawn = true;
 
@@ -400,7 +400,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         uint256 withdrawnAmount = 0;
 
-        if (request.kind == WithdrawalKind.POOL) {
+        if (request.kind == WithdrawKind.POOL) {
             withdrawnAmount = request.assetAmount;
         } else {
             SFC.withdraw(request.validatorId, withdrawId);
@@ -411,7 +411,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         require(withdrawnAmount <= request.assetAmount, "ERR_WITHDRAWN_AMOUNT_TOO_HIGH");
 
         if (!emergency) {
-            // protection against deleting the withdrawal request and going back with less assets than what is owned
+            // protection against deleting the withdraw request and going back with less assets than what is owned
             // can be bypassed by setting emergency to true
             require(request.assetAmount == withdrawnAmount, "ERR_NOT_ENOUGH_ASSETS");
         }
@@ -470,12 +470,12 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      * @param amount the amount to undelegate
      */
     function _undelegateFromValidator(uint256 validatorId, uint256 amount) internal {
-        // create a new withdrawal request
+        // create a new withdraw request
         uint256 withdrawId = _incrementWithdrawCounter();
-        WithdrawalRequest storage request = allWithdrawalRequests[withdrawId];
+        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
         require(request.requestTimestamp == 0, "ERR_WRID_ALREADY_USED");
 
-        request.kind = WithdrawalKind.VALIDATOR;
+        request.kind = WithdrawKind.VALIDATOR;
         request.requestTimestamp = _now();
         request.user = msg.sender;
         request.assetAmount = amount;
@@ -494,12 +494,12 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      * @param amount the amount to undelegate
      */
     function _undelegateFromPool(uint256 amount) internal {
-        // create a new withdrawal request
+        // create a new withdraw request
         uint256 withdrawId = _incrementWithdrawCounter();
-        WithdrawalRequest storage request = allWithdrawalRequests[withdrawId];
+        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
         require(request.requestTimestamp == 0, "ERR_WRID_ALREADY_USED");
 
-        request.kind = WithdrawalKind.POOL;
+        request.kind = WithdrawKind.POOL;
         request.requestTimestamp = _now();
         request.user = msg.sender;
         request.assetAmount = amount;

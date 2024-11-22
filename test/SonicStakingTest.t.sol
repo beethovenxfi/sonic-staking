@@ -22,7 +22,7 @@ contract SonicStakingTest is Test {
 
     uint256 fantomFork;
 
-    enum WithdrawalKind {
+    enum WithdrawKind {
         POOL,
         VALIDATOR
     }
@@ -81,7 +81,7 @@ contract SonicStakingTest is Test {
         assertEq(sonicStaking.protocolFeeBIPS(), 1000);
         assertEq(sonicStaking.minDeposit(), 1 ether);
         assertEq(sonicStaking.maxDeposit(), 1_000_000 ether);
-        assertEq(sonicStaking.withdrawalDelay(), 14 * 24 * 60 * 60);
+        assertEq(sonicStaking.withdrawDelay(), 14 * 24 * 60 * 60);
         assertFalse(sonicStaking.undelegatePaused());
         assertFalse(sonicStaking.withdrawPaused());
         assertFalse(sonicStaking.rewardClaimPaused());
@@ -209,7 +209,7 @@ contract SonicStakingTest is Test {
         assertEq(sonicStaking.wrapped().balanceOf(user), depositAmount - undelegateAmount);
 
         (, uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
-            sonicStaking.allWithdrawalRequests(sonicStaking.withdrawCounter());
+            sonicStaking.allWithdrawRequests(sonicStaking.withdrawCounter());
         assertEq(validatorId, 0);
         assertEq(requestTimestamp, block.timestamp);
         assertEq(userAddress, user);
@@ -255,7 +255,7 @@ contract SonicStakingTest is Test {
         assertEq(sonicStaking.withdrawCounter(), 103);
 
         (, uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
-            sonicStaking.allWithdrawalRequests(sonicStaking.withdrawCounter() - 2);
+            sonicStaking.allWithdrawRequests(sonicStaking.withdrawCounter() - 2);
         assertEq(validatorId, 0);
         assertEq(requestTimestamp, block.timestamp);
         assertEq(userAddress, user);
@@ -263,7 +263,7 @@ contract SonicStakingTest is Test {
         assertEq(amountS, undelegatedFromPool);
 
         (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) =
-            sonicStaking.allWithdrawalRequests(sonicStaking.withdrawCounter() - 1);
+            sonicStaking.allWithdrawRequests(sonicStaking.withdrawCounter() - 1);
         assertEq(validatorId, 1);
         assertEq(requestTimestamp, block.timestamp);
         assertEq(userAddress, user);
@@ -271,7 +271,7 @@ contract SonicStakingTest is Test {
         assertEq(amountS, 1000 ether);
 
         (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) =
-            sonicStaking.allWithdrawalRequests(sonicStaking.withdrawCounter());
+            sonicStaking.allWithdrawRequests(sonicStaking.withdrawCounter());
         assertEq(validatorId, 2);
         assertEq(requestTimestamp, block.timestamp);
         assertEq(userAddress, user);
@@ -326,7 +326,7 @@ contract SonicStakingTest is Test {
         assertEq(lastUsedWrIdStart + 1, sonicStaking.withdrawCounter());
         assertEq(sonicStaking.wrapped().balanceOf(user), depositAmount - undelegateAmount);
 
-        // need to increase time to allow for withdrawal
+        // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
         uint256 balanceBefore = address(user).balance;
@@ -341,7 +341,7 @@ contract SonicStakingTest is Test {
         assertEq(lastUsedWrIdStart + 1, sonicStaking.withdrawCounter());
         assertEq(sonicStaking.wrapped().balanceOf(user), depositAmount - undelegateAmount);
 
-        (,,, bool isWithdrawn,,) = sonicStaking.allWithdrawalRequests(101);
+        (,,, bool isWithdrawn,,) = sonicStaking.allWithdrawRequests(101);
         assertEq(isWithdrawn, true);
     }
 
@@ -376,8 +376,8 @@ contract SonicStakingTest is Test {
     function testStateSetters() public {
         vm.startPrank(SONIC_STAKING_OPERATOR);
 
-        sonicStaking.setWithdrawalDelay(1);
-        assertEq(sonicStaking.withdrawalDelay(), 1);
+        sonicStaking.setWithdrawDelay(1);
+        assertEq(sonicStaking.withdrawDelay(), 1);
 
         sonicStaking.setUndelegatePaused(true);
         assertTrue(sonicStaking.undelegatePaused());

@@ -121,11 +121,11 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking.undelegate(undelegateAmount, validatorIds);
         assertEq(sonicStaking.withdrawCounter(), 102);
 
-        // need to increase time to allow for withdrawal
+        // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
         (, uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
-            sonicStaking.allWithdrawalRequests(101);
+            sonicStaking.allWithdrawRequests(101);
 
         assertEq(validatorId, 0);
 
@@ -134,7 +134,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking.withdraw(101, false);
         assertEq(address(user).balance, balanceBefore + 9000 ether);
 
-        (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) = sonicStaking.allWithdrawalRequests(102);
+        (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) = sonicStaking.allWithdrawRequests(102);
         assertEq(validatorId, 1);
 
         vm.prank(user);
@@ -171,7 +171,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(rateStart, sonicStaking.getRate());
         assertEq(lastUsedWrIdStart + 1, sonicStaking.withdrawCounter());
 
-        // need to increase time to allow for withdrawal
+        // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
         vm.prank(SONIC_STAKING_OPERATOR);
@@ -249,7 +249,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking.undelegate(delegateAmount, validatorIds);
         assertEq(sonicStaking.withdrawCounter(), 101);
 
-        // need to increase time to allow for withdrawal
+        // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
         uint256 balanceBefore = address(user).balance;
