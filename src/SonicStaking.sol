@@ -100,8 +100,10 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
     event Deposited(address indexed user, uint256 assetAmount, uint256 wrappedAmount);
     event Delegated(uint256 indexed toValidator, uint256 assetAmount);
-    event Undelegated(address indexed user, uint256 wrID, uint256 assetAmount, uint256 fromValidator);
-    event Withdrawn(address indexed user, uint256 wrID, uint256 assetAmount, bool emergency);
+    event Undelegated(
+        address indexed user, uint256 wrID, uint256 assetAmount, uint256 fromValidator, WithdrawalKind kind
+    );
+    event Withdrawn(address indexed user, uint256 wrID, uint256 assetAmount, WithdrawalKind kind, bool emergency);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -418,7 +420,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         (bool withdrawnToUser,) = user.call{value: withdrawnAmount}("");
         require(withdrawnToUser, "Failed to withdraw asset to user");
 
-        emit Withdrawn(user, withdrawId, request.assetAmount, emergency);
+        emit Withdrawn(user, withdrawId, request.assetAmount, request.kind, emergency);
     }
 
     /**
@@ -484,7 +486,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         totalDelegated -= amount;
 
-        emit Undelegated(msg.sender, withdrawId, amount, validatorId);
+        emit Undelegated(msg.sender, withdrawId, amount, validatorId, request.kind);
     }
 
     /**
@@ -506,7 +508,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         totalPool -= amount;
 
-        emit Undelegated(msg.sender, withdrawId, amount, 0);
+        emit Undelegated(msg.sender, withdrawId, amount, 0, request.kind);
     }
 
     function _now() internal view returns (uint256) {
