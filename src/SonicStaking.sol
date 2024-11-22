@@ -404,19 +404,19 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         address user = request.user;
         require(msg.sender == user, "ERR_UNAUTHORIZED");
 
-        uint256 balanceBefore = address(this).balance;
-
         uint256 withdrawnAmount = 0;
 
         if (request.kind == WithdrawKind.POOL) {
             withdrawnAmount = request.assetAmount;
         } else {
+            uint256 balanceBefore = address(this).balance;
+
             SFC.withdraw(request.validatorId, withdrawId);
             withdrawnAmount = address(this).balance - balanceBefore;
-        }
 
-        // can never get more assets than what is owed
-        require(withdrawnAmount <= request.assetAmount, "ERR_WITHDRAWN_AMOUNT_TOO_HIGH");
+            // can never get more assets than what is owed
+            require(withdrawnAmount <= request.assetAmount, "ERR_WITHDRAWN_AMOUNT_TOO_HIGH");
+        }
 
         if (!emergency) {
             // protection against deleting the withdraw request and going back with less assets than what is owned
