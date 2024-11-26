@@ -9,9 +9,7 @@ import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Init
 import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlUpgradeable} from "openzeppelin-contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-interface IRateProvider {
-    function getRate() external view returns (uint256 _rate);
-}
+import {IRateProvider} from "./interfaces/IRateProvider.sol";
 
 /**
  * @title Sonic Staking Contract
