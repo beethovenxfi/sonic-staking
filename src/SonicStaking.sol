@@ -414,12 +414,12 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
             // can never get more assets than what is owed
             require(withdrawnAmount <= request.assetAmount, "ERR_WITHDRAWN_AMOUNT_TOO_HIGH");
-        }
 
-        if (!emergency) {
-            // protection against deleting the withdraw request and going back with less assets than what is owned
-            // can be bypassed by setting emergency to true
-            require(request.assetAmount == withdrawnAmount, "ERR_NOT_ENOUGH_ASSETS");
+            if (!emergency) {
+                // protection against deleting the withdraw request and going back with less assets than what is owned
+                // can be bypassed by setting emergency to true
+                require(request.assetAmount == withdrawnAmount, "ERR_NOT_ENOUGH_ASSETS");
+            }
         }
 
         // do transfer after marking as withdrawn to protect against re-entrancy
