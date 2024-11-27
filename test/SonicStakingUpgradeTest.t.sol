@@ -5,7 +5,6 @@ import {Test, console} from "forge-std/Test.sol";
 import {DeploySonicStaking} from "script/DeploySonicStaking.sol";
 import {SonicStaking} from "src/SonicStaking.sol";
 import {SonicStakingUpgrade} from "src/mock/SonicStakingUpgrade.sol";
-import {StakedS} from "src/StakedS.sol";
 import {ISFC} from "src/interfaces/ISFC.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import {SonicStakingTest} from "./SonicStakingTest.t.sol";
@@ -30,19 +29,7 @@ contract SonicStakingUpgradeTest is Test, SonicStakingTest {
         sonicStaking =
             sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
 
-        wrapped = sonicStaking.wrapped();
-
         // somehow the renouncing in the DeploySonicStaking script doesn't work when called from the test, so we renounce here
-        try wrapped.renounceRole(wrapped.MINTER_ROLE(), address(this)) {
-            console.log("renounce minter role");
-        } catch (bytes memory) {
-            console.log("fail renounce minter role");
-        }
-        try wrapped.renounceRole(wrapped.DEFAULT_ADMIN_ROLE(), address(this)) {
-            console.log("renounce admin role");
-        } catch (bytes memory) {
-            console.log("fail renounce admin role");
-        }
         try sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this)) {
             console.log("renounce admin role from staking contract");
         } catch (bytes memory) {
