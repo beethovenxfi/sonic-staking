@@ -97,7 +97,7 @@ contract SonicStaking is
 
     uint256 public withdrawCounter;
 
-    event withdrawDelaySet(address indexed owner, uint256 delay);
+    event WithdrawDelaySet(address indexed owner, uint256 delay);
     event UndelegatePausedUpdated(address indexed owner, bool newValue);
     event WithdrawPausedUpdated(address indexed owner, bool newValue);
     event RewardClaimPausedUpdated(address indexed owner, bool newValue);
@@ -265,7 +265,7 @@ contract SonicStaking is
      */
     function setWithdrawDelay(uint256 delay) external onlyRole(OPERATOR_ROLE) {
         withdrawDelay = delay;
-        emit withdrawDelaySet(msg.sender, delay);
+        emit WithdrawDelaySet(msg.sender, delay);
     }
 
     /**
