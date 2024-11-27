@@ -4,7 +4,6 @@ pragma solidity ^0.8.7;
 import {Test, console} from "forge-std/Test.sol";
 import {DeploySonicStaking} from "script/DeploySonicStaking.sol";
 import {SonicStaking} from "src/SonicStaking.sol";
-import {StakedS} from "src/StakedS.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import {SFCMock} from "src/mock/SFCMock.sol";
 import {SonicStakingTest} from "./SonicStakingTest.t.sol";
@@ -28,19 +27,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking =
             sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
 
-        wrapped = sonicStaking.wrapped();
-
         // somehow the renouncing in the DeploySonicStaking script doesn't work when called from the test, so we renounce here
-        try wrapped.renounceRole(wrapped.MINTER_ROLE(), address(this)) {
-            console.log("renounce minter role");
-        } catch (bytes memory) {
-            console.log("fail renounce minter role");
-        }
-        try wrapped.renounceRole(wrapped.DEFAULT_ADMIN_ROLE(), address(this)) {
-            console.log("renounce admin role");
-        } catch (bytes memory) {
-            console.log("fail renounce admin role");
-        }
         try sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this)) {
             console.log("renounce admin role from staking contract");
         } catch (bytes memory) {
@@ -203,7 +190,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 rateBefore = sonicStaking.getRate();
         uint256 poolBefore = sonicStaking.totalPool();
         uint256 totalSWorthBefore = sonicStaking.totalAssets();
-        assertEq(wrapped.balanceOf(user), depositAmount); // minted 1:1
+        assertEq(sonicStaking.balanceOf(user), depositAmount); // minted 1:1
 
         assertEq(rateBefore, 1 ether);
 
@@ -225,8 +212,8 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         address newUser = vm.addr(201);
         uint256 newUserDepositAmount = 100 ether;
         makeDepositFromSpecifcUser(newUserDepositAmount, newUser);
-        assertLt(wrapped.balanceOf(newUser), newUserDepositAmount); // got less stkS than S (rate is <1)
-        assertApproxEqAbs(wrapped.balanceOf(newUser) * sonicStaking.getRate() / 1e18, newUserDepositAmount, 1); // balance multiplied by rate should be equal to deposit amount
+        assertLt(sonicStaking.balanceOf(newUser), newUserDepositAmount); // got less stkS than S (rate is <1)
+        assertApproxEqAbs(sonicStaking.balanceOf(newUser) * sonicStaking.getRate() / 1e18, newUserDepositAmount, 1); // balance multiplied by rate should be equal to deposit amount
     }
 
     function testEmergencyWithdraw() public {

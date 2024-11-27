@@ -4,7 +4,6 @@ pragma solidity ^0.8.7;
 import {Test, console} from "forge-std/Test.sol";
 import {DeploySonicStaking} from "script/DeploySonicStaking.sol";
 import {SonicStaking} from "src/SonicStaking.sol";
-import {StakedS} from "src/StakedS.sol";
 import {ISFC} from "src/interfaces/ISFC.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 
@@ -14,7 +13,6 @@ contract SonicStakingTest is Test {
     address SONIC_STAKING_OWNER;
     ISFC SFC = ISFC(0xFC00FACE00000000000000000000000000000000);
     SonicStaking sonicStaking;
-    StakedS stakedS;
 
     string FANTOM_FORK_URL = "https://rpc.fantom.network";
     uint256 INITIAL_FORK_BLOCK_NUMBER = 97094615;
@@ -42,18 +40,6 @@ contract SonicStakingTest is Test {
         sonicStaking =
             sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
 
-        stakedS = sonicStaking.wrapped();
-
-        try stakedS.renounceRole(stakedS.MINTER_ROLE(), address(this)) {
-            console.log("renounce minter role");
-        } catch (bytes memory) {
-            console.log("fail renounce minter role");
-        }
-        try stakedS.renounceRole(stakedS.DEFAULT_ADMIN_ROLE(), address(this)) {
-            console.log("renounce admin role");
-        } catch (bytes memory) {
-            console.log("fail renounce admin role");
-        }
         try sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this)) {
             console.log("renounce admin role from staking contract");
         } catch (bytes memory) {

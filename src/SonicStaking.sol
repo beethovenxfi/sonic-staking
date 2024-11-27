@@ -2,21 +2,33 @@
 pragma solidity ^0.8.7;
 
 import "./interfaces/ISFC.sol";
-import "./StakedS.sol";
+import {IRateProvider} from "./interfaces/IRateProvider.sol";
 
 import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {AccessControlUpgradeable} from "openzeppelin-contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {ERC20Upgradeable} from "openzeppelin-contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {ERC20BurnableUpgradeable} from
+    "openzeppelin-contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+import {ERC20PermitUpgradeable} from
+    "openzeppelin-contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {AccessControlUpgradeable} from "openzeppelin-contracts-upgradeable/access/AccessControlUpgradeable.sol";
-
-import {IRateProvider} from "./interfaces/IRateProvider.sol";
 
 /**
  * @title Sonic Staking Contract
  * @author Beets
  * @notice Main point of interaction with Beets liquid staking for Sonic
  */
-contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSUpgradeable, AccessControlUpgradeable {
+contract SonicStaking is
+    IRateProvider,
+    Initializable,
+    ERC20Upgradeable,
+    ERC20BurnableUpgradeable,
+    ERC20PermitUpgradeable,
+    OwnableUpgradeable,
+    UUPSUpgradeable,
+    AccessControlUpgradeable
+{
     // These constants have been taken from the SFC contract
     uint256 public constant DECIMAL_UNIT = 1e18;
 
@@ -37,11 +49,6 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
     }
 
     mapping(uint256 withdrawId => WithdrawRequest request) public allWithdrawRequests;
-
-    /**
-     * @dev A reference to the wrapped asset ERC20 token contract
-     */
-    StakedS public wrapped;
 
     /**
      * @dev A reference to the SFC contract
@@ -108,18 +115,20 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
     /**
      * @notice Initializer
-     * @param _wrappedToken_ the address of the wrapped token contract (is NOT modifiable)
-     * @param _sfc_ the address of the SFC contract (is NOT modifiable)
-     * @param _treasury_ The address of the treasury where fees are sent to (is modifiable)
+     * @param _sfc the address of the SFC contract (is NOT modifiable)
+     * @param _treasury The address of the treasury where fees are sent to (is modifiable)
      */
-    function initialize(StakedS _wrappedToken_, ISFC _sfc_, address _treasury_) public initializer {
+    function initialize(ISFC _sfc, address _treasury) public initializer {
+        __ERC20_init("Beets Staked Sonic", "stS");
+        __ERC20Burnable_init();
+        __ERC20Permit_init("Beets Staked Sonic");
+
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
-        wrapped = _wrappedToken_;
-        SFC = _sfc_;
-        treasury = _treasury_;
+        SFC = _sfc;
+        treasury = _treasury;
         withdrawDelay = 604800 * 2; // 14 days
         minDeposit = 1 ether;
         maxDeposit = 1_000_000 ether;
@@ -153,7 +162,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
     function getRate() public view returns (uint256) {
         uint256 assetTotal = totalAssets();
-        uint256 totalWrapped = wrapped.totalSupply();
+        uint256 totalWrapped = totalSupply();
 
         if (assetTotal == 0 || totalWrapped == 0) {
             return 1 * DECIMAL_UNIT;
@@ -167,7 +176,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
      */
     function convertToShares(uint256 assetAmount) public view returns (uint256) {
         uint256 assetTotal = totalAssets();
-        uint256 totalWrapped = wrapped.totalSupply();
+        uint256 totalWrapped = totalSupply();
 
         if (assetTotal == 0 || totalWrapped == 0) {
             return assetAmount;
@@ -328,7 +337,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
 
         address user = msg.sender;
         uint256 wrappedAmount = convertToShares(amount);
-        wrapped.mint(user, wrappedAmount);
+        _mint(user, wrappedAmount);
 
         totalPool += amount;
 
@@ -345,7 +354,7 @@ contract SonicStaking is IRateProvider, Initializable, OwnableUpgradeable, UUPSU
         require(amountWrappedAsset > 0, "ERR_ZERO_AMOUNT");
 
         uint256 amountToUndelegate = (getRate() * amountWrappedAsset) / DECIMAL_UNIT;
-        wrapped.burnFrom(msg.sender, amountWrappedAsset);
+        _burn(msg.sender, amountWrappedAsset);
 
         // undelegate from the pool first
         if (totalPool > 0) {

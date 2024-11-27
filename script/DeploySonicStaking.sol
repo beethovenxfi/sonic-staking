@@ -3,7 +3,6 @@
 pragma solidity ^0.8.7;
 
 import {SonicStaking} from "src/SonicStaking.sol";
-import {StakedS} from "src/StakedS.sol";
 import {ISFC} from "src/interfaces/ISFC.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
@@ -15,10 +14,9 @@ contract DeploySonicStaking is Script {
         returns (SonicStaking)
     {
         vm.startBroadcast();
-        StakedS stakedS = new StakedS();
         address sonicStakingAddress = Upgrades.deployUUPSProxy(
             "SonicStaking.sol:SonicStaking",
-            abi.encodeCall(SonicStaking.initialize, (stakedS, ISFC(sfcAddress), treasuryAddress))
+            abi.encodeCall(SonicStaking.initialize, (ISFC(sfcAddress), treasuryAddress))
         );
         SonicStaking sonicStaking = SonicStaking(payable(sonicStakingAddress));
 
@@ -32,18 +30,6 @@ contract DeploySonicStaking is Script {
             console.log("fail renounce default admin role in deployscript");
         }
 
-        // setup stakedS access control
-        stakedS.grantRole(stakedS.MINTER_ROLE(), sonicStakingAddress);
-        try stakedS.renounceRole(stakedS.MINTER_ROLE(), msg.sender) {
-            console.log("renounce minter role in deployscript");
-        } catch (bytes memory) {
-            console.log("fail renounce minter role in deployscript");
-        }
-        try stakedS.renounceRole(stakedS.DEFAULT_ADMIN_ROLE(), msg.sender) {
-            console.log("renounce admin role in deployscript");
-        } catch (bytes memory) {
-            console.log("fail renounce admin role in deployscript");
-        }
         vm.stopBroadcast();
         return sonicStaking;
     }

@@ -4,7 +4,7 @@ pragma solidity ^0.8.7;
 import {Test, console} from "forge-std/Test.sol";
 import {DeploySonicStaking} from "script/DeploySonicStaking.sol";
 import {SonicStaking} from "src/SonicStaking.sol";
-import {StakedS} from "src/StakedS.sol";
+
 import {ISFC} from "src/interfaces/ISFC.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 
@@ -13,7 +13,6 @@ contract SonicStakingTest is Test {
     address SONIC_STAKING_OPERATOR;
     address SONIC_STAKING_OWNER;
     SonicStaking sonicStaking;
-    StakedS wrapped;
 
     ISFC SFC;
 
@@ -44,19 +43,7 @@ contract SonicStakingTest is Test {
         sonicStaking =
             sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
 
-        wrapped = sonicStaking.wrapped();
-
         // somehow the renouncing in the DeploySonicStaking script doesn't work when called from the test, so we renounce here
-        try wrapped.renounceRole(wrapped.MINTER_ROLE(), address(this)) {
-            console.log("renounce minter role");
-        } catch (bytes memory) {
-            console.log("fail renounce minter role");
-        }
-        try wrapped.renounceRole(wrapped.DEFAULT_ADMIN_ROLE(), address(this)) {
-            console.log("renounce admin role");
-        } catch (bytes memory) {
-            console.log("fail renounce admin role");
-        }
         try sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this)) {
             console.log("renounce admin role from staking contract");
         } catch (bytes memory) {
@@ -74,7 +61,6 @@ contract SonicStakingTest is Test {
 
         // make sure addresses are set properly
         assertEq(address(sonicStaking.SFC()), address(SFC));
-        assertEq(address(sonicStaking.wrapped()), address(wrapped));
 
         // make sure initital set is set properly
         assertEq(sonicStaking.treasury(), TREASURY_ADDRESS);
@@ -95,14 +81,13 @@ contract SonicStakingTest is Test {
     function testDeposit() public {
         uint256 depositAmount = 100000 ether;
 
-        ERC20 stkS = sonicStaking.wrapped();
         address user = makeDeposit(depositAmount);
         assertEq(sonicStaking.totalPool(), depositAmount);
         assertEq(sonicStaking.totalAssets(), depositAmount);
 
         assertEq(sonicStaking.getRate(), 1 ether);
         // user gets the same amount of stkS because rate is 1.
-        assertEq(stkS.balanceOf(user), depositAmount);
+        assertEq(sonicStaking.balanceOf(user), depositAmount);
     }
 
     function testDelegate() public {
@@ -206,7 +191,7 @@ contract SonicStakingTest is Test {
         assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), delegateAmount1);
         assertEq(SFC.getStake(address(sonicStaking), toValidatorId2), delegateAmount2);
         assertEq(sonicStaking.totalPool(), depositAmount - delegateAmount1 - delegateAmount2 - undelegateAmount);
-        assertEq(sonicStaking.wrapped().balanceOf(user), depositAmount - undelegateAmount);
+        assertEq(sonicStaking.balanceOf(user), depositAmount - undelegateAmount);
 
         (, uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
             sonicStaking.allWithdrawRequests(sonicStaking.withdrawCounter());
@@ -250,7 +235,7 @@ contract SonicStakingTest is Test {
         assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), 0);
         assertEq(SFC.getStake(address(sonicStaking), toValidatorId2), 2000 ether);
         assertEq(sonicStaking.totalPool(), 0);
-        assertEq(sonicStaking.wrapped().balanceOf(user), depositAmount - undelegateAmount);
+        assertEq(sonicStaking.balanceOf(user), depositAmount - undelegateAmount);
 
         assertEq(sonicStaking.withdrawCounter(), 103);
 
@@ -301,7 +286,7 @@ contract SonicStakingTest is Test {
         assertEq(totalSWorthStart + depositAmount, sonicStaking.totalAssets());
         assertEq(rateStart, sonicStaking.getRate());
         assertEq(lastUsedWrIdStart, sonicStaking.withdrawCounter());
-        assertEq(sonicStaking.wrapped().balanceOf(user), depositAmount);
+        assertEq(sonicStaking.balanceOf(user), depositAmount);
 
         delegate(delegateAmount1, toValidatorId1);
 
@@ -310,7 +295,7 @@ contract SonicStakingTest is Test {
         assertEq(totalSWorthStart + depositAmount, sonicStaking.totalAssets());
         assertEq(rateStart, sonicStaking.getRate());
         assertEq(lastUsedWrIdStart, sonicStaking.withdrawCounter());
-        assertEq(sonicStaking.wrapped().balanceOf(user), depositAmount);
+        assertEq(sonicStaking.balanceOf(user), depositAmount);
 
         uint256[] memory validatorIds = new uint256[](1);
         validatorIds[0] = 1;
@@ -324,7 +309,7 @@ contract SonicStakingTest is Test {
         assertEq(totalSWorthStart + depositAmount - undelegateAmount, sonicStaking.totalAssets());
         assertEq(rateStart, sonicStaking.getRate());
         assertEq(lastUsedWrIdStart + 1, sonicStaking.withdrawCounter());
-        assertEq(sonicStaking.wrapped().balanceOf(user), depositAmount - undelegateAmount);
+        assertEq(sonicStaking.balanceOf(user), depositAmount - undelegateAmount);
 
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
@@ -339,7 +324,7 @@ contract SonicStakingTest is Test {
         assertEq(totalSWorthStart + depositAmount - undelegateAmount, sonicStaking.totalAssets());
         assertEq(rateStart, sonicStaking.getRate());
         assertEq(lastUsedWrIdStart + 1, sonicStaking.withdrawCounter());
-        assertEq(sonicStaking.wrapped().balanceOf(user), depositAmount - undelegateAmount);
+        assertEq(sonicStaking.balanceOf(user), depositAmount - undelegateAmount);
 
         (,,, bool isWithdrawn,,) = sonicStaking.allWithdrawRequests(101);
         assertEq(isWithdrawn, true);
