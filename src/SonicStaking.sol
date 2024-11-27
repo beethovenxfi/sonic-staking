@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import "./interfaces/ISFC.sol";
+import {ISFC} from "./interfaces/ISFC.sol";
 import {IRateProvider} from "./interfaces/IRateProvider.sol";
 
 import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
