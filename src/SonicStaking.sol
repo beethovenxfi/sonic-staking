@@ -124,7 +124,6 @@ contract SonicStaking is
     error UndelegationPaused();
     error WithdrawsPaused();
     error RewardClaimingPaused();
-    error InsufficientValidatorsForUndelegate();
     error WithdrawnAmountTooHigh(uint256 withdrawn, uint256 expected);
     error WithdrawnAmountTooLow(uint256 withdrawn, uint256 expected);
     error NativeTransferFailed();
