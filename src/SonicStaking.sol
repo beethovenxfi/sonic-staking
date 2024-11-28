@@ -463,7 +463,7 @@ contract SonicStaking is
         (bool withdrawnToUser,) = user.call{value: withdrawnAmount}("");
         require(withdrawnToUser, NativeTransferFailed());
 
-        emit Withdrawn(user, withdrawId, request.assetAmount, request.kind, emergency);
+        emit Withdrawn(user, withdrawId, withdrawnAmount, request.kind, emergency);
     }
 
     /**
