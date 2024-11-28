@@ -48,10 +48,10 @@ contract SonicStakingTest is Test {
     }
 
     function testDelegateRevert() public {
-        vm.expectRevert("ERR_INVALID_AMOUNT");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountCannotBeZero.selector));
         delegate(0, 1);
 
-        vm.expectRevert("ERR_INVALID_AMOUNT");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountLargerThanPool.selector));
         delegate(100 ether, 1);
 
         makeDeposit(100 ether);
@@ -63,18 +63,18 @@ contract SonicStakingTest is Test {
 
     function testUndelegateToPoolRevert() public {
         vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert("ERR_ZERO_AMOUNT");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountCannotBeZero.selector));
         sonicStaking.operatorUndelegateToPool(0, 1);
 
         makeDeposit(100 ether);
         delegate(100 ether, 1);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert("ERR_NO_DELEGATION");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.NoDelegationForValidator.selector, 2));
         sonicStaking.operatorUndelegateToPool(100 ether, 2);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert("ERR_AMOUNT_TOO_HIGH");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
         sonicStaking.operatorUndelegateToPool(1000 ether, 1);
     }
 

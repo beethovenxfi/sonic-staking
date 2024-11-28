@@ -243,7 +243,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         // do not emergency withdraw, will revert
         vm.prank(user);
-        vm.expectRevert("ERR_NOT_ENOUGH_ASSETS");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawnAmountTooLow.selector));
         sonicStaking.withdraw(101, false);
 
         // emergency withdraw

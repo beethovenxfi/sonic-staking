@@ -110,6 +110,31 @@ contract SonicStaking is
     );
     event Withdrawn(address indexed user, uint256 wrID, uint256 assetAmount, WithdrawKind kind, bool emergency);
 
+    error DelegateAmountCannotBeZero();
+    error DelegateAmountLargerThanPool();
+    error UndelegateAmountCannotBeZero();
+    error NoDelegationForValidator(uint256 validatorId);
+    error UndelegateAmountExceedsDelegated();
+    error WithdrawIdDoesNotExist();
+    error WithdrawDelayNotElapsed(uint256 earliestWithdrawTime);
+    error WithdrawAlreadyProcessed();
+    error UnauthorizedWithdraw();
+    error TreasuryAddressCannotBeZero();
+    error ProtocolFeeTooHigh();
+    error DepositOutsideLimit();
+    error UndelegationPaused();
+    error WithdrawsPaused();
+    error RewardClaimingPaused();
+    error WithdrawnAmountTooHigh();
+    error WithdrawnAmountTooLow();
+    error NativeTransferFailed();
+    error BalanceDecreasedDuringRewardClaim();
+    error ProtocolFeeTransferFailed();
+    error BalanceDecreasedAfterFees();
+    error PausedValueDidNotChange();
+    error UnableToUndelegateFullAmountFromSpecifiedValidators();
+    error InvalidWithdrawRequest();
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
@@ -196,13 +221,13 @@ contract SonicStaking is
      * @param toValidatorId the ID of the validator to delegate to
      */
     function delegate(uint256 amount, uint256 toValidatorId) external onlyRole(OPERATOR_ROLE) {
-        require(amount > 0 && amount <= totalPool, "ERR_INVALID_AMOUNT");
+        require(amount > 0, DelegateAmountCannotBeZero());
+        require(amount <= totalPool, DelegateAmountLargerThanPool());
 
         totalPool -= amount;
+        totalDelegated += amount;
 
         SFC.delegate{value: amount}(toValidatorId);
-
-        totalDelegated += amount;
 
         emit Delegated(toValidatorId, amount);
     }
@@ -216,11 +241,12 @@ contract SonicStaking is
         external
         onlyRole(OPERATOR_ROLE)
     {
-        require(amountToUndelegate > 0, "ERR_ZERO_AMOUNT");
+        require(amountToUndelegate > 0, UndelegateAmountCannotBeZero());
 
         uint256 delegatedAmount = SFC.getStake(address(this), fromValidatorId);
-        require(delegatedAmount > 0, "ERR_NO_DELEGATION");
-        require(amountToUndelegate <= delegatedAmount, "ERR_AMOUNT_TOO_HIGH");
+
+        require(delegatedAmount > 0, NoDelegationForValidator(fromValidatorId));
+        require(amountToUndelegate <= delegatedAmount, UndelegateAmountExceedsDelegated());
 
         _undelegateFromValidator(fromValidatorId, amountToUndelegate);
 
@@ -233,14 +259,15 @@ contract SonicStaking is
      */
     function operatorWithdrawToPool(uint256 wrId) external onlyRole(OPERATOR_ROLE) {
         WithdrawRequest storage request = allWithdrawRequests[wrId];
+        uint256 timestamp = request.requestTimestamp;
+        uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;
 
-        require(request.requestTimestamp > 0, "ERR_WRID_INVALID");
-        require(_now() >= request.requestTimestamp + withdrawDelay, "ERR_NOT_ENOUGH_TIME_PASSED");
-        require(!request.isWithdrawn, "ERR_ALREADY_WITHDRAWN");
+        require(timestamp > 0, WithdrawIdDoesNotExist());
+        require(_now() >= earliestWithdrawTime, WithdrawDelayNotElapsed(earliestWithdrawTime));
+        require(!request.isWithdrawn, WithdrawAlreadyProcessed());
+        require(msg.sender == request.user, UnauthorizedWithdraw());
 
         request.isWithdrawn = true;
-
-        require(msg.sender == request.user, "ERR_UNAUTHORIZED");
 
         uint256 balanceBefore = address(this).balance;
 
@@ -273,7 +300,8 @@ contract SonicStaking is
      * @param desiredValue the desired value of the switch
      */
     function setUndelegatePaused(bool desiredValue) external onlyRole(OPERATOR_ROLE) {
-        require(undelegatePaused != desiredValue, "ERR_ALREADY_DESIRED_VALUE");
+        require(undelegatePaused != desiredValue, PausedValueDidNotChange());
+
         undelegatePaused = desiredValue;
         emit UndelegatePausedUpdated(msg.sender, desiredValue);
     }
@@ -283,7 +311,8 @@ contract SonicStaking is
      * @param desiredValue the desired value of the switch
      */
     function setWithdrawPaused(bool desiredValue) external onlyRole(OPERATOR_ROLE) {
-        require(withdrawPaused != desiredValue, "ERR_ALREADY_DESIRED_VALUE");
+        require(withdrawPaused != desiredValue, PausedValueDidNotChange());
+
         withdrawPaused = desiredValue;
         emit WithdrawPausedUpdated(msg.sender, desiredValue);
     }
@@ -293,7 +322,8 @@ contract SonicStaking is
      * @param desiredValue the desired value of the switch
      */
     function setRewardClaimPaused(bool desiredValue) external onlyRole(OPERATOR_ROLE) {
-        require(rewardClaimPaused != desiredValue, "ERR_ALREADY_DESIRED_VALUE");
+        require(rewardClaimPaused != desiredValue, PausedValueDidNotChange());
+
         rewardClaimPaused = desiredValue;
         emit RewardClaimPausedUpdated(msg.sender, desiredValue);
     }
@@ -301,6 +331,7 @@ contract SonicStaking is
     function setDepositLimits(uint256 min, uint256 max) external onlyRole(OPERATOR_ROLE) {
         minDeposit = min;
         maxDeposit = max;
+
         emit DepositLimitUpdated(msg.sender, min, max);
     }
 
@@ -309,7 +340,8 @@ contract SonicStaking is
      * @param newTreasury the new treasury address
      */
     function setTreasury(address newTreasury) external onlyRole(OPERATOR_ROLE) {
-        require(newTreasury != address(0), "ERR_INVALID_VALUE");
+        require(newTreasury != address(0), TreasuryAddressCannotBeZero());
+
         treasury = newTreasury;
     }
 
@@ -318,7 +350,8 @@ contract SonicStaking is
      * @param newFeeBIPS the value of the fee (in BIPS)
      */
     function setProtocolFeeBIPS(uint256 newFeeBIPS) external onlyRole(OPERATOR_ROLE) {
-        require(newFeeBIPS <= 10_000, "ERR_INVALID_VALUE");
+        require(newFeeBIPS <= 10_000, ProtocolFeeTooHigh());
+
         protocolFeeBIPS = newFeeBIPS;
     }
 
@@ -333,7 +366,7 @@ contract SonicStaking is
      */
     function deposit() external payable {
         uint256 amount = msg.value;
-        require(amount >= minDeposit && amount <= maxDeposit, "ERR_AMOUNT_OUTSIDE_LIMITS");
+        require(amount >= minDeposit && amount <= maxDeposit, DepositOutsideLimit());
 
         address user = msg.sender;
         uint256 wrappedAmount = convertToShares(amount);
@@ -350,8 +383,8 @@ contract SonicStaking is
      * @param fromValidators an array of validator IDs to undelegate from
      */
     function undelegate(uint256 amountWrappedAsset, uint256[] calldata fromValidators) external {
-        require(!undelegatePaused, "ERR_UNDELEGATE_IS_PAUSED");
-        require(amountWrappedAsset > 0, "ERR_ZERO_AMOUNT");
+        require(!undelegatePaused, UndelegationPaused());
+        require(amountWrappedAsset > 0, UndelegateAmountCannotBeZero());
 
         uint256 amountToUndelegate = (getRate() * amountWrappedAsset) / DECIMAL_UNIT;
         _burn(msg.sender, amountWrappedAsset);
@@ -372,7 +405,7 @@ contract SonicStaking is
 
         for (uint256 i = 0; i < fromValidators.length; i++) {
             uint256 delegatedAmount = SFC.getStake(address(this), fromValidators[i]);
-            require(delegatedAmount > 0, "ERR_NO_DELEGATION");
+            require(delegatedAmount > 0, NoDelegationForValidator(fromValidators[i]));
 
             if (amountToUndelegate > 0) {
                 if (amountToUndelegate <= delegatedAmount) {
@@ -390,7 +423,7 @@ contract SonicStaking is
         }
 
         // making sure the full amount has been undelegated, guarding against wrong input and making sure the user gets the full amount back
-        require(amountToUndelegate == 0, "ERR_NOT_FULLY_UNDELEGATED");
+        require(amountToUndelegate == 0, UnableToUndelegateFullAmountFromSpecifiedValidators());
     }
 
     /**
@@ -399,17 +432,20 @@ contract SonicStaking is
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
     function withdraw(uint256 withdrawId, bool emergency) external {
-        require(!withdrawPaused, "ERR_WITHDRAW_IS_PAUSED");
+        require(!withdrawPaused, WithdrawsPaused());
 
         WithdrawRequest storage request = allWithdrawRequests[withdrawId];
 
-        require(request.requestTimestamp > 0, "ERR_WRID_INVALID");
-        require(_now() >= request.requestTimestamp + withdrawDelay, "ERR_NOT_ENOUGH_TIME_PASSED");
-        require(!request.isWithdrawn, "ERR_ALREADY_WITHDRAWN");
+        require(request.requestTimestamp > 0, InvalidWithdrawRequest());
+        require(
+            _now() >= request.requestTimestamp + withdrawDelay,
+            WithdrawDelayNotElapsed(request.requestTimestamp + withdrawDelay)
+        );
+        require(!request.isWithdrawn, WithdrawAlreadyProcessed());
         request.isWithdrawn = true;
 
         address user = request.user;
-        require(msg.sender == user, "ERR_UNAUTHORIZED");
+        require(msg.sender == user, UnauthorizedWithdraw());
 
         uint256 withdrawnAmount = 0;
 
@@ -422,18 +458,18 @@ contract SonicStaking is
             withdrawnAmount = address(this).balance - balanceBefore;
 
             // can never get more assets than what is owed
-            require(withdrawnAmount <= request.assetAmount, "ERR_WITHDRAWN_AMOUNT_TOO_HIGH");
+            require(withdrawnAmount <= request.assetAmount, WithdrawnAmountTooHigh());
 
             if (!emergency) {
                 // protection against deleting the withdraw request and going back with less assets than what is owned
                 // can be bypassed by setting emergency to true
-                require(request.assetAmount == withdrawnAmount, "ERR_NOT_ENOUGH_ASSETS");
+                require(request.assetAmount == withdrawnAmount, WithdrawnAmountTooLow());
             }
         }
 
         // do transfer after marking as withdrawn to protect against re-entrancy
         (bool withdrawnToUser,) = user.call{value: withdrawnAmount}("");
-        require(withdrawnToUser, "Failed to withdraw asset to user");
+        require(withdrawnToUser, NativeTransferFailed());
 
         emit Withdrawn(user, withdrawId, request.assetAmount, request.kind, emergency);
     }
@@ -449,7 +485,7 @@ contract SonicStaking is
      * @param fromValidators an array of validator IDs to claim rewards from
      */
     function claimRewards(uint256[] calldata fromValidators) external {
-        require(!rewardClaimPaused, "ERR_REWARD_CLAIM_IS_PAUSED");
+        require(!rewardClaimPaused, RewardClaimingPaused());
 
         uint256 balanceBefore = address(this).balance;
 
@@ -462,13 +498,13 @@ contract SonicStaking is
 
         if (protocolFeeBIPS > 0) {
             uint256 balanceAfter = address(this).balance;
-            require(balanceAfter >= balanceBefore, "ERR_BALANCE_DECREASED");
+            require(balanceAfter >= balanceBefore, BalanceDecreasedDuringRewardClaim());
             uint256 protocolFee = ((balanceAfter - balanceBefore) * protocolFeeBIPS) / 10_000;
             (bool protocolFeesClaimed,) = treasury.call{value: protocolFee}("");
-            require(protocolFeesClaimed, "Failed to claim protocol fees to treasury");
+            require(protocolFeesClaimed, ProtocolFeeTransferFailed());
         }
         uint256 balancerAfterFees = address(this).balance;
-        require(balancerAfterFees >= balanceBefore, "ERR_BALANCE_DECREASED_AFTER_FEES");
+        require(balancerAfterFees >= balanceBefore, BalanceDecreasedAfterFees());
 
         totalPool += balancerAfterFees - balanceBefore;
     }
@@ -485,23 +521,13 @@ contract SonicStaking is
      * @param amount the amount to undelegate
      */
     function _undelegateFromValidator(uint256 validatorId, uint256 amount) internal {
-        // create a new withdraw request
-        uint256 withdrawId = _incrementWithdrawCounter();
-        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
-        require(request.requestTimestamp == 0, "ERR_WRID_ALREADY_USED");
-
-        request.kind = WithdrawKind.VALIDATOR;
-        request.requestTimestamp = _now();
-        request.user = msg.sender;
-        request.assetAmount = amount;
-        request.validatorId = validatorId;
-        request.isWithdrawn = false;
+        uint256 withdrawId = _createWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amount);
 
         SFC.undelegate(validatorId, withdrawId, amount);
 
         totalDelegated -= amount;
 
-        emit Undelegated(msg.sender, withdrawId, amount, validatorId, request.kind);
+        emit Undelegated(msg.sender, withdrawId, amount, validatorId, WithdrawKind.VALIDATOR);
     }
 
     /**
@@ -509,21 +535,26 @@ contract SonicStaking is
      * @param amount the amount to undelegate
      */
     function _undelegateFromPool(uint256 amount) internal {
-        // create a new withdraw request
-        uint256 withdrawId = _incrementWithdrawCounter();
-        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
-        require(request.requestTimestamp == 0, "ERR_WRID_ALREADY_USED");
-
-        request.kind = WithdrawKind.POOL;
-        request.requestTimestamp = _now();
-        request.user = msg.sender;
-        request.assetAmount = amount;
-        request.validatorId = 0;
-        request.isWithdrawn = false;
+        uint256 withdrawId = _createWithdrawRequest(WithdrawKind.POOL, 0, amount);
 
         totalPool -= amount;
 
-        emit Undelegated(msg.sender, withdrawId, amount, 0, request.kind);
+        emit Undelegated(msg.sender, withdrawId, amount, 0, WithdrawKind.POOL);
+    }
+
+    function _createWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
+        internal
+        returns (uint256 withdrawId)
+    {
+        withdrawId = _incrementWithdrawCounter();
+        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
+
+        request.kind = kind;
+        request.requestTimestamp = _now();
+        request.user = msg.sender;
+        request.assetAmount = amount;
+        request.validatorId = validatorId;
+        request.isWithdrawn = false;
     }
 
     function _now() internal view returns (uint256) {
