@@ -354,7 +354,9 @@ contract SonicStakingTest is Test {
         validatorIds[0] = 2;
 
         vm.prank(user);
-        vm.expectRevert("ERR_NOT_FULLY_UNDELEGATED");
+        vm.expectRevert(
+            abi.encodeWithSelector(SonicStaking.UnableToUndelegateFullAmountFromSpecifiedValidators.selector)
+        );
         sonicStaking.undelegate(undelegateAmount, validatorIds);
     }
 
@@ -387,22 +389,22 @@ contract SonicStakingTest is Test {
     function testStateSettersRevert() public {
         vm.startPrank(SONIC_STAKING_OPERATOR);
 
-        vm.expectRevert("ERR_ALREADY_DESIRED_VALUE");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setUndelegatePaused(false);
 
-        vm.expectRevert("ERR_ALREADY_DESIRED_VALUE");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setUndelegatePaused(false);
 
-        vm.expectRevert("ERR_ALREADY_DESIRED_VALUE");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setWithdrawPaused(false);
 
-        vm.expectRevert("ERR_ALREADY_DESIRED_VALUE");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setRewardClaimPaused(false);
 
-        vm.expectRevert("ERR_INVALID_VALUE");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.ProtocolFeeTooHigh.selector));
         sonicStaking.setProtocolFeeBIPS(10001);
 
-        vm.expectRevert("ERR_INVALID_VALUE");
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.TreasuryAddressCannotBeZero.selector));
         sonicStaking.setTreasury(address(0));
     }
 
