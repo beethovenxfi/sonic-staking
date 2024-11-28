@@ -34,6 +34,8 @@ contract SonicStaking is
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
+    uint256 public constant MAX_PROTOCOL_FEE_BIPS = 10_000;
+
     enum WithdrawKind {
         POOL,
         VALIDATOR
@@ -128,7 +130,6 @@ contract SonicStaking is
     error WithdrawnAmountTooHigh();
     error WithdrawnAmountTooLow();
     error NativeTransferFailed();
-    error BalanceDecreasedDuringRewardClaim();
     error ProtocolFeeTransferFailed();
     error BalanceDecreasedAfterFees();
     error PausedValueDidNotChange();
@@ -356,7 +357,7 @@ contract SonicStaking is
      * @param newFeeBIPS the value of the fee (in BIPS)
      */
     function setProtocolFeeBIPS(uint256 newFeeBIPS) external onlyRole(OPERATOR_ROLE) {
-        require(newFeeBIPS <= 10_000, ProtocolFeeTooHigh());
+        require(newFeeBIPS <= MAX_PROTOCOL_FEE_BIPS, ProtocolFeeTooHigh());
 
         protocolFeeBIPS = newFeeBIPS;
     }
@@ -457,6 +458,7 @@ contract SonicStaking is
             }
         }
 
+        address user = msg.sender;
         (bool withdrawnToUser,) = user.call{value: withdrawnAmount}("");
         require(withdrawnToUser, NativeTransferFailed());
 
@@ -471,32 +473,32 @@ contract SonicStaking is
 
     /**
      * @notice Claim rewards from all contracts and add them to the pool
-     * @param fromValidators an array of validator IDs to claim rewards from
+     * @param validatorIds an array of validator IDs to claim rewards from
      */
-    function claimRewards(uint256[] calldata fromValidators) external {
+    function claimRewards(uint256[] calldata validatorIds) external {
         require(!rewardClaimPaused, RewardClaimingPaused());
 
         uint256 balanceBefore = address(this).balance;
 
-        for (uint256 i = 0; i < fromValidators.length; i++) {
-            uint256 rewards = SFC.pendingRewards(address(this), fromValidators[i]);
+        for (uint256 i = 0; i < validatorIds.length; i++) {
+            uint256 rewards = SFC.pendingRewards(address(this), validatorIds[i]);
+
             if (rewards > 0) {
-                SFC.claimRewards(fromValidators[i]);
+                SFC.claimRewards(validatorIds[i]);
             }
         }
 
-        if (protocolFeeBIPS > 0) {
-            uint256 balanceAfter = address(this).balance;
-            require(balanceAfter >= balanceBefore, BalanceDecreasedDuringRewardClaim());
-            uint256 protocolFee = ((balanceAfter - balanceBefore) * protocolFeeBIPS) / 10_000;
+        uint256 totalRewardsClaimed = address(this).balance - balanceBefore;
+        uint256 protocolFee = 0;
+
+        if (totalRewardsClaimed > 0 && protocolFeeBIPS > 0) {
+            protocolFee = (totalRewardsClaimed * protocolFeeBIPS) / MAX_PROTOCOL_FEE_BIPS;
+
             (bool protocolFeesClaimed,) = treasury.call{value: protocolFee}("");
             require(protocolFeesClaimed, ProtocolFeeTransferFailed());
         }
 
-        uint256 balancerAfterFees = address(this).balance;
-        require(balancerAfterFees >= balanceBefore, BalanceDecreasedAfterFees());
-
-        totalPool += balancerAfterFees - balanceBefore;
+        totalPool += totalRewardsClaimed - protocolFee;
     }
 
     /**
