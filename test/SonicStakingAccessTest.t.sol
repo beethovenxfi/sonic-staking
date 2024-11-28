@@ -5,16 +5,16 @@ import {Test, console} from "forge-std/Test.sol";
 import {DeploySonicStaking} from "script/DeploySonicStaking.sol";
 import {SonicStaking} from "src/SonicStaking.sol";
 import {ISFC} from "src/interfaces/ISFC.sol";
-import {SonicStakingTest} from "./SonicStakingTest.t.sol";
+import {SonicStakingTestSetup} from "./SonicStakingTestSetup.sol";
 
-contract SonicStakingAccessTest is Test, SonicStakingTest {
+contract SonicStakingAccessTest is Test, SonicStakingTestSetup {
     error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
 
     function testOperatorRole() public {
         assertTrue(sonicStaking.hasRole(sonicStaking.OPERATOR_ROLE(), SONIC_STAKING_OPERATOR));
-        assertFalse(sonicStaking.hasRole(sonicStaking.OPERATOR_ROLE(), address(this)));
 
         address user = vm.addr(200);
+        assertFalse(sonicStaking.hasRole(sonicStaking.OPERATOR_ROLE(), address(user)));
 
         vm.startPrank(user);
         vm.expectRevert(

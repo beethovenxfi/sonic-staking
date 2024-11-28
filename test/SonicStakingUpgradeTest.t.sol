@@ -7,11 +7,11 @@ import {SonicStaking} from "src/SonicStaking.sol";
 import {SonicStakingUpgrade} from "src/mock/SonicStakingUpgrade.sol";
 import {ISFC} from "src/interfaces/ISFC.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
-import {SonicStakingTest} from "./SonicStakingTest.t.sol";
+import {SonicStakingTestSetup} from "./SonicStakingTestSetup.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 
-contract SonicStakingUpgradeTest is Test, SonicStakingTest {
+contract SonicStakingUpgradeTest is Test, SonicStakingTestSetup {
     function testContractUpgraded() public {
         // upgrade the proxy
         vm.startPrank(SONIC_STAKING_OWNER);
