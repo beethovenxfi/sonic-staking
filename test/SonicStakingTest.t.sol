@@ -24,8 +24,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         // make sure initital set is set properly
         assertEq(sonicStaking.treasury(), TREASURY_ADDRESS);
         assertEq(sonicStaking.protocolFeeBIPS(), 1000);
-        assertEq(sonicStaking.minDeposit(), 1 ether);
-        assertEq(sonicStaking.maxDeposit(), 1_000_000 ether);
         assertEq(sonicStaking.withdrawDelay(), 14 * 24 * 60 * 60);
         assertFalse(sonicStaking.undelegatePaused());
         assertFalse(sonicStaking.withdrawPaused());
@@ -320,7 +318,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     }
 
     function testStateSetters() public {
-        vm.startPrank(SONIC_STAKING_OPERATOR);
+        vm.startPrank(SONIC_STAKING_OWNER);
 
         sonicStaking.setWithdrawDelay(1);
         assertEq(sonicStaking.withdrawDelay(), 1);
@@ -334,10 +332,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         sonicStaking.setRewardClaimPaused(true);
         assertTrue(sonicStaking.rewardClaimPaused());
 
-        sonicStaking.setDepositLimits(1, 100);
-        assertEq(sonicStaking.minDeposit(), 1);
-        assertEq(sonicStaking.maxDeposit(), 100);
-
         sonicStaking.setProtocolFeeBIPS(100);
         assertEq(sonicStaking.protocolFeeBIPS(), 100);
 
@@ -346,7 +340,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     }
 
     function testStateSettersRevert() public {
-        vm.startPrank(SONIC_STAKING_OPERATOR);
+        vm.startPrank(SONIC_STAKING_OWNER);
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setUndelegatePaused(false);

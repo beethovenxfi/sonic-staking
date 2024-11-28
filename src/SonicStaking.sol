@@ -35,6 +35,7 @@ contract SonicStaking is
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     uint256 public constant MAX_PROTOCOL_FEE_BIPS = 10_000;
+    uint256 public constant MIN_DEPOSIT = 1 ether;
 
     enum WithdrawKind {
         POOL,
@@ -72,9 +73,7 @@ contract SonicStaking is
      */
     uint256 public withdrawDelay;
 
-    uint256 public minDeposit;
-
-    uint256 public maxDeposit;
+    bool public depositPaused;
 
     bool public undelegatePaused;
 
@@ -103,7 +102,7 @@ contract SonicStaking is
     event UndelegatePausedUpdated(address indexed owner, bool newValue);
     event WithdrawPausedUpdated(address indexed owner, bool newValue);
     event RewardClaimPausedUpdated(address indexed owner, bool newValue);
-    event DepositLimitUpdated(address indexed owner, uint256 min, uint256 max);
+    event DepositPausedUpdated(address indexed owner, bool newValue);
 
     event Deposited(address indexed user, uint256 assetAmount, uint256 wrappedAmount);
     event Delegated(uint256 indexed toValidator, uint256 assetAmount);
@@ -123,7 +122,8 @@ contract SonicStaking is
     error UnauthorizedWithdraw();
     error TreasuryAddressCannotBeZero();
     error ProtocolFeeTooHigh();
-    error DepositOutsideLimit();
+    error DepositTooLow();
+    error DepositPaused();
     error UndelegationPaused();
     error WithdrawsPaused();
     error RewardClaimingPaused();
@@ -156,8 +156,6 @@ contract SonicStaking is
         SFC = _sfc;
         treasury = _treasury;
         withdrawDelay = 604800 * 2; // 14 days
-        minDeposit = 1 ether;
-        maxDeposit = 1_000_000 ether;
         undelegatePaused = false;
         withdrawPaused = false;
         rewardClaimPaused = false;
@@ -224,7 +222,7 @@ contract SonicStaking is
 
     /**
      *
-     * Admin functions
+     * OPERATOR functions
      *
      */
 
@@ -294,10 +292,26 @@ contract SonicStaking is
     }
 
     /**
+     * @notice Pause all protocol functions
+     */
+    function pause() external onlyRole(OPERATOR_ROLE) {
+        _setDepositPaused(true);
+        _setUndelegatePaused(true);
+        _setWithdrawPaused(true);
+        _setRewardClaimPaused(true);
+    }
+
+    /**
+     *
+     * OWNER functions
+     *
+     */
+
+    /**
      * @notice Set withdraw delay
      * @param delay the new delay
      */
-    function setWithdrawDelay(uint256 delay) external onlyRole(OPERATOR_ROLE) {
+    function setWithdrawDelay(uint256 delay) external onlyOwner {
         withdrawDelay = delay;
         emit WithdrawDelaySet(msg.sender, delay);
     }
@@ -306,47 +320,39 @@ contract SonicStaking is
      * @notice Pause/unpause user undelegations
      * @param newValue the desired value of the switch
      */
-    function setUndelegatePaused(bool newValue) external onlyRole(OPERATOR_ROLE) {
-        require(undelegatePaused != newValue, PausedValueDidNotChange());
-
-        undelegatePaused = newValue;
-        emit UndelegatePausedUpdated(msg.sender, newValue);
+    function setUndelegatePaused(bool newValue) external onlyOwner {
+        _setUndelegatePaused(newValue);
     }
 
     /**
      * @notice Pause/unpause user withdraws
      * @param newValue the desired value of the switch
      */
-    function setWithdrawPaused(bool newValue) external onlyRole(OPERATOR_ROLE) {
-        require(withdrawPaused != newValue, PausedValueDidNotChange());
-
-        withdrawPaused = newValue;
-        emit WithdrawPausedUpdated(msg.sender, newValue);
+    function setWithdrawPaused(bool newValue) external onlyOwner {
+        _setWithdrawPaused(newValue);
     }
 
     /**
-     * @notice Pause/unpause reward claiming functions
+     * @notice Pause/unpause reward claiming function
      * @param newValue the desired value of the switch
      */
-    function setRewardClaimPaused(bool newValue) external onlyRole(OPERATOR_ROLE) {
-        require(rewardClaimPaused != newValue, PausedValueDidNotChange());
-
-        rewardClaimPaused = newValue;
-        emit RewardClaimPausedUpdated(msg.sender, newValue);
+    function setRewardClaimPaused(bool newValue) external onlyOwner {
+        _setRewardClaimPaused(newValue);
     }
 
-    function setDepositLimits(uint256 min, uint256 max) external onlyRole(OPERATOR_ROLE) {
-        minDeposit = min;
-        maxDeposit = max;
-
-        emit DepositLimitUpdated(msg.sender, min, max);
+    /**
+     * @notice Pause/unpause deposit function
+     * @param newValue the desired value of the switch
+     */
+    function setDepositPaused(bool newValue) external onlyOwner {
+        _setDepositPaused(newValue);
     }
 
     /**
      * @notice Update the treasury address
      * @param newTreasury the new treasury address
      */
-    function setTreasury(address newTreasury) external onlyRole(OPERATOR_ROLE) {
+    function setTreasury(address newTreasury) external onlyOwner {
         require(newTreasury != address(0), TreasuryAddressCannotBeZero());
 
         treasury = newTreasury;
@@ -356,7 +362,7 @@ contract SonicStaking is
      * @notice Update the protocol fee
      * @param newFeeBIPS the value of the fee (in BIPS)
      */
-    function setProtocolFeeBIPS(uint256 newFeeBIPS) external onlyRole(OPERATOR_ROLE) {
+    function setProtocolFeeBIPS(uint256 newFeeBIPS) external onlyOwner {
         require(newFeeBIPS <= MAX_PROTOCOL_FEE_BIPS, ProtocolFeeTooHigh());
 
         protocolFeeBIPS = newFeeBIPS;
@@ -373,7 +379,8 @@ contract SonicStaking is
      */
     function deposit() external payable {
         uint256 amount = msg.value;
-        require(amount >= minDeposit && amount <= maxDeposit, DepositOutsideLimit());
+        require(amount >= MIN_DEPOSIT, DepositTooLow());
+        require(!depositPaused, DepositPaused());
 
         address user = msg.sender;
         uint256 sharesAmount = convertToShares(amount);
@@ -558,6 +565,35 @@ contract SonicStaking is
         withdrawCounter++;
 
         return withdrawCounter;
+    }
+
+    function _setUndelegatePaused(bool newValue) internal {
+        require(undelegatePaused != newValue, PausedValueDidNotChange());
+
+        undelegatePaused = newValue;
+        emit UndelegatePausedUpdated(msg.sender, newValue);
+    }
+
+    function _setWithdrawPaused(bool newValue) internal {
+        require(withdrawPaused != newValue, PausedValueDidNotChange());
+
+        withdrawPaused = newValue;
+        emit WithdrawPausedUpdated(msg.sender, newValue);
+    }
+
+    function _setRewardClaimPaused(bool newValue) internal {
+        require(rewardClaimPaused != newValue, PausedValueDidNotChange());
+
+        rewardClaimPaused = newValue;
+        emit RewardClaimPausedUpdated(msg.sender, newValue);
+    }
+
+    function _setDepositPaused(bool newValue) internal {
+        require(depositPaused != newValue, PausedValueDidNotChange());
+
+        depositPaused = newValue;
+
+        emit DepositPausedUpdated(msg.sender, newValue);
     }
 
     modifier withValidWithdrawId(uint256 withdrawId) {
