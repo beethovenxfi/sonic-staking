@@ -2,7 +2,7 @@
 pragma solidity ^0.8.7;
 
 import {Test, console} from "forge-std/Test.sol";
-import {DeploySonicStaking} from "script/DeploySonicStaking.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {SonicStaking} from "src/SonicStaking.sol";
 
 import {ISFC} from "src/interfaces/ISFC.sol";
@@ -27,28 +27,27 @@ contract SonicStakingTest is Test {
     }
 
     function setUp() public {
-        deploySonicStaking();
-    }
-
-    function deploySonicStaking() public virtual {
-        // deploy the contract
         fantomFork = vm.createSelectFork(FANTOM_FORK_URL, INITIAL_FORK_BLOCK_NUMBER);
+        setSFCAddress();
 
+        // deploy Sonic Staking
         SONIC_STAKING_OPERATOR = vm.addr(1);
         SONIC_STAKING_OWNER = vm.addr(2);
 
+        address sonicStakingAddress = Upgrades.deployUUPSProxy(
+            "SonicStaking.sol:SonicStaking", abi.encodeCall(SonicStaking.initialize, (SFC, TREASURY_ADDRESS))
+        );
+        sonicStaking = SonicStaking(payable(sonicStakingAddress));
+
+        // setup sonicStaking access control
+        sonicStaking.transferOwnership(SONIC_STAKING_OWNER);
+        sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), SONIC_STAKING_OPERATOR);
+        sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), SONIC_STAKING_OWNER);
+        sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this));
+    }
+
+    function setSFCAddress() public virtual {
         SFC = ISFC(0xFC00FACE00000000000000000000000000000000);
-
-        DeploySonicStaking sonicStakingDeploy = new DeploySonicStaking();
-        sonicStaking =
-            sonicStakingDeploy.run(address(SFC), TREASURY_ADDRESS, SONIC_STAKING_OWNER, SONIC_STAKING_OPERATOR);
-
-        // somehow the renouncing in the DeploySonicStaking script doesn't work when called from the test, so we renounce here
-        try sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this)) {
-            console.log("renounce admin role from staking contract");
-        } catch (bytes memory) {
-            console.log("fail renounce admin role from staking contract");
-        }
     }
 
     function testInitialization() public view {

@@ -24,11 +24,7 @@ contract DeploySonicStaking is Script {
         sonicStaking.transferOwnership(sonicStakingOwner);
         sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), sonicStakingOperator);
         sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), sonicStakingOwner);
-        try sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), msg.sender) {
-            console.log("renounce default admin role role in deployscript");
-        } catch (bytes memory) {
-            console.log("fail renounce default admin role in deployscript");
-        }
+        sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), msg.sender);
 
         vm.stopBroadcast();
         return sonicStaking;
