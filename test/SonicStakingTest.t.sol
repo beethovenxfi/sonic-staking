@@ -27,7 +27,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.withdrawDelay(), 14 * 24 * 60 * 60);
         assertFalse(sonicStaking.undelegatePaused());
         assertFalse(sonicStaking.withdrawPaused());
-        assertFalse(sonicStaking.rewardClaimPaused());
+        assertFalse(sonicStaking.depositPaused());
         assertEq(sonicStaking.totalDelegated(), 0);
         assertEq(sonicStaking.totalPool(), 0);
         assertEq(sonicStaking.totalAssets(), 0);
@@ -329,9 +329,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         sonicStaking.setWithdrawPaused(true);
         assertTrue(sonicStaking.withdrawPaused());
 
-        sonicStaking.setRewardClaimPaused(true);
-        assertTrue(sonicStaking.rewardClaimPaused());
-
         sonicStaking.setProtocolFeeBIPS(100);
         assertEq(sonicStaking.protocolFeeBIPS(), 100);
 
@@ -350,9 +347,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setWithdrawPaused(false);
-
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
-        sonicStaking.setRewardClaimPaused(false);
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.ProtocolFeeTooHigh.selector));
         sonicStaking.setProtocolFeeBIPS(10001);

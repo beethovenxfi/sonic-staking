@@ -62,6 +62,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         // claim the rewards
         uint256[] memory delegationIds = new uint256[](1);
         delegationIds[0] = 1;
+        vm.prank(SONIC_STAKING_CLAIMOR);
         sonicStaking.claimRewards(delegationIds);
         assertEq(sfcMock.pendingRewards(address(sonicStaking), 1), 0);
 
@@ -182,6 +183,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         // claim the rewards
         uint256[] memory delegationIds = new uint256[](1);
         delegationIds[0] = 1;
+        vm.prank(SONIC_STAKING_CLAIMOR);
         sonicStaking.claimRewards(delegationIds);
         assertEq(sfcMock.pendingRewards(address(sonicStaking), 1), 0);
 

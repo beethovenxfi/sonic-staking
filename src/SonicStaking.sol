@@ -33,6 +33,7 @@ contract SonicStaking is
     uint256 public constant DECIMAL_UNIT = 1e18;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    bytes32 public constant CLAIM_ROLE = keccak256("CLAIM_ROLE");
 
     uint256 public constant MAX_PROTOCOL_FEE_BIPS = 10_000;
     uint256 public constant MIN_DEPOSIT = 1 ether;
@@ -79,8 +80,6 @@ contract SonicStaking is
 
     bool public withdrawPaused;
 
-    bool public rewardClaimPaused;
-
     /**
      * The total assets delegated to validators
      */
@@ -101,7 +100,6 @@ contract SonicStaking is
     event WithdrawDelaySet(address indexed owner, uint256 delay);
     event UndelegatePausedUpdated(address indexed owner, bool newValue);
     event WithdrawPausedUpdated(address indexed owner, bool newValue);
-    event RewardClaimPausedUpdated(address indexed owner, bool newValue);
     event DepositPausedUpdated(address indexed owner, bool newValue);
 
     event Deposited(address indexed user, uint256 assetAmount, uint256 wrappedAmount);
@@ -158,7 +156,7 @@ contract SonicStaking is
         withdrawDelay = 604800 * 2; // 14 days
         undelegatePaused = false;
         withdrawPaused = false;
-        rewardClaimPaused = false;
+        depositPaused = false;
         protocolFeeBIPS = 1000;
         withdrawCounter = 100;
     }
@@ -298,7 +296,6 @@ contract SonicStaking is
         _setDepositPaused(true);
         _setUndelegatePaused(true);
         _setWithdrawPaused(true);
-        _setRewardClaimPaused(true);
     }
 
     /**
@@ -330,14 +327,6 @@ contract SonicStaking is
      */
     function setWithdrawPaused(bool newValue) external onlyOwner {
         _setWithdrawPaused(newValue);
-    }
-
-    /**
-     * @notice Pause/unpause reward claiming function
-     * @param newValue the desired value of the switch
-     */
-    function setRewardClaimPaused(bool newValue) external onlyOwner {
-        _setRewardClaimPaused(newValue);
     }
 
     /**
@@ -474,18 +463,10 @@ contract SonicStaking is
     }
 
     /**
-     *
-     * Maintenance Functions
-     *
-     */
-
-    /**
      * @notice Claim rewards from all contracts and add them to the pool
      * @param validatorIds an array of validator IDs to claim rewards from
      */
-    function claimRewards(uint256[] calldata validatorIds) external {
-        require(!rewardClaimPaused, RewardClaimingPaused());
-
+    function claimRewards(uint256[] calldata validatorIds) external onlyRole(CLAIM_ROLE) {
         uint256 balanceBefore = address(this).balance;
 
         for (uint256 i = 0; i < validatorIds.length; i++) {
@@ -579,13 +560,6 @@ contract SonicStaking is
 
         withdrawPaused = newValue;
         emit WithdrawPausedUpdated(msg.sender, newValue);
-    }
-
-    function _setRewardClaimPaused(bool newValue) internal {
-        require(rewardClaimPaused != newValue, PausedValueDidNotChange());
-
-        rewardClaimPaused = newValue;
-        emit RewardClaimPausedUpdated(msg.sender, newValue);
     }
 
     function _setDepositPaused(bool newValue) internal {

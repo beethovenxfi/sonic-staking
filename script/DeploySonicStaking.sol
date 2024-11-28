@@ -9,10 +9,13 @@ import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import "forge-std/Script.sol";
 
 contract DeploySonicStaking is Script {
-    function run(address sfcAddress, address treasuryAddress, address sonicStakingOwner, address sonicStakingOperator)
-        public
-        returns (SonicStaking)
-    {
+    function run(
+        address sfcAddress,
+        address treasuryAddress,
+        address sonicStakingOwner,
+        address sonicStakingOperator,
+        address sonicStakingClaimor
+    ) public returns (SonicStaking) {
         vm.startBroadcast();
         address sonicStakingAddress = Upgrades.deployUUPSProxy(
             "SonicStaking.sol:SonicStaking",
@@ -23,6 +26,7 @@ contract DeploySonicStaking is Script {
         // setup sonicStaking access control
         sonicStaking.transferOwnership(sonicStakingOwner);
         sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), sonicStakingOperator);
+        sonicStaking.grantRole(sonicStaking.CLAIM_ROLE(), sonicStakingClaimor);
         sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), sonicStakingOwner);
         sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), msg.sender);
 

@@ -10,6 +10,7 @@ import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 
 contract SonicStakingTestSetup is Test {
     address TREASURY_ADDRESS = 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7;
+    address SONIC_STAKING_CLAIMOR;
     address SONIC_STAKING_OPERATOR;
     address SONIC_STAKING_OWNER;
     SonicStaking sonicStaking;
@@ -33,6 +34,7 @@ contract SonicStakingTestSetup is Test {
         // deploy Sonic Staking
         SONIC_STAKING_OPERATOR = vm.addr(1);
         SONIC_STAKING_OWNER = vm.addr(2);
+        SONIC_STAKING_CLAIMOR = vm.addr(3);
 
         address sonicStakingAddress = Upgrades.deployUUPSProxy(
             "SonicStaking.sol:SonicStaking", abi.encodeCall(SonicStaking.initialize, (SFC, TREASURY_ADDRESS))
@@ -42,6 +44,7 @@ contract SonicStakingTestSetup is Test {
         // setup sonicStaking access control
         sonicStaking.transferOwnership(SONIC_STAKING_OWNER);
         sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), SONIC_STAKING_OPERATOR);
+        sonicStaking.grantRole(sonicStaking.CLAIM_ROLE(), SONIC_STAKING_CLAIMOR);
         sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), SONIC_STAKING_OWNER);
         sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this));
     }

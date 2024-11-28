@@ -49,7 +49,6 @@ contract SonicStakingAccessTest is Test, SonicStakingTestSetup {
         sonicStaking.pause();
         assertTrue(sonicStaking.undelegatePaused());
         assertTrue(sonicStaking.withdrawPaused());
-        assertTrue(sonicStaking.rewardClaimPaused());
         assertTrue(sonicStaking.depositPaused());
 
         vm.stopPrank();
@@ -70,9 +69,6 @@ contract SonicStakingAccessTest is Test, SonicStakingTestSetup {
 
         vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, user));
         sonicStaking.setWithdrawPaused(true);
-
-        vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, user));
-        sonicStaking.setRewardClaimPaused(true);
 
         vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, user));
         sonicStaking.setDepositPaused(true);
@@ -99,9 +95,6 @@ contract SonicStakingAccessTest is Test, SonicStakingTestSetup {
         sonicStaking.setWithdrawPaused(true);
         assertTrue(sonicStaking.withdrawPaused());
 
-        sonicStaking.setRewardClaimPaused(true);
-        assertTrue(sonicStaking.rewardClaimPaused());
-
         sonicStaking.setDepositPaused(true);
         assertTrue(sonicStaking.depositPaused());
 
@@ -110,6 +103,23 @@ contract SonicStakingAccessTest is Test, SonicStakingTestSetup {
 
         sonicStaking.setProtocolFeeBIPS(9_000);
         assertEq(sonicStaking.protocolFeeBIPS(), 9_000);
+
+        vm.stopPrank();
+    }
+
+    function testClaimorRoleDeny() public {
+        assertTrue(sonicStaking.hasRole(sonicStaking.CLAIM_ROLE(), SONIC_STAKING_CLAIMOR));
+
+        address user = vm.addr(200);
+        assertFalse(sonicStaking.hasRole(sonicStaking.CLAIM_ROLE(), address(user)));
+
+        uint256[] memory delegationIds = new uint256[](1);
+        delegationIds[0] = 1;
+        vm.startPrank(user);
+        vm.expectRevert(
+            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.CLAIM_ROLE())
+        );
+        sonicStaking.claimRewards(delegationIds);
 
         vm.stopPrank();
     }
