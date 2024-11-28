@@ -266,15 +266,12 @@ contract SonicStaking is
      * @notice Withdraw undelegated assets to the pool
      * @param withdrawId the unique withdrawId for the undelegation request
      */
-    function operatorWithdrawToPool(uint256 withdrawId) external onlyRole(OPERATOR_ROLE) {
+    function operatorWithdrawToPool(uint256 withdrawId)
+        external
+        onlyRole(OPERATOR_ROLE)
+        withValidWithdrawId(withdrawId)
+    {
         WithdrawRequest storage request = allWithdrawRequests[withdrawId];
-        uint256 timestamp = request.requestTimestamp;
-        uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;
-
-        require(timestamp > 0, WithdrawIdDoesNotExist());
-        require(_now() >= earliestWithdrawTime, WithdrawDelayNotElapsed(earliestWithdrawTime));
-        require(!request.isWithdrawn, WithdrawAlreadyProcessed());
-        require(msg.sender == request.user, UnauthorizedWithdraw());
 
         request.isWithdrawn = true;
 
@@ -433,21 +430,12 @@ contract SonicStaking is
      * @param withdrawId the unique withdraw id for the undelegation request
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
-    function withdraw(uint256 withdrawId, bool emergency) external {
+    function withdraw(uint256 withdrawId, bool emergency) external withValidWithdrawId(withdrawId) {
         require(!withdrawPaused, WithdrawsPaused());
 
         WithdrawRequest storage request = allWithdrawRequests[withdrawId];
 
-        require(request.requestTimestamp > 0, InvalidWithdrawRequest());
-        require(
-            _now() >= request.requestTimestamp + withdrawDelay,
-            WithdrawDelayNotElapsed(request.requestTimestamp + withdrawDelay)
-        );
-        require(!request.isWithdrawn, WithdrawAlreadyProcessed());
         request.isWithdrawn = true;
-
-        address user = request.user;
-        require(msg.sender == user, UnauthorizedWithdraw());
 
         uint256 withdrawnAmount = 0;
 
@@ -463,13 +451,12 @@ contract SonicStaking is
             require(withdrawnAmount <= request.assetAmount, WithdrawnAmountTooHigh());
 
             if (!emergency) {
-                // protection against deleting the withdraw request and going back with less assets than what is owned
-                // can be bypassed by setting emergency to true
+                // In the instance of a slashing event, the amount withdrawn will not match the request amount.
+                // The user must acknowledge this by setting emergency to true.
                 require(request.assetAmount == withdrawnAmount, WithdrawnAmountTooLow());
             }
         }
 
-        // do transfer after marking as withdrawn to protect against re-entrancy
         (bool withdrawnToUser,) = user.call{value: withdrawnAmount}("");
         require(withdrawnToUser, NativeTransferFailed());
 
@@ -505,6 +492,7 @@ contract SonicStaking is
             (bool protocolFeesClaimed,) = treasury.call{value: protocolFee}("");
             require(protocolFeesClaimed, ProtocolFeeTransferFailed());
         }
+
         uint256 balancerAfterFees = address(this).balance;
         require(balancerAfterFees >= balanceBefore, BalanceDecreasedAfterFees());
 
@@ -567,6 +555,19 @@ contract SonicStaking is
         withdrawCounter++;
 
         return withdrawCounter;
+    }
+
+    modifier withValidWithdrawId(uint256 withdrawId) {
+        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
+        uint256 timestamp = request.requestTimestamp;
+        uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;
+
+        require(timestamp > 0, WithdrawIdDoesNotExist());
+        require(_now() >= earliestWithdrawTime, WithdrawDelayNotElapsed(earliestWithdrawTime));
+        require(!request.isWithdrawn, WithdrawAlreadyProcessed());
+        require(msg.sender == request.user, UnauthorizedWithdraw());
+
+        _;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
