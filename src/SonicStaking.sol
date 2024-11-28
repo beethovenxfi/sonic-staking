@@ -388,9 +388,9 @@ contract SonicStaking is
     /**
      * @notice Undelegate asset, assets can then be withdrawn after `withdrawDelay`
      * @param amountShares the amount of shares to undelegate
-     * @param validators an array of validator IDs to undelegate from
+     * @param validatorIds an array of validator IDs to undelegate from
      */
-    function undelegate(uint256 amountShares, uint256[] calldata validators) external {
+    function undelegate(uint256 amountShares, uint256[] calldata validatorIds) external {
         require(!undelegatePaused, UndelegationPaused());
         require(amountShares > 0, UndelegateAmountCannotBeZero());
 
@@ -406,19 +406,19 @@ contract SonicStaking is
             amountToUndelegate -= amountFromPool;
         }
 
-        for (uint256 i = 0; i < validators.length; i++) {
+        for (uint256 i = 0; i < validatorIds.length; i++) {
             // if we've undelegated the full amount, we can break out of the loop
             if (amountToUndelegate == 0) {
                 break;
             }
 
-            uint256 amountDelegated = SFC.getStake(address(this), validators[i]);
+            uint256 amountDelegated = SFC.getStake(address(this), validatorIds[i]);
 
-            require(amountDelegated > 0, NoDelegationForValidator(validators[i]));
+            require(amountDelegated > 0, NoDelegationForValidator(validatorIds[i]));
 
             uint256 amountFromValidator = amountToUndelegate > amountDelegated ? amountDelegated : amountToUndelegate;
 
-            _undelegateFromValidator(validators[i], amountFromValidator);
+            _undelegateFromValidator(validatorIds[i], amountFromValidator);
             amountToUndelegate -= amountFromValidator;
         }
 
@@ -453,7 +453,8 @@ contract SonicStaking is
 
             if (!emergency) {
                 // In the instance of a slashing event, the amount withdrawn will not match the request amount.
-                // The user must acknowledge this by setting emergency to true.
+                // The user must acknowledge this by setting emergency to true. Since the user is absorbing
+                // this loss, there is no impact on the rate.
                 require(request.assetAmount == withdrawnAmount, WithdrawnAmountTooLow());
             }
         }
