@@ -186,13 +186,13 @@ contract SonicStaking is
      * @notice Returns the amount of asset equivalent to 1 share (with 18 decimals)
      */
     function getRate() public view returns (uint256) {
-        uint256 assetTotal = totalAssets();
+        uint256 assetsTotal = totalAssets();
         uint256 totalShares = totalSupply();
 
-        if (assetTotal == 0 || totalShares == 0) {
+        if (assetsTotal == 0 || totalShares == 0) {
             return 1 * DECIMAL_UNIT;
         }
-        return (assetTotal * DECIMAL_UNIT) / totalShares;
+        return (assetsTotal * DECIMAL_UNIT) / totalShares;
     }
 
     /**
@@ -200,13 +200,25 @@ contract SonicStaking is
      * @param assetAmount the amount of assets to convert
      */
     function convertToShares(uint256 assetAmount) public view returns (uint256) {
-        uint256 assetTotal = totalAssets();
+        uint256 assetsTotal = totalAssets();
         uint256 totalShares = totalSupply();
 
-        if (assetTotal == 0 || totalShares == 0) {
+        if (assetsTotal == 0 || totalShares == 0) {
             return assetAmount;
         }
-        return (assetAmount * totalShares) / assetTotal;
+
+        return (assetAmount * totalShares) / assetsTotal;
+    }
+
+    function convertToAssets(uint256 sharesAmount) public view returns (uint256) {
+        uint256 assetsTotal = totalAssets();
+        uint256 totalShares = totalSupply();
+
+        if (assetsTotal == 0 || totalShares == 0) {
+            return sharesAmount;
+        }
+
+        return (sharesAmount * assetsTotal) / totalShares;
     }
 
     /**
@@ -359,67 +371,60 @@ contract SonicStaking is
      */
 
     /**
-     * @notice Deposit assets, and mint wrapped assets
+     * @notice Deposit assets, and mint shares
      */
     function deposit() external payable {
         uint256 amount = msg.value;
         require(amount >= minDeposit && amount <= maxDeposit, DepositOutsideLimit());
 
         address user = msg.sender;
-        uint256 wrappedAmount = convertToShares(amount);
-        _mint(user, wrappedAmount);
+        uint256 sharesAmount = convertToShares(amount);
+
+        _mint(user, sharesAmount);
 
         totalPool += amount;
 
-        emit Deposited(user, amount, wrappedAmount);
+        emit Deposited(user, amount, sharesAmount);
     }
 
     /**
      * @notice Undelegate asset, assets can then be withdrawn after `withdrawDelay`
-     * @param amountWrappedAsset the amount of wrapped asset to undelegate
-     * @param fromValidators an array of validator IDs to undelegate from
+     * @param amountShares the amount of shares to undelegate
+     * @param validators an array of validator IDs to undelegate from
      */
-    function undelegate(uint256 amountWrappedAsset, uint256[] calldata fromValidators) external {
+    function undelegate(uint256 amountShares, uint256[] calldata validators) external {
         require(!undelegatePaused, UndelegationPaused());
-        require(amountWrappedAsset > 0, UndelegateAmountCannotBeZero());
+        require(amountShares > 0, UndelegateAmountCannotBeZero());
 
-        uint256 amountToUndelegate = (getRate() * amountWrappedAsset) / DECIMAL_UNIT;
-        _burn(msg.sender, amountWrappedAsset);
+        uint256 amountToUndelegate = convertToAssets(amountShares);
+
+        _burn(msg.sender, amountShares);
 
         // undelegate from the pool first
         if (totalPool > 0) {
-            uint256 undelegateFromPool;
+            uint256 amountFromPool = amountToUndelegate > totalPool ? totalPool : amountToUndelegate;
 
-            if (amountToUndelegate > totalPool) {
-                undelegateFromPool = totalPool;
-            } else {
-                undelegateFromPool = amountToUndelegate;
-            }
-
-            _undelegateFromPool(undelegateFromPool);
-            amountToUndelegate -= undelegateFromPool;
+            _undelegateFromPool(amountFromPool);
+            amountToUndelegate -= amountFromPool;
         }
 
-        for (uint256 i = 0; i < fromValidators.length; i++) {
-            uint256 delegatedAmount = SFC.getStake(address(this), fromValidators[i]);
-            require(delegatedAmount > 0, NoDelegationForValidator(fromValidators[i]));
-
-            if (amountToUndelegate > 0) {
-                if (amountToUndelegate <= delegatedAmount) {
-                    // amountToUndelegate is less than or equal to the amount delegated to this validator, we partially undelegate from the validator.
-                    // can undelegate the full `amountToUndelegate` from this validator.
-                    _undelegateFromValidator(fromValidators[i], amountToUndelegate);
-                    amountToUndelegate = 0;
-                } else {
-                    // `amountToUndelegate` is greater than the amount delegated to this validator, so we fully undelegate from the validator.
-                    // `amountToUndelegate` not yet 0 and will need another loop.
-                    _undelegateFromValidator(fromValidators[i], delegatedAmount);
-                    amountToUndelegate -= delegatedAmount;
-                }
+        for (uint256 i = 0; i < validators.length; i++) {
+            // if we've undelegated the full amount, we can break out of the loop
+            if (amountToUndelegate == 0) {
+                break;
             }
+
+            uint256 amountDelegated = SFC.getStake(address(this), validators[i]);
+
+            require(amountDelegated > 0, NoDelegationForValidator(validators[i]));
+
+            uint256 amountFromValidator = amountToUndelegate > amountDelegated ? amountDelegated : amountToUndelegate;
+
+            _undelegateFromValidator(validators[i], amountFromValidator);
+            amountToUndelegate -= amountFromValidator;
         }
 
-        // making sure the full amount has been undelegated, guarding against wrong input and making sure the user gets the full amount back
+        // check that the full amount has been undelegated
         require(amountToUndelegate == 0, UnableToUndelegateFullAmountFromSpecifiedValidators());
     }
 
