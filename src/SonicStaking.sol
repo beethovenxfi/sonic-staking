@@ -262,8 +262,9 @@ contract SonicStaking is
     /**
      * @notice Withdraw undelegated assets to the pool
      * @param withdrawId the unique withdrawId for the undelegation request
+     * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
-    function operatorWithdrawToPool(uint256 withdrawId)
+    function operatorWithdrawToPool(uint256 withdrawId, bool emergency)
         external
         onlyRole(OPERATOR_ROLE)
         withValidWithdrawId(withdrawId)
@@ -279,6 +280,12 @@ contract SonicStaking is
         // in the instance of a slahing event, the amount withdrawn will not match the request amount.
         // We track the change of balance for the contract to get the actual amount withdrawn.
         uint256 actualWithdrawnAmount = address(this).balance - balanceBefore;
+
+        if (!emergency) {
+            // In the instance of a slashing event, the amount withdrawn will not match the request amount.
+            // The operator must acknowledge this by setting emergency to true and accept that a drop in the rate will occur.
+            require(request.assetAmount == actualWithdrawnAmount, WithdrawnAmountTooLow());
+        }
 
         // we need to subtract the request amount from the pending amount since that is the value that was added during
         // the operator undelegate

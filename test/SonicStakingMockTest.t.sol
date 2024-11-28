@@ -148,7 +148,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         vm.warp(block.timestamp + 14 days);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.operatorWithdrawToPool(101);
+        sonicStaking.operatorWithdrawToPool(101, false);
 
         assertEq(totalDelegatedStart, sonicStaking.totalDelegated());
         assertEq(totalPoolStart + depositAmount, sonicStaking.totalPool());
