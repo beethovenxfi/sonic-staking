@@ -106,9 +106,9 @@ contract SonicStaking is
     event Deposited(address indexed user, uint256 assetAmount, uint256 wrappedAmount);
     event Delegated(uint256 indexed toValidator, uint256 assetAmount);
     event Undelegated(
-        address indexed user, uint256 wrID, uint256 assetAmount, uint256 fromValidator, WithdrawKind kind
+        address indexed user, uint256 withdarwId, uint256 assetAmount, uint256 fromValidator, WithdrawKind kind
     );
-    event Withdrawn(address indexed user, uint256 wrID, uint256 assetAmount, WithdrawKind kind, bool emergency);
+    event Withdrawn(address indexed user, uint256 withdarwId, uint256 assetAmount, WithdrawKind kind, bool emergency);
 
     error DelegateAmountCannotBeZero();
     error DelegateAmountLargerThanPool();
@@ -166,7 +166,7 @@ contract SonicStaking is
 
     /**
      *
-     * Getter & helper functions   *
+     * Getter & helper functions
      *
      */
 
@@ -183,82 +183,79 @@ contract SonicStaking is
     }
 
     /**
-     * @notice Returns the amount of asset equivalent 1 wrapped asset (with 18 decimals)
+     * @notice Returns the amount of asset equivalent to 1 share (with 18 decimals)
      */
     function getRate() public view returns (uint256) {
         uint256 assetTotal = totalAssets();
-        uint256 totalWrapped = totalSupply();
+        uint256 totalShares = totalSupply();
 
-        if (assetTotal == 0 || totalWrapped == 0) {
+        if (assetTotal == 0 || totalShares == 0) {
             return 1 * DECIMAL_UNIT;
         }
-        return (assetTotal * DECIMAL_UNIT) / totalWrapped;
+        return (assetTotal * DECIMAL_UNIT) / totalShares;
     }
 
     /**
-     * @notice Returns the amount of wrapped asset equivalent to the provided asset
-     * @param assetAmount the amount of asset to convert
+     * @notice Returns the amount of share equivalent to the provided number of assets
+     * @param assetAmount the amount of assets to convert
      */
     function convertToShares(uint256 assetAmount) public view returns (uint256) {
         uint256 assetTotal = totalAssets();
-        uint256 totalWrapped = totalSupply();
+        uint256 totalShares = totalSupply();
 
-        if (assetTotal == 0 || totalWrapped == 0) {
+        if (assetTotal == 0 || totalShares == 0) {
             return assetAmount;
         }
-        return (assetAmount * totalWrapped) / assetTotal;
+        return (assetAmount * totalShares) / assetTotal;
     }
 
     /**
      *
-     * Admin functions   *
+     * Admin functions
      *
      */
 
     /**
      * @notice Delegate from the pool to a specific validator
-     * @param amount the amount to delegate
-     * @param toValidatorId the ID of the validator to delegate to
+     * @param amount the amount of assets to delegate
+     * @param validatorId the ID of the validator to delegate to
      */
-    function delegate(uint256 amount, uint256 toValidatorId) external onlyRole(OPERATOR_ROLE) {
+    function delegate(uint256 amount, uint256 validatorId) external onlyRole(OPERATOR_ROLE) {
         require(amount > 0, DelegateAmountCannotBeZero());
         require(amount <= totalPool, DelegateAmountLargerThanPool());
 
         totalPool -= amount;
         totalDelegated += amount;
 
-        SFC.delegate{value: amount}(toValidatorId);
+        SFC.delegate{value: amount}(validatorId);
 
-        emit Delegated(toValidatorId, amount);
+        emit Delegated(validatorId, amount);
     }
 
     /**
      * @notice Undelegate assets, assets can then be withdrawn to the pool after `withdrawDelay`
-     * @param amountToUndelegate the amount of assets to undelegate from given validator
-     * @param fromValidatorId the validator to undelegate from
+     * @param amount the amount of assets to undelegate from given validator
+     * @param validatorId the validator to undelegate from
      */
-    function operatorUndelegateToPool(uint256 amountToUndelegate, uint256 fromValidatorId)
-        external
-        onlyRole(OPERATOR_ROLE)
-    {
-        require(amountToUndelegate > 0, UndelegateAmountCannotBeZero());
+    function operatorUndelegateToPool(uint256 amount, uint256 validatorId) external onlyRole(OPERATOR_ROLE) {
+        require(amount > 0, UndelegateAmountCannotBeZero());
 
-        uint256 delegatedAmount = SFC.getStake(address(this), fromValidatorId);
+        uint256 delegatedAmount = SFC.getStake(address(this), validatorId);
 
-        require(delegatedAmount > 0, NoDelegationForValidator(fromValidatorId));
-        require(amountToUndelegate <= delegatedAmount, UndelegateAmountExceedsDelegated());
+        require(delegatedAmount > 0, NoDelegationForValidator(validatorId));
+        require(amount <= delegatedAmount, UndelegateAmountExceedsDelegated());
 
-        _undelegateFromValidator(fromValidatorId, amountToUndelegate);
+        _undelegateFromValidator(validatorId, amount);
 
-        pendingOperatorWithdraw += amountToUndelegate;
+        pendingOperatorWithdraw += amount;
     }
 
     /**
      * @notice Withdraw undelegated assets to the pool
-     * @param wrId the unique wrID for the undelegation request
+     * @param withdrawId the unique withdrawId for the undelegation request
      */
-    function operatorWithdrawToPool(uint256 wrId) external onlyRole(OPERATOR_ROLE) {
-        WithdrawRequest storage request = allWithdrawRequests[wrId];
+    function operatorWithdrawToPool(uint256 withdrawId) external onlyRole(OPERATOR_ROLE) {
+        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
         uint256 timestamp = request.requestTimestamp;
         uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;
 
@@ -271,7 +268,7 @@ contract SonicStaking is
 
         uint256 balanceBefore = address(this).balance;
 
-        SFC.withdraw(request.validatorId, wrId);
+        SFC.withdraw(request.validatorId, withdrawId);
 
         // in the instance of a slahing event, the amount withdrawn will not match the request amount.
         // We track the change of balance for the contract to get the actual amount withdrawn.
@@ -287,7 +284,7 @@ contract SonicStaking is
     }
 
     /**
-     * @notice Set withdraw delay onlyRole(OPERATOR_ROLE)
+     * @notice Set withdraw delay
      * @param delay the new delay
      */
     function setWithdrawDelay(uint256 delay) external onlyRole(OPERATOR_ROLE) {
@@ -296,36 +293,36 @@ contract SonicStaking is
     }
 
     /**
-     * @notice Pause/unpause user undelegations onlyRole(OPERATOR_ROLE)
-     * @param desiredValue the desired value of the switch
+     * @notice Pause/unpause user undelegations
+     * @param newValue the desired value of the switch
      */
-    function setUndelegatePaused(bool desiredValue) external onlyRole(OPERATOR_ROLE) {
-        require(undelegatePaused != desiredValue, PausedValueDidNotChange());
+    function setUndelegatePaused(bool newValue) external onlyRole(OPERATOR_ROLE) {
+        require(undelegatePaused != newValue, PausedValueDidNotChange());
 
-        undelegatePaused = desiredValue;
-        emit UndelegatePausedUpdated(msg.sender, desiredValue);
+        undelegatePaused = newValue;
+        emit UndelegatePausedUpdated(msg.sender, newValue);
     }
 
     /**
-     * @notice Pause/unpause user withdraws onlyRole(OPERATOR_ROLE)
-     * @param desiredValue the desired value of the switch
+     * @notice Pause/unpause user withdraws
+     * @param newValue the desired value of the switch
      */
-    function setWithdrawPaused(bool desiredValue) external onlyRole(OPERATOR_ROLE) {
-        require(withdrawPaused != desiredValue, PausedValueDidNotChange());
+    function setWithdrawPaused(bool newValue) external onlyRole(OPERATOR_ROLE) {
+        require(withdrawPaused != newValue, PausedValueDidNotChange());
 
-        withdrawPaused = desiredValue;
-        emit WithdrawPausedUpdated(msg.sender, desiredValue);
+        withdrawPaused = newValue;
+        emit WithdrawPausedUpdated(msg.sender, newValue);
     }
 
     /**
-     * @notice Pause/unpause reward claiming functions onlyRole(OPERATOR_ROLE)
-     * @param desiredValue the desired value of the switch
+     * @notice Pause/unpause reward claiming functions
+     * @param newValue the desired value of the switch
      */
-    function setRewardClaimPaused(bool desiredValue) external onlyRole(OPERATOR_ROLE) {
-        require(rewardClaimPaused != desiredValue, PausedValueDidNotChange());
+    function setRewardClaimPaused(bool newValue) external onlyRole(OPERATOR_ROLE) {
+        require(rewardClaimPaused != newValue, PausedValueDidNotChange());
 
-        rewardClaimPaused = desiredValue;
-        emit RewardClaimPausedUpdated(msg.sender, desiredValue);
+        rewardClaimPaused = newValue;
+        emit RewardClaimPausedUpdated(msg.sender, newValue);
     }
 
     function setDepositLimits(uint256 min, uint256 max) external onlyRole(OPERATOR_ROLE) {
@@ -357,7 +354,7 @@ contract SonicStaking is
 
     /**
      *
-     * End User Functions *
+     * End User Functions
      *
      */
 
@@ -428,7 +425,7 @@ contract SonicStaking is
 
     /**
      * @notice Withdraw undelegated assets
-     * @param withdrawId the unique wrID for the undelegation request
+     * @param withdrawId the unique withdraw id for the undelegation request
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
     function withdraw(uint256 withdrawId, bool emergency) external {
@@ -476,7 +473,7 @@ contract SonicStaking is
 
     /**
      *
-     * Maintenance Functions *
+     * Maintenance Functions
      *
      */
 
@@ -511,7 +508,7 @@ contract SonicStaking is
 
     /**
      *
-     * Internal functions *
+     * Internal functions
      *
      */
 
