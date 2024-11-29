@@ -120,7 +120,7 @@ contract SonicStaking is
     error UnauthorizedWithdraw();
     error TreasuryAddressCannotBeZero();
     error ProtocolFeeTooHigh();
-    error DepositTooLow();
+    error DepositTooSmall();
     error DepositPaused();
     error UndelegationPaused();
     error WithdrawsPaused();
@@ -367,7 +367,7 @@ contract SonicStaking is
      */
     function deposit() external payable {
         uint256 amount = msg.value;
-        require(amount >= MIN_DEPOSIT, DepositTooLow());
+        require(amount >= MIN_DEPOSIT, DepositTooSmall());
         require(!depositPaused, DepositPaused());
 
         address user = msg.sender;
