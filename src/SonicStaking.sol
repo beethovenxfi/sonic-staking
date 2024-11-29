@@ -181,13 +181,7 @@ contract SonicStaking is
      * @notice Returns the amount of asset equivalent to 1 share (with 18 decimals)
      */
     function getRate() public view returns (uint256) {
-        uint256 assetsTotal = totalAssets();
-        uint256 totalShares = totalSupply();
-
-        if (assetsTotal == 0 || totalShares == 0) {
-            return 1 * DECIMAL_UNIT;
-        }
-        return (assetsTotal * DECIMAL_UNIT) / totalShares;
+        return convertToAssets(1e18);
     }
 
     /**
