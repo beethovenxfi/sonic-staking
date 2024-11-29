@@ -129,10 +129,8 @@ contract SonicStaking is
     error WithdrawnAmountTooLow();
     error NativeTransferFailed();
     error ProtocolFeeTransferFailed();
-    error BalanceDecreasedAfterFees();
     error PausedValueDidNotChange();
     error UnableToUndelegateFullAmountFromSpecifiedValidators();
-    error InvalidWithdrawRequest();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
