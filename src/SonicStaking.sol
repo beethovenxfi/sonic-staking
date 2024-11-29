@@ -441,7 +441,7 @@ contract SonicStaking is
      * @param withdrawId the unique withdraw id for the undelegation request
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
-    function withdraw(uint256 withdrawId, bool emergency) external withValidWithdrawId(withdrawId) {
+    function withdraw(uint256 withdrawId, bool emergency) public withValidWithdrawId(withdrawId) {
         require(!withdrawPaused, WithdrawsPaused());
 
         WithdrawRequest storage request = allWithdrawRequests[withdrawId];
@@ -481,7 +481,7 @@ contract SonicStaking is
      * @param withdrawIds the unique withdraw ids for the undelegation requests
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
-    function withdrawMany(uint256[] calldata withdrawIds, bool emergency) {
+    function withdrawMany(uint256[] calldata withdrawIds, bool emergency) external {
         for (uint256 i = 0; i < withdrawIds.length; i++) {
             withdraw(withdrawIds[i], emergency);
         }
