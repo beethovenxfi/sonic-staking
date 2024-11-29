@@ -131,6 +131,7 @@ contract SonicStaking is
     error ProtocolFeeTransferFailed();
     error PausedValueDidNotChange();
     error UnableToUndelegateFullAmountFromSpecifiedValidators();
+    error UndelegateAmountExceedsPool();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -382,6 +383,8 @@ contract SonicStaking is
 
     /**
      * @notice Undelegate asset, assets can then be withdrawn after `withdrawDelay`
+     * @dev We leave it to off-chain infra to optimize for the fewest number of validators, as each validator creates
+     *      an additional withdraw request.
      * @param amountShares the amount of shares to undelegate
      * @param validatorIds an array of validator IDs to undelegate from
      */
@@ -393,32 +396,44 @@ contract SonicStaking is
 
         _burn(msg.sender, amountShares);
 
-        // undelegate from the pool first
-        if (totalPool > 0) {
-            uint256 amountFromPool = amountToUndelegate > totalPool ? totalPool : amountToUndelegate;
-
-            _undelegateFromPool(amountFromPool);
-            amountToUndelegate -= amountFromPool;
-        }
-
         for (uint256 i = 0; i < validatorIds.length; i++) {
-            // if we've undelegated the full amount, we can break out of the loop
-            if (amountToUndelegate == 0) {
-                break;
-            }
-
             uint256 amountDelegated = SFC.getStake(address(this), validatorIds[i]);
 
             require(amountDelegated > 0, NoDelegationForValidator(validatorIds[i]));
 
-            uint256 amountFromValidator = amountToUndelegate > amountDelegated ? amountDelegated : amountToUndelegate;
-
-            _undelegateFromValidator(validatorIds[i], amountFromValidator);
-            amountToUndelegate -= amountFromValidator;
+            if (amountToUndelegate > amountDelegated) {
+                _undelegateFromValidator(validatorIds[i], amountDelegated);
+                amountToUndelegate -= amountDelegated;
+            } else {
+                _undelegateFromValidator(validatorIds[i], amountToUndelegate);
+                amountToUndelegate = 0;
+                // we've undelegated the full amount, no need to continue
+                break;
+            }
         }
 
         // check that the full amount has been undelegated
         require(amountToUndelegate == 0, UnableToUndelegateFullAmountFromSpecifiedValidators());
+    }
+
+    /**
+     * @notice Undelegate from the pool.
+     * @param amountShares the amount of shares to undelegate
+     */
+    function undelegateFromPool(uint256 amountShares) external {
+        require(amountShares > 0, UndelegateAmountCannotBeZero());
+
+        uint256 amountToUndelegate = convertToAssets(amountShares);
+
+        require(amountToUndelegate <= totalPool, UndelegateAmountExceedsPool());
+
+        _burn(msg.sender, amountShares);
+
+        uint256 withdrawId = _createWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
+
+        totalPool -= amountToUndelegate;
+
+        emit Undelegated(msg.sender, withdrawId, amountToUndelegate, 0, WithdrawKind.POOL);
     }
 
     /**
@@ -459,6 +474,17 @@ contract SonicStaking is
         require(withdrawnToUser, NativeTransferFailed());
 
         emit Withdrawn(user, withdrawId, withdrawnAmount, request.kind, emergency);
+    }
+
+    /**
+     * @notice Withdraw undelegated assets for a list of withdrawIds
+     * @param withdrawIds the unique withdraw ids for the undelegation requests
+     * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
+     */
+    function withdrawMany(uint256[] calldata withdrawIds, bool emergency) {
+        for (uint256 i = 0; i < withdrawIds.length; i++) {
+            withdraw(withdrawIds[i], emergency);
+        }
     }
 
     /**
@@ -510,18 +536,6 @@ contract SonicStaking is
         emit Undelegated(msg.sender, withdrawId, amount, validatorId, WithdrawKind.VALIDATOR);
     }
 
-    /**
-     * @notice Undelegate from the pool.
-     * @param amount the amount to undelegate
-     */
-    function _undelegateFromPool(uint256 amount) internal {
-        uint256 withdrawId = _createWithdrawRequest(WithdrawKind.POOL, 0, amount);
-
-        totalPool -= amount;
-
-        emit Undelegated(msg.sender, withdrawId, amount, 0, WithdrawKind.POOL);
-    }
-
     function _createWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
         internal
         returns (uint256 withdrawId)
@@ -571,10 +585,9 @@ contract SonicStaking is
 
     modifier withValidWithdrawId(uint256 withdrawId) {
         WithdrawRequest storage request = allWithdrawRequests[withdrawId];
-        uint256 timestamp = request.requestTimestamp;
         uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;
 
-        require(timestamp > 0, WithdrawIdDoesNotExist());
+        require(request.requestTimestamp > 0, WithdrawIdDoesNotExist());
         require(_now() >= earliestWithdrawTime, WithdrawDelayNotElapsed(earliestWithdrawTime));
         require(!request.isWithdrawn, WithdrawAlreadyProcessed());
         require(msg.sender == request.user, UnauthorizedWithdraw());
