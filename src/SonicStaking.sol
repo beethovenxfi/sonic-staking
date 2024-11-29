@@ -291,6 +291,8 @@ contract SonicStaking is
 
     /**
      * @notice Pause all protocol functions
+     * @dev The operator is given the power to pause the protocol, giving them the power to take action in the case of
+     *      an emergency. Enabling the protocol is reserved for the admin.
      */
     function pause() external onlyRole(OPERATOR_ROLE) {
         _setDepositPaused(true);
