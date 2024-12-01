@@ -400,6 +400,7 @@ contract SonicStaking is
 
         _burn(msg.sender, amountShares);
 
+        // If too many validators are provided, the empty withdrawIds will be 0s
         withdrawIds = new uint256[](validatorIds.length);
 
         for (uint256 i = 0; i < validatorIds.length; i++) {
