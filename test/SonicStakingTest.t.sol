@@ -139,10 +139,8 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         delegate(delegateAmount2, toValidatorId2);
 
-        uint256[] memory validatorIds = new uint256[](0);
-
         vm.prank(user);
-        sonicStaking.undelegate(undelegateAmount, validatorIds);
+        sonicStaking.undelegateFromPool(undelegateAmount);
 
         assertEq(sonicStaking.totalDelegated(), delegateAmount1 + delegateAmount2);
         assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), delegateAmount1);
@@ -157,134 +155,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(userAddress, user);
         assertEq(isWithdrawn, false);
         assertEq(amountS, undelegateAmount);
-    }
-
-    function testUndelegateFromValidatorAndPool() public {
-        uint256 depositAmount = 10000 ether;
-        uint256 delegateAmount1 = 1000 ether;
-        uint256 delegateAmount2 = 5000 ether;
-        uint256 undelegateAmount = 8000 ether;
-        uint256 toValidatorId1 = 1;
-        uint256 toValidatorId2 = 2;
-
-        uint256 undelegatedFromPool = undelegateAmount - (depositAmount - delegateAmount1 - delegateAmount2);
-
-        // make sure we have a deposit
-        address user = makeDeposit(depositAmount);
-
-        delegate(delegateAmount1, toValidatorId1);
-
-        // need to increase time to allow for another delegation
-        vm.warp(block.timestamp + 1 hours);
-
-        delegate(delegateAmount2, toValidatorId2);
-
-        uint256[] memory validatorIds = new uint256[](2);
-        validatorIds[0] = 1;
-        validatorIds[1] = 2;
-
-        vm.prank(user);
-        sonicStaking.undelegate(undelegateAmount, validatorIds);
-
-        assertEq(
-            sonicStaking.totalDelegated(), delegateAmount1 + delegateAmount2 - (undelegateAmount - undelegatedFromPool)
-        );
-        assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), 0);
-        assertEq(SFC.getStake(address(sonicStaking), toValidatorId2), 2000 ether);
-        assertEq(sonicStaking.totalPool(), 0);
-        assertEq(sonicStaking.balanceOf(user), depositAmount - undelegateAmount);
-
-        assertEq(sonicStaking.withdrawCounter(), 103);
-
-        (, uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
-            sonicStaking.allWithdrawRequests(sonicStaking.withdrawCounter() - 2);
-        assertEq(validatorId, 0);
-        assertEq(requestTimestamp, block.timestamp);
-        assertEq(userAddress, user);
-        assertEq(isWithdrawn, false);
-        assertEq(amountS, undelegatedFromPool);
-
-        (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) =
-            sonicStaking.allWithdrawRequests(sonicStaking.withdrawCounter() - 1);
-        assertEq(validatorId, 1);
-        assertEq(requestTimestamp, block.timestamp);
-        assertEq(userAddress, user);
-        assertEq(isWithdrawn, false);
-        assertEq(amountS, 1000 ether);
-
-        (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) =
-            sonicStaking.allWithdrawRequests(sonicStaking.withdrawCounter());
-        assertEq(validatorId, 2);
-        assertEq(requestTimestamp, block.timestamp);
-        assertEq(userAddress, user);
-        assertEq(isWithdrawn, false);
-        assertEq(amountS, 3000 ether);
-    }
-
-    function testUndelegateAndWithdrawFromPoolOnly() public {
-        uint256 depositAmount = 10000 ether;
-        uint256 delegateAmount1 = 1000 ether;
-        uint256 undelegateAmount = 1000 ether;
-        uint256 toValidatorId1 = 1;
-
-        (
-            uint256 totalDelegatedStart,
-            uint256 totalPoolStart,
-            uint256 totalSWorthStart,
-            uint256 rateStart,
-            uint256 lastUsedWrIdStart
-        ) = getAmounts();
-
-        // make sure we have a deposit
-        address user = makeDeposit(depositAmount);
-
-        assertEq(totalDelegatedStart, sonicStaking.totalDelegated());
-        assertEq(totalPoolStart + depositAmount, sonicStaking.totalPool());
-        assertEq(totalSWorthStart + depositAmount, sonicStaking.totalAssets());
-        assertEq(rateStart, sonicStaking.getRate());
-        assertEq(lastUsedWrIdStart, sonicStaking.withdrawCounter());
-        assertEq(sonicStaking.balanceOf(user), depositAmount);
-
-        delegate(delegateAmount1, toValidatorId1);
-
-        assertEq(totalDelegatedStart + delegateAmount1, sonicStaking.totalDelegated());
-        assertEq(totalPoolStart + depositAmount - delegateAmount1, sonicStaking.totalPool());
-        assertEq(totalSWorthStart + depositAmount, sonicStaking.totalAssets());
-        assertEq(rateStart, sonicStaking.getRate());
-        assertEq(lastUsedWrIdStart, sonicStaking.withdrawCounter());
-        assertEq(sonicStaking.balanceOf(user), depositAmount);
-
-        uint256[] memory validatorIds = new uint256[](1);
-        validatorIds[0] = 1;
-
-        vm.prank(user);
-        sonicStaking.undelegate(undelegateAmount, validatorIds);
-        assertEq(sonicStaking.withdrawCounter(), 101);
-
-        assertEq(totalDelegatedStart + delegateAmount1, sonicStaking.totalDelegated());
-        assertEq(totalPoolStart + depositAmount - delegateAmount1 - undelegateAmount, sonicStaking.totalPool());
-        assertEq(totalSWorthStart + depositAmount - undelegateAmount, sonicStaking.totalAssets());
-        assertEq(rateStart, sonicStaking.getRate());
-        assertEq(lastUsedWrIdStart + 1, sonicStaking.withdrawCounter());
-        assertEq(sonicStaking.balanceOf(user), depositAmount - undelegateAmount);
-
-        // need to increase time to allow for withdraw
-        vm.warp(block.timestamp + 14 days);
-
-        uint256 balanceBefore = address(user).balance;
-        vm.prank(user);
-        sonicStaking.withdraw(101, false);
-        assertEq(address(user).balance, balanceBefore + 1000 ether);
-
-        assertEq(totalDelegatedStart + delegateAmount1, sonicStaking.totalDelegated());
-        assertEq(totalPoolStart + depositAmount - delegateAmount1 - undelegateAmount, sonicStaking.totalPool());
-        assertEq(totalSWorthStart + depositAmount - undelegateAmount, sonicStaking.totalAssets());
-        assertEq(rateStart, sonicStaking.getRate());
-        assertEq(lastUsedWrIdStart + 1, sonicStaking.withdrawCounter());
-        assertEq(sonicStaking.balanceOf(user), depositAmount - undelegateAmount);
-
-        (,,, bool isWithdrawn,,) = sonicStaking.allWithdrawRequests(101);
-        assertEq(isWithdrawn, true);
     }
 
     function testUndelegateWithTooLittleValidatorsProvided() public {

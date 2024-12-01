@@ -78,41 +78,37 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
     // withdraw from delegator does not work on fork as it needs to increase the epoch
     function testUndelegateAndWithdrawFromDelegator() public {
         uint256 depositAmount = 10000 ether;
-        uint256 delegateAmount1 = 1000 ether;
+        uint256 delegateAmount = 10000 ether;
         uint256 undelegateAmount = 10000 ether;
-        uint256 toValidatorId1 = 1;
+        uint256 toValidatorId = 1;
 
-        // make sure we have a deposit
         address user = makeDeposit(depositAmount);
 
-        delegate(delegateAmount1, toValidatorId1);
+        delegate(delegateAmount, toValidatorId);
 
         uint256[] memory validatorIds = new uint256[](1);
         validatorIds[0] = 1;
 
         vm.prank(user);
         sonicStaking.undelegate(undelegateAmount, validatorIds);
-        assertEq(sonicStaking.withdrawCounter(), 102);
+        assertEq(sonicStaking.withdrawCounter(), 101);
 
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
-        (, uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
+        (, uint256 validatorId, uint256 amountAssets, bool isWithdrawn,, address userAddress) =
             sonicStaking.allWithdrawRequests(101);
 
-        assertEq(validatorId, 0);
+        assertEq(validatorId, toValidatorId);
+        assertEq(amountAssets, undelegateAmount);
+        assertEq(userAddress, user);
+        assertEq(isWithdrawn, false);
 
         uint256 balanceBefore = address(user).balance;
+
         vm.prank(user);
         sonicStaking.withdraw(101, false);
-        assertEq(address(user).balance, balanceBefore + 9000 ether);
-
-        (, validatorId, amountS, isWithdrawn, requestTimestamp, userAddress) = sonicStaking.allWithdrawRequests(102);
-        assertEq(validatorId, 1);
-
-        vm.prank(user);
-        sonicStaking.withdraw(102, false);
-        assertEq(address(user).balance, balanceBefore + 10000 ether);
+        assertEq(address(user).balance, balanceBefore + undelegateAmount);
     }
 
     // withdraw from delegator does not work on fork as it needs to increase the epoch
@@ -217,7 +213,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         // undelegate from slashed validator
         uint256[] memory validatorIds = new uint256[](1);
-        validatorIds[0] = 1;
+        validatorIds[0] = toValidatorId;
 
         vm.prank(user);
         sonicStaking.undelegate(delegateAmount, validatorIds);
@@ -235,7 +231,10 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         // emergency withdraw
         vm.prank(user);
-        sonicStaking.withdraw(101, true);
+        uint256 amountWithdrawn = sonicStaking.withdraw(101, true);
+        console.log("balance before", balanceBefore);
+        console.log("balance after", address(user).balance);
+        console.log("amount withdrawn", amountWithdrawn);
         assertApproxEqAbs(address(user).balance, balanceBefore + 500 ether, 1);
     }
 
