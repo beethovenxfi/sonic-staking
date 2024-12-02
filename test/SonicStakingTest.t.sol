@@ -36,117 +36,89 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     }
 
     function testDeposit() public {
-        uint256 depositAmount = 100000 ether;
+        uint256 depositAssetAmount = 100_000 ether;
 
-        address user = makeDeposit(depositAmount);
-        assertEq(sonicStaking.totalPool(), depositAmount);
-        assertEq(sonicStaking.totalAssets(), depositAmount);
+        address user = makeDeposit(depositAssetAmount);
+        assertEq(sonicStaking.totalPool(), depositAssetAmount);
+        assertEq(sonicStaking.totalAssets(), depositAssetAmount);
 
         assertEq(sonicStaking.getRate(), 1 ether);
-        // user gets the same amount of stkS because rate is 1.
-        assertEq(sonicStaking.balanceOf(user), depositAmount);
+        // user gets the same amount of shares because rate is 1.
+        assertEq(sonicStaking.balanceOf(user), depositAssetAmount);
     }
 
     function testDelegate() public {
-        uint256 depositAmount = 100000 ether;
-        uint256 delegateAmount = 1000 ether;
+        uint256 depositAssetAmount = 100_000 ether;
+        uint256 delegateAssetAmount = 1_000 ether;
         uint256 toValidatorId = 1;
 
-        // make sure we have a deposit
-        makeDeposit(depositAmount);
-
         uint256 rateBefore = sonicStaking.getRate();
-        // delegate
-        delegate(delegateAmount, toValidatorId);
 
-        // assert
-        assertEq(sonicStaking.totalPool(), depositAmount - delegateAmount);
-        assertEq(sonicStaking.totalDelegated(), delegateAmount);
-        assertEq(sonicStaking.totalAssets(), depositAmount);
-        assertEq(SFC.getStake(address(sonicStaking), toValidatorId), delegateAmount);
+        makeDeposit(depositAssetAmount);
+        delegate(delegateAssetAmount, toValidatorId);
 
+        assertEq(sonicStaking.totalPool(), depositAssetAmount - delegateAssetAmount);
+        assertEq(sonicStaking.totalDelegated(), delegateAssetAmount);
+        assertEq(sonicStaking.totalAssets(), depositAssetAmount);
+        assertEq(SFC.getStake(address(sonicStaking), toValidatorId), delegateAssetAmount);
+
+        // No rate change as there is no reward claimed yet
         assertEq(sonicStaking.getRate(), rateBefore);
     }
 
     function testMultipleDelegateToSameValidator() public {
-        uint256 depositAmount = 100000 ether;
-        uint256 delegateAmount = 1000 ether;
+        uint256 depositAssetAmount = 100_000 ether;
+        uint256 delegateAssetAmount = 1_000 ether;
         uint256 toValidatorId = 1;
 
-        // make sure we have a deposit
-        makeDeposit(depositAmount);
-
-        delegate(delegateAmount, toValidatorId);
-
-        assertEq(sonicStaking.totalDelegated(), delegateAmount);
-        assertEq(sonicStaking.totalAssets(), depositAmount);
-        assertEq(sonicStaking.totalPool(), depositAmount - delegateAmount);
-        assertEq(SFC.getStake(address(sonicStaking), toValidatorId), delegateAmount);
+        makeDeposit(depositAssetAmount);
+        delegate(delegateAssetAmount, toValidatorId);
 
         // need to increase time to allow for another delegation
         vm.warp(block.timestamp + 1 hours);
 
-        delegate(delegateAmount, toValidatorId);
+        // second delegation to the same validator
+        delegate(delegateAssetAmount, toValidatorId);
 
-        assertEq(sonicStaking.totalDelegated(), delegateAmount * 2);
-        assertEq(sonicStaking.totalAssets(), depositAmount);
-        assertEq(sonicStaking.totalPool(), depositAmount - delegateAmount * 2);
-        assertEq(SFC.getStake(address(sonicStaking), toValidatorId), delegateAmount * 2);
+        assertEq(sonicStaking.totalDelegated(), delegateAssetAmount * 2);
+        assertEq(sonicStaking.totalAssets(), depositAssetAmount);
+        assertEq(sonicStaking.totalPool(), depositAssetAmount - delegateAssetAmount * 2);
+        assertEq(SFC.getStake(address(sonicStaking), toValidatorId), delegateAssetAmount * 2);
     }
 
     function testMultipleDelegateToDifferentValidator() public {
-        uint256 depositAmount = 100000 ether;
-        uint256 delegateAmount1 = 1000 ether;
-        uint256 delegateAmount2 = 5000 ether;
+        uint256 depositAssetAmount = 100_000 ether;
+        uint256 delegateAssetAmount1 = 1_000 ether;
+        uint256 delegateAssetAmount2 = 5_000 ether;
         uint256 toValidatorId1 = 1;
         uint256 toValidatorId2 = 2;
 
-        // make sure we have a deposit
-        makeDeposit(depositAmount);
-
-        delegate(delegateAmount1, toValidatorId1);
-
-        assertEq(sonicStaking.totalDelegated(), delegateAmount1);
-        assertEq(sonicStaking.totalAssets(), depositAmount);
-        assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), delegateAmount1);
+        makeDeposit(depositAssetAmount);
+        delegate(delegateAssetAmount1, toValidatorId1);
 
         // need to increase time to allow for another delegation
         vm.warp(block.timestamp + 1 hours);
 
-        delegate(delegateAmount2, toValidatorId2);
+        // second delegation to a different validator
+        delegate(delegateAssetAmount2, toValidatorId2);
 
-        assertEq(sonicStaking.totalDelegated(), delegateAmount1 + delegateAmount2);
-        assertEq(sonicStaking.totalAssets(), depositAmount);
-        assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), delegateAmount1);
-        assertEq(SFC.getStake(address(sonicStaking), toValidatorId2), delegateAmount2);
+        assertEq(sonicStaking.totalDelegated(), delegateAssetAmount1 + delegateAssetAmount2);
+        assertEq(sonicStaking.totalAssets(), depositAssetAmount);
+        assertEq(sonicStaking.totalPool(), depositAssetAmount - delegateAssetAmount1 - delegateAssetAmount2);
+        assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), delegateAssetAmount1);
+        assertEq(SFC.getStake(address(sonicStaking), toValidatorId2), delegateAssetAmount2);
     }
 
     function testUndelegateFromPool() public {
-        uint256 depositAmount = 100000 ether;
-        uint256 delegateAmount1 = 1000 ether;
-        uint256 delegateAmount2 = 5000 ether;
-        uint256 undelegateAmount = 10000 ether;
-        uint256 toValidatorId1 = 1;
-        uint256 toValidatorId2 = 2;
+        uint256 depositAssetAmount = 100_000 ether;
+        uint256 undelegateSharesAmount = 10_000 ether;
 
-        // make sure we have a deposit
-        address user = makeDeposit(depositAmount);
+        address user = makeDeposit(depositAssetAmount);
 
-        delegate(delegateAmount1, toValidatorId1);
-
-        // need to increase time to allow for another delegation
-        vm.warp(block.timestamp + 1 hours);
-
-        delegate(delegateAmount2, toValidatorId2);
+        uint256 userSharesBefore = sonicStaking.balanceOf(user);
 
         vm.prank(user);
-        sonicStaking.undelegateFromPool(undelegateAmount);
-
-        assertEq(sonicStaking.totalDelegated(), delegateAmount1 + delegateAmount2);
-        assertEq(SFC.getStake(address(sonicStaking), toValidatorId1), delegateAmount1);
-        assertEq(SFC.getStake(address(sonicStaking), toValidatorId2), delegateAmount2);
-        assertEq(sonicStaking.totalPool(), depositAmount - delegateAmount1 - delegateAmount2 - undelegateAmount);
-        assertEq(sonicStaking.balanceOf(user), depositAmount - undelegateAmount);
+        sonicStaking.undelegateFromPool(undelegateSharesAmount);
 
         (, uint256 validatorId, uint256 amountS, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
             sonicStaking.allWithdrawRequests(sonicStaking.withdrawCounter());
@@ -154,27 +126,26 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(requestTimestamp, block.timestamp);
         assertEq(userAddress, user);
         assertEq(isWithdrawn, false);
-        assertEq(amountS, undelegateAmount);
+        assertEq(amountS, undelegateSharesAmount);
+
+        assertEq(sonicStaking.totalPool(), depositAssetAmount - sonicStaking.convertToAssets(undelegateSharesAmount));
+        assertEq(sonicStaking.balanceOf(user), userSharesBefore - undelegateSharesAmount);
     }
 
     function testUndelegateWithTooLittleValidatorsProvided() public {
-        uint256 depositAmount = 10000 ether;
-        uint256 delegateAmount1 = 5000 ether;
-        uint256 delegateAmount2 = 3000 ether;
-        uint256 undelegateAmount = 6000 ether;
+        uint256 depositAssetAmount = 10_000 ether;
+        uint256 delegateAssetAmount1 = 5_000 ether;
+        uint256 delegateAssetAmount2 = 3_000 ether;
+        uint256 undelegateSharesAmount = 6_000 ether;
         uint256 toValidatorId1 = 1;
         uint256 toValidatorId2 = 2;
 
         (, uint256 totalPoolStart,,,) = getAmounts();
 
-        // make sure we have a deposit
-        address user = makeDeposit(depositAmount);
+        address user = makeDeposit(depositAssetAmount);
 
-        delegate(delegateAmount1, toValidatorId1);
-        delegate(delegateAmount2, toValidatorId2);
-
-        assertEq(delegateAmount2 + delegateAmount1, sonicStaking.totalDelegated());
-        assertEq(totalPoolStart + depositAmount - delegateAmount1 - delegateAmount2, sonicStaking.totalPool());
+        delegate(delegateAssetAmount1, toValidatorId1);
+        delegate(delegateAssetAmount2, toValidatorId2);
 
         // only provide validator2, which doesnt have sufficient S to undelegate
         uint256[] memory validatorIds = new uint256[](1);
@@ -184,7 +155,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.expectRevert(
             abi.encodeWithSelector(SonicStaking.UnableToUndelegateFullAmountFromSpecifiedValidators.selector)
         );
-        sonicStaking.undelegate(undelegateAmount, validatorIds);
+        sonicStaking.undelegate(undelegateSharesAmount, validatorIds);
     }
 
     function testStateSetters() public {
