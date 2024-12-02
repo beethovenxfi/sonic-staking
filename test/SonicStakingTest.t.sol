@@ -224,4 +224,61 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.TreasuryAddressCannotBeZero.selector));
         sonicStaking.setTreasury(address(0));
     }
+
+    function testUndelegateFromValidator() public {
+        uint256 amount = 1000 ether;
+        // This should already be tested somewhere else
+        uint256 amountShares = SonicStaking.convertToShares(amount);
+        uint256 validatorId = 1;
+
+        address user = makeDeposit(amount);
+
+        //we dont need to test the deposit, we've already tested this somewhere else
+
+        delegate(amount, validatorId);
+
+        //we dont need to test the delegate, we've already tested this somewhere else
+
+        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
+        requests[0] = createUndelegateRequest(amountShares, validatorId);
+
+        vm.prank(user);
+        uint256[] memory withdrawIds = sonicStaking.undelegate(requests);
+
+        // do not explode this struct, if we add a new var in the struct, everything breaks
+        SonicStaking.WithdrawRequest withdrawRequest = sonicStaking.allWithdrawRequests(withdrawIds[0]);
+
+        assertEq(withdrawRequest.assetAmount, amount);
+        assertEq(withdrawRequest.isWithdrawn, false);
+        assertEq(withdrawRequest.user, user);
+        assertEq(withdrawRequest.kind, SonicStaking.WithdrawKind.VALIDATOR);
+        assertEq(withdrawRequest.validatorId, validatorId);
+    }
+
+    function testPartialUndelegateFromValidator() public {
+        uint256 amount = 1000 ether;
+        // we undelegate 250 of the 1000 deposited
+        uint256 undelegateAmount = 250 ether;
+        uint256 undelegateAmountShares = SonicStaking.convertToShares(undelegateAmount);
+        uint256 validatorId = 1;
+
+        address user = makeDeposit(amount);
+
+        //we dont need to test the deposit, we've already tested this somewhere else
+
+        delegate(amount, validatorId);
+
+        //we dont need to test the delegate, we've already tested this somewhere else
+
+        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
+        requests[0] = createUndelegateRequest(undelegateAmountShares, validatorId);
+
+        vm.prank(user);
+        uint256[] memory withdrawIds = sonicStaking.undelegate(requests);
+
+        // do not explode this struct, if we add a new var in the struct, everything breaks
+        SonicStaking.WithdrawRequest withdrawRequest = sonicStaking.allWithdrawRequests(withdrawIds[0]);
+
+        assertEq(withdrawRequest.assetAmount, undelegateAmount);
+    }
 }
