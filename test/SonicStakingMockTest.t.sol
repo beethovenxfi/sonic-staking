@@ -243,6 +243,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         vm.prank(user);
         sonicStaking.undelegate(delegateAssetAmount, validatorIds);
+        assertEq(sonicStaking.withdrawCounter(), 101);
 
         vm.warp(block.timestamp + 14 days);
 
@@ -255,6 +256,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         // emergency withdraw
         vm.prank(user);
+        sonicStaking.withdraw(101, true);
         assertApproxEqAbs(address(user).balance, balanceBefore + 500 ether, 1);
     }
 
