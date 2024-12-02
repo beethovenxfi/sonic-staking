@@ -387,7 +387,8 @@ contract SonicStaking is
     }
 
     /**
-     * @notice Undelegate asset, assets can then be withdrawn after `withdrawDelay`
+     * @notice Undelegate LST assets. The assets are burnt from the msg.sender and withdraw request(s) are created.
+     *            The underlying assets are withdrawable after the `withdrawDelay` has passed.
      * @param requests an array of undelegate requests, specifying the validatorId and the amountShares
      */
     function undelegate(UndelegateRequest[] calldata requests) external returns (uint256[] memory withdrawIds) {
