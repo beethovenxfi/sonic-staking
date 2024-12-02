@@ -402,9 +402,8 @@ contract SonicStaking is
             totalAmountShares += requests[i].amountShares;
         }
 
-        require(totalAmountShares > 0, UndelegateAmountCannotBeZero());
-
         _burn(msg.sender, totalAmountShares);
+
         withdrawIds = new uint256[](requests.length);
 
         for (uint256 i = 0; i < requests.length; i++) {
