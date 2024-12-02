@@ -117,6 +117,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         uint256 userSharesBefore = sonicStaking.balanceOf(user);
 
+        uint256 assetsToReceive = sonicStaking.convertToAssets(undelegateSharesAmount);
         vm.prank(user);
         sonicStaking.undelegateFromPool(undelegateSharesAmount);
 
@@ -128,7 +129,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(isWithdrawn, false);
         assertEq(amountS, undelegateSharesAmount);
 
-        assertEq(sonicStaking.totalPool(), depositAssetAmount - sonicStaking.convertToAssets(undelegateSharesAmount));
+        assertEq(sonicStaking.totalPool(), depositAssetAmount - assetsToReceive);
         assertEq(sonicStaking.balanceOf(user), userSharesBefore - undelegateSharesAmount);
     }
 
@@ -139,8 +140,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 undelegateSharesAmount = 6_000 ether;
         uint256 toValidatorId1 = 1;
         uint256 toValidatorId2 = 2;
-
-        (, uint256 totalPoolStart,,,) = getAmounts();
 
         address user = makeDeposit(depositAssetAmount);
 
