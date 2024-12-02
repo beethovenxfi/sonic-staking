@@ -408,15 +408,14 @@ contract SonicStaking is
         withdrawIds = new uint256[](requests.length);
 
         for (uint256 i = 0; i < requests.length; i++) {
-            uint256 validatorId = requests[i].validatorId;
             uint256 amountToUndelegate = convertToAssets(requests[i].amountShares);
-            uint256 amountDelegated = SFC.getStake(address(this), validatorId);
+            uint256 amountDelegated = SFC.getStake(address(this), requests[i].validatorId);
 
             require(amountToUndelegate <= amountDelegated, UndelegateAmountExceedsDelegated());
 
-            withdrawIds[i] = _createWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountToUndelegate);
+            withdrawIds[i] = _createWithdrawRequest(WithdrawKind.VALIDATOR, requests[i].validatorId, amountToUndelegate);
 
-            SFC.undelegate(validatorId, withdrawIds[i], amountToUndelegate);
+            SFC.undelegate(requests[i].validatorId, withdrawIds[i], amountToUndelegate);
         }
     }
 
