@@ -388,8 +388,6 @@ contract SonicStaking is
 
     /**
      * @notice Undelegate asset, assets can then be withdrawn after `withdrawDelay`
-     * @dev We leave it to off-chain infra to optimize for the fewest number of validators, as each validator creates
-     *      an additional withdraw request.
      * @param requests an array of undelegate requests, specifying the validatorId and the amountShares
      */
     function undelegate(UndelegateRequest[] calldata requests) external returns (uint256[] memory withdrawIds) {
