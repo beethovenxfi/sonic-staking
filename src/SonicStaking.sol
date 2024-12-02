@@ -129,7 +129,6 @@ contract SonicStaking is
     error NativeTransferFailed();
     error ProtocolFeeTransferFailed();
     error PausedValueDidNotChange();
-    error UnableToUndelegateFullAmountFromSpecifiedValidators();
     error UndelegateAmountExceedsPool();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -382,48 +381,42 @@ contract SonicStaking is
         emit Deposited(user, amount, sharesAmount);
     }
 
+    struct UndelegateRequest {
+        uint256 validatorId;
+        uint256 amountShares;
+    }
+
     /**
      * @notice Undelegate asset, assets can then be withdrawn after `withdrawDelay`
      * @dev We leave it to off-chain infra to optimize for the fewest number of validators, as each validator creates
      *      an additional withdraw request.
-     * @param amountShares the amount of shares to undelegate
-     * @param validatorIds an array of validator IDs to undelegate from
+     * @param requests an array of undelegate requests, specifying the validatorId and the amountShares
      */
-    function undelegate(uint256 amountShares, uint256[] calldata validatorIds)
-        external
-        returns (uint256[] memory withdrawIds)
-    {
+    function undelegate(UndelegateRequest[] calldata requests) external returns (uint256[] memory withdrawIds) {
         require(!undelegatePaused, UndelegationPaused());
-        require(amountShares > 0, UndelegateAmountCannotBeZero());
 
-        uint256 amountToUndelegate = convertToAssets(amountShares);
+        uint256 totalAmountShares = 0;
 
-        _burn(msg.sender, amountShares);
-
-        // If too many validators are provided, the empty withdrawIds will be 0s
-        withdrawIds = new uint256[](validatorIds.length);
-
-        for (uint256 i = 0; i < validatorIds.length; i++) {
-            uint256 amountDelegated = SFC.getStake(address(this), validatorIds[i]);
-
-            require(amountDelegated > 0, NoDelegationForValidator(validatorIds[i]));
-
-            uint256 amountFromValidator = amountToUndelegate > amountDelegated ? amountDelegated : amountToUndelegate;
-
-            withdrawIds[i] = _createWithdrawRequest(WithdrawKind.VALIDATOR, validatorIds[i], amountFromValidator);
-
-            SFC.undelegate(validatorIds[i], withdrawIds[i], amountFromValidator);
-
-            amountToUndelegate -= amountFromValidator;
-
-            if (amountToUndelegate == 0) {
-                // we've undelegated the full amount, no need to continue
-                break;
-            }
+        for (uint256 i = 0; i < requests.length; i++) {
+            require(requests[i].amountShares > 0, UndelegateAmountCannotBeZero());
+            totalAmountShares += requests[i].amountShares;
         }
 
-        // check that the full amount has been undelegated
-        require(amountToUndelegate == 0, UnableToUndelegateFullAmountFromSpecifiedValidators());
+        require(totalAmountShares > 0, UndelegateAmountCannotBeZero());
+
+        _burn(msg.sender, totalAmountShares);
+
+        for (uint256 i = 0; i < requests.length; i++) {
+            uint256 validatorId = requests[i].validatorId;
+            uint256 amountToUndelegate = convertToAssets(requests[i].amountShares);
+            uint256 amountDelegated = SFC.getStake(address(this), validatorId);
+
+            require(amountToUndelegate <= amountDelegated, UndelegateAmountExceedsDelegated());
+
+            withdrawIds[i] = _createWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountToUndelegate);
+
+            SFC.undelegate(validatorId, withdrawIds[i], amountToUndelegate);
+        }
     }
 
     /**
