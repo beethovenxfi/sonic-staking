@@ -242,8 +242,12 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
         requests[0] = createUndelegateRequest(amountShares, validatorId);
 
+        uint256 userSharesBefore = sonicStaking.balanceOf(user);
+
         vm.prank(user);
         uint256[] memory withdrawIds = sonicStaking.undelegate(requests);
+
+        assertEq(sonicStaking.balanceOf(user), userSharesBefore - amountShares);
 
         // do not explode this struct, if we add a new var in the struct, everything breaks
         SonicStaking.WithdrawRequest withdrawRequest = sonicStaking.allWithdrawRequests(withdrawIds[0]);
@@ -273,8 +277,12 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
         requests[0] = createUndelegateRequest(undelegateAmountShares, validatorId);
 
+        uint256 userSharesBefore = sonicStaking.balanceOf(user);
+
         vm.prank(user);
         uint256[] memory withdrawIds = sonicStaking.undelegate(requests);
+
+        assertEq(sonicStaking.balanceOf(user), userSharesBefore - undelegateAmountShares);
 
         // do not explode this struct, if we add a new var in the struct, everything breaks
         SonicStaking.WithdrawRequest withdrawRequest = sonicStaking.allWithdrawRequests(withdrawIds[0]);
