@@ -167,6 +167,25 @@ contract SonicStaking is
     }
 
     /**
+     * @dev This modifier is used to validate a given withdrawId when performing a withdraw. A valid withdraw Id:
+     *      - exists
+     *      - has not been processed
+     *      - has passed the withdraw delay
+     *      - msg.sender is the user that made the initial request
+     */
+    modifier withValidWithdrawId(uint256 withdrawId) {
+        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
+        uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;
+
+        require(request.requestTimestamp > 0, WithdrawIdDoesNotExist());
+        require(_now() >= earliestWithdrawTime, WithdrawDelayNotElapsed(earliestWithdrawTime));
+        require(!request.isWithdrawn, WithdrawAlreadyProcessed());
+        require(msg.sender == request.user, UnauthorizedWithdraw());
+
+        _;
+    }
+
+    /**
      *
      * Getter & helper functions
      *
@@ -634,25 +653,6 @@ contract SonicStaking is
         depositPaused = newValue;
 
         emit DepositPausedUpdated(msg.sender, newValue);
-    }
-
-    /**
-     * @dev This modifier is used to validate a given withdrawId when performing a withdraw. A valid withdraw Id:
-     *      - exists
-     *      - has not been processed
-     *      - has passed the withdraw delay
-     *      - msg.sender is the user that made the initial request
-     */
-    modifier withValidWithdrawId(uint256 withdrawId) {
-        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
-        uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;
-
-        require(request.requestTimestamp > 0, WithdrawIdDoesNotExist());
-        require(_now() >= earliestWithdrawTime, WithdrawDelayNotElapsed(earliestWithdrawTime));
-        require(!request.isWithdrawn, WithdrawAlreadyProcessed());
-        require(msg.sender == request.user, UnauthorizedWithdraw());
-
-        _;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
