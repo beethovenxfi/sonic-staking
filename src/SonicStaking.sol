@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.27;
 
 import {ISFC} from "./interfaces/ISFC.sol";
 import {IRateProvider} from "./interfaces/IRateProvider.sol";

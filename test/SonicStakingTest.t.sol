@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.27;
 
 import {Test, console} from "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -50,7 +50,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     function testDelegate() public {
         uint256 depositAssetAmount = 100_000 ether;
         uint256 delegateAssetAmount = 1_000 ether;
-        uint256 toValidatorId = 1;
+        uint256 toValidatorId = 2;
 
         uint256 rateBefore = sonicStaking.getRate();
 

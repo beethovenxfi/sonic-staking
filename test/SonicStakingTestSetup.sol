@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.27;
 
 import {Test, console} from "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -17,8 +17,8 @@ contract SonicStakingTestSetup is Test {
 
     ISFC SFC;
 
-    string FANTOM_FORK_URL = "https://rpc.fantom.network";
-    uint256 INITIAL_FORK_BLOCK_NUMBER = 97094615;
+    string FANTOM_FORK_URL = "https://rpc.soniclabs.com";
+    uint256 INITIAL_FORK_BLOCK_NUMBER = 10000;
 
     uint256 fantomFork;
 
