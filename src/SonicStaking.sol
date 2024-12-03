@@ -225,6 +225,10 @@ contract SonicStaking is
         return (assetAmount * totalShares) / assetsTotal;
     }
 
+    /**
+     * @notice Returns the amount of asset equivalent to the provided number of shares
+     * @param sharesAmount the amount of shares to convert
+     */
     function convertToAssets(uint256 sharesAmount) public view returns (uint256) {
         uint256 assetsTotal = totalAssets();
         uint256 totalShares = totalSupply();
