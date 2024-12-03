@@ -71,7 +71,6 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertGt(sonicStaking.getRate(), rateBefore);
     }
 
-    // withdraw from delegator does not work on fork as it needs to increase the epoch
     function testUndelegateAndWithdraw() public {
         uint256 depositAssetAmount = 10_000 ether;
         uint256 delegateAssetAmount = 10_000 ether;
@@ -111,7 +110,6 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(isWithdrawn, true);
     }
 
-    // withdraw from delegator does not work on fork as it needs to increase the epoch
     function testUndelegateAndWithdrawWithIncreasedRate() public {
         uint256 depositAssetAmount = 10_000 ether;
         uint256 delegateAssetAmount = 10_000 ether;
@@ -260,6 +258,82 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         vm.prank(user);
         sonicStaking.withdraw(101, true);
         assertApproxEqAbs(address(user).balance, balanceBefore + 500 ether, 1);
+    }
+
+    function testConvertToSharesRateOne() public {
+        uint256 amount = 1000 ether;
+        assertEq(sonicStaking.getRate(), 1 ether);
+        uint256 shares = sonicStaking.convertToShares(amount);
+        assertEq(shares, amount);
+    }
+
+    function testConvertToAssetsRateOne() public {
+        uint256 shares = 1000 ether;
+        assertEq(sonicStaking.getRate(), 1 ether);
+        uint256 amount = sonicStaking.convertToAssets(shares);
+        assertEq(amount, shares);
+    }
+
+    function testConvertToSharesIncreasedRate() public {
+        uint256 depositAssetAmount = 1_000 ether;
+        uint256 delegateAssetAmount = 1_000 ether;
+        uint256 toValidatorId = 1;
+        uint256 pendingRewards = 1 ether;
+        address user = makeDeposit(depositAssetAmount);
+        delegate(delegateAssetAmount, toValidatorId);
+
+        SFCMock(sfcMock).setPendingRewards{value: pendingRewards}(address(sonicStaking), 1, pendingRewards);
+
+        uint256 rateBefore = sonicStaking.getRate();
+        assertEq(sonicStaking.balanceOf(user), depositAssetAmount); // minted 1:1
+
+        assertEq(rateBefore, 1 ether);
+
+        uint256[] memory delegationIds = new uint256[](1);
+        delegationIds[0] = 1;
+        vm.prank(SONIC_STAKING_CLAIMOR);
+        sonicStaking.claimRewards(delegationIds);
+
+        uint256 protocolFee = pendingRewards * sonicStaking.protocolFeeBIPS() / sonicStaking.MAX_PROTOCOL_FEE_BIPS();
+
+        uint256 assetIncrease = pendingRewards - protocolFee;
+
+        // make sure that rate has increased for testing
+        assertGt(sonicStaking.getRate(), rateBefore);
+
+        uint256 sharesCalulcated = 1 ether * sonicStaking.totalSupply() / (depositAssetAmount + assetIncrease);
+        assertEq(sonicStaking.convertToShares(1 ether), sharesCalulcated);
+    }
+
+    function testConvertToAssetsIncreasedRate() public {
+        uint256 depositAssetAmount = 1_000 ether;
+        uint256 delegateAssetAmount = 1_000 ether;
+        uint256 toValidatorId = 1;
+        uint256 pendingRewards = 1 ether;
+        address user = makeDeposit(depositAssetAmount);
+        delegate(delegateAssetAmount, toValidatorId);
+
+        SFCMock(sfcMock).setPendingRewards{value: pendingRewards}(address(sonicStaking), 1, pendingRewards);
+
+        uint256 rateBefore = sonicStaking.getRate();
+        assertEq(sonicStaking.balanceOf(user), depositAssetAmount); // minted 1:1
+
+        assertEq(rateBefore, 1 ether);
+
+        uint256[] memory delegationIds = new uint256[](1);
+        delegationIds[0] = 1;
+        vm.prank(SONIC_STAKING_CLAIMOR);
+        sonicStaking.claimRewards(delegationIds);
+
+        uint256 protocolFee = pendingRewards * sonicStaking.protocolFeeBIPS() / sonicStaking.MAX_PROTOCOL_FEE_BIPS();
+
+        uint256 assetIncrease = pendingRewards - protocolFee;
+
+        // make sure that rate has increased for testing
+        assertGt(sonicStaking.getRate(), rateBefore);
+
+        uint256 assetsCalculated = 1 ether * (depositAssetAmount + assetIncrease) / sonicStaking.totalSupply();
+        assertEq(sonicStaking.convertToAssets(1 ether), assetsCalculated);
     }
 
     function getState()
