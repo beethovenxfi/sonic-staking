@@ -261,4 +261,50 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         assertEq(assetAmount, undelegateAmount);
     }
+
+    function testUserWithdraws() public {
+        uint256 amount = 1000 ether;
+        uint256 validatorId = 1;
+        uint256 undelegateAmount1 = 100 ether;
+        uint256 undelegateAmount2 = 200 ether;
+        uint256 undelegateAmount3 = 300 ether;
+        address user = makeDeposit(amount);
+
+        delegate(amount, validatorId);
+
+        // Create 3 undelegate requests
+        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](3);
+        requests[0] = createUndelegateRequest(undelegateAmount1, validatorId);
+        requests[1] = createUndelegateRequest(undelegateAmount2, validatorId);
+        requests[2] = createUndelegateRequest(undelegateAmount3, validatorId);
+
+        vm.prank(user);
+        sonicStaking.undelegate(requests);
+
+        // Test getting all withdraws
+        SonicStaking.WithdrawRequest[] memory withdraws = sonicStaking.getUserWithdraws(user, 0, 3, false);
+        assertEq(withdraws.length, 3);
+        assertEq(withdraws[0].assetAmount, undelegateAmount1);
+        assertEq(withdraws[1].assetAmount, undelegateAmount2);
+        assertEq(withdraws[2].assetAmount, undelegateAmount3);
+
+        // Test pagination
+        withdraws = sonicStaking.getUserWithdraws(user, 1, 2, false);
+        assertEq(withdraws.length, 2);
+        assertEq(withdraws[0].assetAmount, undelegateAmount2);
+        assertEq(withdraws[1].assetAmount, undelegateAmount3);
+
+        // Test reverse order
+        withdraws = sonicStaking.getUserWithdraws(user, 0, 3, true);
+        assertEq(withdraws.length, 3);
+        assertEq(withdraws[0].assetAmount, undelegateAmount3);
+        assertEq(withdraws[1].assetAmount, undelegateAmount2);
+        assertEq(withdraws[2].assetAmount, undelegateAmount1);
+
+        // Test reverse order with pagination
+        withdraws = sonicStaking.getUserWithdraws(user, 1, 2, true);
+        assertEq(withdraws.length, 2);
+        assertEq(withdraws[0].assetAmount, undelegateAmount2);
+        assertEq(withdraws[1].assetAmount, undelegateAmount1);
+    }
 }

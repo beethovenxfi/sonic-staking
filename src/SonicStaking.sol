@@ -55,6 +55,12 @@ contract SonicStaking is
     mapping(uint256 withdrawId => WithdrawRequest request) public allWithdrawRequests;
 
     /**
+     * @dev We track all withdraw ids for each user, in order to allow for easier off-chain UX.
+     */
+    mapping(address user => mapping(uint256 index => uint256 withdrawId)) public userWithdraws;
+    mapping(address user => uint256 numWithdraws) public userNumWithdraws;
+
+    /**
      * @dev A reference to the SFC contract
      */
     ISFC public SFC;
@@ -130,6 +136,8 @@ contract SonicStaking is
     error ProtocolFeeTransferFailed();
     error PausedValueDidNotChange();
     error UndelegateAmountExceedsPool();
+    error UserWithdrawsSkipTooLarge();
+    error UserWithdrawsMaxSizeZero();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -207,6 +215,32 @@ contract SonicStaking is
         }
 
         return (sharesAmount * assetsTotal) / totalShares;
+    }
+
+    function getUserWithdraws(address user, uint256 skip, uint256 maxSize, bool reverseOrder)
+        public
+        view
+        returns (WithdrawRequest[] memory)
+    {
+        require(skip < userNumWithdraws[user], UserWithdrawsSkipTooLarge());
+        require(maxSize > 0, UserWithdrawsMaxSizeZero());
+
+        uint256 remaining = userNumWithdraws[user] - skip;
+        uint256 size = remaining < maxSize ? remaining : maxSize;
+        WithdrawRequest[] memory items = new WithdrawRequest[](size);
+
+        for (uint256 i = 0; i < size; i++) {
+            if (!reverseOrder) {
+                // In chronological order we simply skip the first (older) entries
+                items[i] = allWithdrawRequests[userWithdraws[user][skip + i]];
+            } else {
+                // In reverse order we go back to front, skipping the last (newer) entries. Note that `remaining` will
+                // equal the total count if `skip` is 0, meaning we'd start with the newest entry.
+                items[i] = allWithdrawRequests[userWithdraws[user][remaining - 1 - i]];
+            }
+        }
+
+        return items;
     }
 
     /**
@@ -399,6 +433,7 @@ contract SonicStaking is
         require(!undelegatePaused, UndelegationPaused());
 
         uint256 totalAmountShares = 0;
+        uint256 totalAmountToUndelegate = 0;
         withdrawIds = new uint256[](requests.length);
 
         for (uint256 i = 0; i < requests.length; i++) {
@@ -414,8 +449,10 @@ contract SonicStaking is
             SFC.undelegate(requests[i].validatorId, withdrawIds[i], amountToUndelegate);
 
             totalAmountShares += requests[i].amountShares;
-            totalDelegated -= amountToUndelegate;
+            totalAmountToUndelegate += amountToUndelegate;
         }
+
+        totalDelegated -= totalAmountToUndelegate;
 
         _burn(msg.sender, totalAmountShares);
     }
@@ -548,15 +585,20 @@ contract SonicStaking is
         internal
         returns (uint256 withdrawId)
     {
+        address user = msg.sender;
         withdrawId = _incrementWithdrawCounter();
         WithdrawRequest storage request = allWithdrawRequests[withdrawId];
 
         request.kind = kind;
         request.requestTimestamp = _now();
-        request.user = msg.sender;
+        request.user = user;
         request.assetAmount = amount;
         request.validatorId = validatorId;
         request.isWithdrawn = false;
+
+        // We store the user's withdraw ids to allow for easier off-chain processing.
+        userWithdraws[user][userNumWithdraws[user]] = withdrawId;
+        userNumWithdraws[user]++;
     }
 
     function _now() internal view returns (uint256) {
