@@ -133,7 +133,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.balanceOf(user), userSharesBefore - undelegateSharesAmount);
     }
 
-    function testUndelegateWithTooLittleValidatorsProvided() public {
+    function testUndelegateTooMuchFromValidator() public {
         uint256 depositAssetAmount = 10_000 ether;
         uint256 delegateAssetAmount1 = 5_000 ether;
         uint256 delegateAssetAmount2 = 3_000 ether;
@@ -150,11 +150,12 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256[] memory validatorIds = new uint256[](1);
         validatorIds[0] = 2;
 
+        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
+        requests[0] = createUndelegateRequest(undelegateSharesAmount, toValidatorId2);
+
         vm.prank(user);
-        vm.expectRevert(
-            abi.encodeWithSelector(SonicStaking.UnableToUndelegateFullAmountFromSpecifiedValidators.selector)
-        );
-        sonicStaking.undelegate(undelegateSharesAmount, validatorIds);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
+        sonicStaking.undelegate(requests);
     }
 
     function testStateSetters() public {
@@ -193,5 +194,71 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.TreasuryAddressCannotBeZero.selector));
         sonicStaking.setTreasury(address(0));
+    }
+
+    function testUndelegateFromValidator() public {
+        uint256 amount = 1000 ether;
+        // This should already be tested somewhere else
+        uint256 amountShares = sonicStaking.convertToShares(amount);
+        uint256 validatorId = 1;
+
+        address user = makeDeposit(amount);
+
+        //we dont need to test the deposit, we've already tested this somewhere else
+
+        delegate(amount, validatorId);
+
+        //we dont need to test the delegate, we've already tested this somewhere else
+
+        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
+        requests[0] = createUndelegateRequest(amountShares, validatorId);
+
+        uint256 userSharesBefore = sonicStaking.balanceOf(user);
+
+        vm.prank(user);
+        uint256[] memory withdrawIds = sonicStaking.undelegate(requests);
+
+        assertEq(sonicStaking.balanceOf(user), userSharesBefore - amountShares);
+
+        // do not explode this struct, if we add a new var in the struct, everything breaks
+        (, uint256 valId, uint256 assetAmount, bool isWithdrawn,, address userAddress) =
+            sonicStaking.allWithdrawRequests(withdrawIds[0]);
+
+        assertEq(assetAmount, amount);
+        assertEq(isWithdrawn, false);
+        assertEq(userAddress, user);
+        // assertEq(kind, SonicStaking.WithdrawKind.VALIDATOR);
+        assertEq(valId, validatorId);
+    }
+
+    function testPartialUndelegateFromValidator() public {
+        uint256 amount = 1000 ether;
+        // we undelegate 250 of the 1000 deposited
+        uint256 undelegateAmount = 250 ether;
+        uint256 undelegateAmountShares = sonicStaking.convertToShares(undelegateAmount);
+        uint256 undelegateAmountAssets = sonicStaking.convertToAssets(undelegateAmountShares);
+        console.log("undelegateAmountShares", undelegateAmountShares);
+        console.log("undelegateAmountAssets", undelegateAmountAssets);
+        uint256 validatorId = 1;
+
+        address user = makeDeposit(amount);
+
+        delegate(amount, validatorId);
+
+        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
+        requests[0] = createUndelegateRequest(undelegateAmountShares, validatorId);
+
+        uint256 userSharesBefore = sonicStaking.balanceOf(user);
+
+        vm.prank(user);
+        uint256[] memory withdrawIds = sonicStaking.undelegate(requests);
+
+        assertEq(sonicStaking.balanceOf(user), userSharesBefore - undelegateAmountShares);
+
+        // do not explode this struct, if we add a new var in the struct, everything breaks
+        (,, uint256 assetAmount,,,) = sonicStaking.allWithdrawRequests(withdrawIds[0]);
+        console.log("withdrawIds[0]", withdrawIds[0]);
+
+        assertEq(assetAmount, undelegateAmount);
     }
 }
