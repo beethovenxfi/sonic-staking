@@ -236,6 +236,13 @@ contract SonicStaking is
         return (sharesAmount * assetsTotal) / totalShares;
     }
 
+    /**
+     * @notice Returns the user's withdraws
+     * @param user the user to get the withdraws for
+     * @param skip the number of withdraws to skip, used for pagination
+     * @param maxSize the maximum number of withdraws to return. It's possible to return less than maxSize. Used for pagination.
+     * @param reverseOrder whether to return the withdraws in reverse order (newest first)
+     */
     function getUserWithdraws(address user, uint256 skip, uint256 maxSize, bool reverseOrder)
         public
         view
