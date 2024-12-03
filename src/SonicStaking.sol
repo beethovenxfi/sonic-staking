@@ -395,17 +395,11 @@ contract SonicStaking is
         require(!undelegatePaused, UndelegationPaused());
 
         uint256 totalAmountShares = 0;
-
-        for (uint256 i = 0; i < requests.length; i++) {
-            require(requests[i].amountShares > 0, UndelegateAmountCannotBeZero());
-            totalAmountShares += requests[i].amountShares;
-        }
-
-        _burn(msg.sender, totalAmountShares);
-
         withdrawIds = new uint256[](requests.length);
 
         for (uint256 i = 0; i < requests.length; i++) {
+            require(requests[i].amountShares > 0, UndelegateAmountCannotBeZero());
+
             uint256 amountToUndelegate = convertToAssets(requests[i].amountShares);
             uint256 amountDelegated = SFC.getStake(address(this), requests[i].validatorId);
 
@@ -414,7 +408,12 @@ contract SonicStaking is
             withdrawIds[i] = _createWithdrawRequest(WithdrawKind.VALIDATOR, requests[i].validatorId, amountToUndelegate);
 
             SFC.undelegate(requests[i].validatorId, withdrawIds[i], amountToUndelegate);
+
+            totalAmountShares += requests[i].amountShares;
+            totalDelegated -= amountToUndelegate;
         }
+
+        _burn(msg.sender, totalAmountShares);
     }
 
     /**

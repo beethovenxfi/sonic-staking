@@ -76,26 +76,26 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 depositAssetAmount = 10_000 ether;
         uint256 delegateAssetAmount = 10_000 ether;
         uint256 undelegateSharesAmount = 10_000 ether;
-        uint256 toValidatorId = 1;
+        uint256 validatorId = 1;
 
         address user = makeDeposit(depositAssetAmount);
 
-        delegate(delegateAssetAmount, toValidatorId);
+        delegate(delegateAssetAmount, validatorId);
 
-        uint256[] memory validatorIds = new uint256[](1);
-        validatorIds[0] = toValidatorId;
+        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
+        requests[0] = createUndelegateRequest(undelegateSharesAmount, validatorId);
 
         vm.prank(user);
-        sonicStaking.undelegate(undelegateSharesAmount, validatorIds);
+        sonicStaking.undelegate(requests);
         assertEq(sonicStaking.withdrawCounter(), 101);
 
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
-        (, uint256 validatorId, uint256 amountAssets, bool isWithdrawn,, address userAddress) =
+        (, uint256 validatorIdWithdrawal, uint256 amountAssets, bool isWithdrawn,, address userAddress) =
             sonicStaking.allWithdrawRequests(101);
 
-        assertEq(validatorId, toValidatorId);
+        assertEq(validatorIdWithdrawal, validatorId);
         assertEq(amountAssets, undelegateSharesAmount);
         assertEq(userAddress, user);
         assertEq(isWithdrawn, false);
@@ -117,12 +117,12 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 delegateAssetAmount = 10_000 ether;
         uint256 undelegateSharesAmount = 5_000 ether;
         uint256 pendingRewards = 100 ether;
-        uint256 toValidatorId = 1;
+        uint256 validatorId = 1;
 
         address user = makeDeposit(depositAssetAmount);
         uint256 userBalanceBefore = address(user).balance;
 
-        delegate(delegateAssetAmount, toValidatorId);
+        delegate(delegateAssetAmount, validatorId);
 
         uint256[] memory validatorIds = new uint256[](1);
         validatorIds[0] = 1;
@@ -135,16 +135,19 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         uint256 assetsToReceive = sonicStaking.convertToAssets(undelegateSharesAmount);
 
+        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
+        requests[0] = createUndelegateRequest(undelegateSharesAmount, validatorId);
+
         vm.prank(user);
-        sonicStaking.undelegate(undelegateSharesAmount, validatorIds);
+        sonicStaking.undelegate(requests);
 
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
-        (, uint256 validatorId, uint256 assetAmount, bool isWithdrawn,, address userAddress) =
+        (, uint256 validatorIdWithdrawal, uint256 assetAmount, bool isWithdrawn,, address userAddress) =
             sonicStaking.allWithdrawRequests(101);
 
-        assertEq(validatorId, toValidatorId);
+        assertEq(validatorIdWithdrawal, validatorId);
         assertEq(assetAmount, assetsToReceive);
         assertEq(userAddress, user);
         assertEq(isWithdrawn, false);
@@ -229,20 +232,19 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
     function testEmergencyWithdraw() public {
         uint256 depositAssetAmount = 1_000 ether;
         uint256 delegateAssetAmount = 1_000 ether;
-        uint256 toValidatorId = 1;
+        uint256 validatorId = 1;
         address user = makeDeposit(depositAssetAmount);
-        delegate(delegateAssetAmount, toValidatorId);
+        delegate(delegateAssetAmount, validatorId);
 
         // slash the validator (slash half of the stake)
-        sfcMock.setCheater(toValidatorId, true);
-        sfcMock.setSlashRefundRatio(toValidatorId, 5 * 1e17);
+        sfcMock.setCheater(validatorId, true);
+        sfcMock.setSlashRefundRatio(validatorId, 5 * 1e17);
 
-        // undelegate from slashed validator
-        uint256[] memory validatorIds = new uint256[](1);
-        validatorIds[0] = toValidatorId;
+        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
+        requests[0] = createUndelegateRequest(delegateAssetAmount, validatorId);
 
         vm.prank(user);
-        sonicStaking.undelegate(delegateAssetAmount, validatorIds);
+        sonicStaking.undelegate(requests);
         assertEq(sonicStaking.withdrawCounter(), 101);
 
         vm.warp(block.timestamp + 14 days);
