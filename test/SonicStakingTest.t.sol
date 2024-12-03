@@ -203,12 +203,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 validatorId = 1;
 
         address user = makeDeposit(amount);
-
-        //we dont need to test the deposit, we've already tested this somewhere else
-
         delegate(amount, validatorId);
-
-        //we dont need to test the delegate, we've already tested this somewhere else
 
         SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
         requests[0] = createUndelegateRequest(amountShares, validatorId);
@@ -219,6 +214,9 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256[] memory withdrawIds = sonicStaking.undelegate(requests);
 
         assertEq(sonicStaking.balanceOf(user), userSharesBefore - amountShares);
+        assertEq(sonicStaking.totalDelegated(), 0);
+        assertEq(sonicStaking.totalAssets(), 0);
+        assertEq(sonicStaking.totalPool(), 0);
 
         // do not explode this struct, if we add a new var in the struct, everything breaks
         (, uint256 valId, uint256 assetAmount, bool isWithdrawn,, address userAddress) =
@@ -254,6 +252,9 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256[] memory withdrawIds = sonicStaking.undelegate(requests);
 
         assertEq(sonicStaking.balanceOf(user), userSharesBefore - undelegateAmountShares);
+        assertEq(sonicStaking.totalDelegated(), amount - undelegateAmountAssets);
+        assertEq(sonicStaking.totalAssets(), amount - undelegateAmountAssets);
+        assertEq(sonicStaking.totalPool(), 0);
 
         // do not explode this struct, if we add a new var in the struct, everything breaks
         (,, uint256 assetAmount,,,) = sonicStaking.allWithdrawRequests(withdrawIds[0]);
