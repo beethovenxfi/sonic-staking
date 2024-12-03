@@ -364,7 +364,7 @@ contract SonicStaking is
      */
 
     /**
-     * @notice Deposit assets, and mint shares
+     * @notice Deposit native assets and mint shares of the LST.
      */
     function deposit() external payable {
         uint256 amount = msg.value;
@@ -372,10 +372,12 @@ contract SonicStaking is
         require(!depositPaused, DepositPaused());
 
         address user = msg.sender;
+
         uint256 sharesAmount = convertToShares(amount);
 
         _mint(user, sharesAmount);
 
+        // Deposits are added to the pool initially. The assets are delegated to validators by the operator.
         totalPool += amount;
 
         emit Deposited(user, amount, sharesAmount);
@@ -387,8 +389,10 @@ contract SonicStaking is
     }
 
     /**
-     * @notice Undelegate LST assets. The assets are burnt from the msg.sender and withdraw request(s) are created.
-     *            The underlying assets are withdrawable after the `withdrawDelay` has passed.
+     * @notice Undelegate staked assets. The shares are burnt from the msg.sender and withdraw request(s) are created.
+     * The assets are withdrawable after the `withdrawDelay` has passed.
+     * @dev Requests is defined as an array to allow for off-chain optimizations for large withdraws. Most undelegation requests
+     * will be for a single validator.
      * @param requests an array of undelegate requests, specifying the validatorId and the amountShares
      */
     function undelegate(UndelegateRequest[] calldata requests) external returns (uint256[] memory withdrawIds) {
@@ -418,6 +422,7 @@ contract SonicStaking is
 
     /**
      * @notice Undelegate from the pool.
+     * @dev While always possible to undelegate from the pool, the standard flow is to undelegate from a validator.
      * @param amountShares the amount of shares to undelegate
      */
     function undelegateFromPool(uint256 amountShares) external {
@@ -429,6 +434,7 @@ contract SonicStaking is
 
         _burn(msg.sender, amountShares);
 
+        // The validatorId is ignored for pool withdrawals
         uint256 withdrawId = _createWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
 
         totalPool -= amountToUndelegate;
@@ -557,6 +563,9 @@ contract SonicStaking is
         return block.timestamp;
     }
 
+    /**
+     * @dev Given the size of uint256 and the maximum supply of $S, we can safely assume that this will never overflow with even a 1 wei minimum withdraw amount.
+     */
     function _incrementWithdrawCounter() internal returns (uint256) {
         withdrawCounter++;
 
@@ -585,6 +594,13 @@ contract SonicStaking is
         emit DepositPausedUpdated(msg.sender, newValue);
     }
 
+    /**
+     * @dev This modifier is used to validate a given withdrawId when performing a withdraw. A valid withdraw Id:
+     *      - exists
+     *      - has not been processed
+     *      - has passed the withdraw delay
+     *      - msg.sender is the user that made the initial request
+     */
     modifier withValidWithdrawId(uint256 withdrawId) {
         WithdrawRequest storage request = allWithdrawRequests[withdrawId];
         uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;
