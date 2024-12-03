@@ -275,6 +275,147 @@ contract SonicStaking is
 
     /**
      *
+     * End User Functions
+     *
+     */
+
+    /**
+     * @notice Deposit native assets and mint shares of the LST.
+     */
+    function deposit() external payable {
+        uint256 amount = msg.value;
+        require(amount >= MIN_DEPOSIT, DepositTooSmall());
+        require(!depositPaused, DepositPaused());
+
+        address user = msg.sender;
+
+        uint256 sharesAmount = convertToShares(amount);
+
+        _mint(user, sharesAmount);
+
+        // Deposits are added to the pool initially. The assets are delegated to validators by the operator.
+        totalPool += amount;
+
+        emit Deposited(user, amount, sharesAmount);
+    }
+
+    struct UndelegateRequest {
+        uint256 validatorId;
+        uint256 amountShares;
+    }
+
+    /**
+     * @notice Undelegate staked assets. The shares are burnt from the msg.sender and withdraw request(s) are created.
+     * The assets are withdrawable after the `withdrawDelay` has passed.
+     * @dev Requests is defined as an array to allow for off-chain optimizations for large withdraws. Most undelegation requests
+     * will be for a single validator.
+     * @param requests an array of undelegate requests, specifying the validatorId and the amountShares
+     */
+    function undelegate(UndelegateRequest[] calldata requests) external returns (uint256[] memory withdrawIds) {
+        require(!undelegatePaused, UndelegationPaused());
+
+        uint256 totalAmountShares = 0;
+        uint256 totalAmountToUndelegate = 0;
+        withdrawIds = new uint256[](requests.length);
+
+        for (uint256 i = 0; i < requests.length; i++) {
+            require(requests[i].amountShares > 0, UndelegateAmountCannotBeZero());
+
+            uint256 amountToUndelegate = convertToAssets(requests[i].amountShares);
+            uint256 amountDelegated = SFC.getStake(address(this), requests[i].validatorId);
+
+            require(amountToUndelegate <= amountDelegated, UndelegateAmountExceedsDelegated());
+
+            withdrawIds[i] = _createWithdrawRequest(WithdrawKind.VALIDATOR, requests[i].validatorId, amountToUndelegate);
+
+            SFC.undelegate(requests[i].validatorId, withdrawIds[i], amountToUndelegate);
+
+            totalAmountShares += requests[i].amountShares;
+            totalAmountToUndelegate += amountToUndelegate;
+        }
+
+        totalDelegated -= totalAmountToUndelegate;
+
+        _burn(msg.sender, totalAmountShares);
+    }
+
+    /**
+     * @notice Undelegate from the pool.
+     * @dev While always possible to undelegate from the pool, the standard flow is to undelegate from a validator.
+     * @param amountShares the amount of shares to undelegate
+     */
+    function undelegateFromPool(uint256 amountShares) external {
+        require(amountShares > 0, UndelegateAmountCannotBeZero());
+
+        uint256 amountToUndelegate = convertToAssets(amountShares);
+
+        require(amountToUndelegate <= totalPool, UndelegateAmountExceedsPool());
+
+        _burn(msg.sender, amountShares);
+
+        // The validatorId is ignored for pool withdrawals
+        uint256 withdrawId = _createWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
+
+        totalPool -= amountToUndelegate;
+
+        emit Undelegated(msg.sender, withdrawId, amountToUndelegate, 0, WithdrawKind.POOL);
+    }
+
+    /**
+     * @notice Withdraw undelegated assets
+     * @param withdrawId the unique withdraw id for the undelegation request
+     * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
+     */
+    function withdraw(uint256 withdrawId, bool emergency) public withValidWithdrawId(withdrawId) returns (uint256) {
+        require(!withdrawPaused, WithdrawsPaused());
+
+        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
+
+        request.isWithdrawn = true;
+
+        uint256 withdrawnAmount = 0;
+
+        if (request.kind == WithdrawKind.POOL) {
+            withdrawnAmount = request.assetAmount;
+        } else {
+            uint256 balanceBefore = address(this).balance;
+
+            SFC.withdraw(request.validatorId, withdrawId);
+            withdrawnAmount = address(this).balance - balanceBefore;
+
+            // can never get more assets than what is owed
+            require(withdrawnAmount <= request.assetAmount, WithdrawnAmountTooHigh());
+
+            if (!emergency) {
+                // In the instance of a slashing event, the amount withdrawn will not match the request amount.
+                // The user must acknowledge this by setting emergency to true. Since the user is absorbing
+                // this loss, there is no impact on the rate.
+                require(request.assetAmount == withdrawnAmount, WithdrawnAmountTooLow());
+            }
+        }
+
+        address user = msg.sender;
+        (bool withdrawnToUser,) = user.call{value: withdrawnAmount}("");
+        require(withdrawnToUser, NativeTransferFailed());
+
+        emit Withdrawn(user, withdrawId, withdrawnAmount, request.kind, emergency);
+
+        return withdrawnAmount;
+    }
+
+    /**
+     * @notice Withdraw undelegated assets for a list of withdrawIds
+     * @param withdrawIds the unique withdraw ids for the undelegation requests
+     * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
+     */
+    function withdrawMany(uint256[] calldata withdrawIds, bool emergency) external {
+        for (uint256 i = 0; i < withdrawIds.length; i++) {
+            withdraw(withdrawIds[i], emergency);
+        }
+    }
+
+    /**
+     *
      * OPERATOR functions
      *
      */
@@ -419,147 +560,6 @@ contract SonicStaking is
         require(newFeeBIPS <= MAX_PROTOCOL_FEE_BIPS, ProtocolFeeTooHigh());
 
         protocolFeeBIPS = newFeeBIPS;
-    }
-
-    /**
-     *
-     * End User Functions
-     *
-     */
-
-    /**
-     * @notice Deposit native assets and mint shares of the LST.
-     */
-    function deposit() external payable {
-        uint256 amount = msg.value;
-        require(amount >= MIN_DEPOSIT, DepositTooSmall());
-        require(!depositPaused, DepositPaused());
-
-        address user = msg.sender;
-
-        uint256 sharesAmount = convertToShares(amount);
-
-        _mint(user, sharesAmount);
-
-        // Deposits are added to the pool initially. The assets are delegated to validators by the operator.
-        totalPool += amount;
-
-        emit Deposited(user, amount, sharesAmount);
-    }
-
-    struct UndelegateRequest {
-        uint256 validatorId;
-        uint256 amountShares;
-    }
-
-    /**
-     * @notice Undelegate staked assets. The shares are burnt from the msg.sender and withdraw request(s) are created.
-     * The assets are withdrawable after the `withdrawDelay` has passed.
-     * @dev Requests is defined as an array to allow for off-chain optimizations for large withdraws. Most undelegation requests
-     * will be for a single validator.
-     * @param requests an array of undelegate requests, specifying the validatorId and the amountShares
-     */
-    function undelegate(UndelegateRequest[] calldata requests) external returns (uint256[] memory withdrawIds) {
-        require(!undelegatePaused, UndelegationPaused());
-
-        uint256 totalAmountShares = 0;
-        uint256 totalAmountToUndelegate = 0;
-        withdrawIds = new uint256[](requests.length);
-
-        for (uint256 i = 0; i < requests.length; i++) {
-            require(requests[i].amountShares > 0, UndelegateAmountCannotBeZero());
-
-            uint256 amountToUndelegate = convertToAssets(requests[i].amountShares);
-            uint256 amountDelegated = SFC.getStake(address(this), requests[i].validatorId);
-
-            require(amountToUndelegate <= amountDelegated, UndelegateAmountExceedsDelegated());
-
-            withdrawIds[i] = _createWithdrawRequest(WithdrawKind.VALIDATOR, requests[i].validatorId, amountToUndelegate);
-
-            SFC.undelegate(requests[i].validatorId, withdrawIds[i], amountToUndelegate);
-
-            totalAmountShares += requests[i].amountShares;
-            totalAmountToUndelegate += amountToUndelegate;
-        }
-
-        totalDelegated -= totalAmountToUndelegate;
-
-        _burn(msg.sender, totalAmountShares);
-    }
-
-    /**
-     * @notice Undelegate from the pool.
-     * @dev While always possible to undelegate from the pool, the standard flow is to undelegate from a validator.
-     * @param amountShares the amount of shares to undelegate
-     */
-    function undelegateFromPool(uint256 amountShares) external {
-        require(amountShares > 0, UndelegateAmountCannotBeZero());
-
-        uint256 amountToUndelegate = convertToAssets(amountShares);
-
-        require(amountToUndelegate <= totalPool, UndelegateAmountExceedsPool());
-
-        _burn(msg.sender, amountShares);
-
-        // The validatorId is ignored for pool withdrawals
-        uint256 withdrawId = _createWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
-
-        totalPool -= amountToUndelegate;
-
-        emit Undelegated(msg.sender, withdrawId, amountToUndelegate, 0, WithdrawKind.POOL);
-    }
-
-    /**
-     * @notice Withdraw undelegated assets
-     * @param withdrawId the unique withdraw id for the undelegation request
-     * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
-     */
-    function withdraw(uint256 withdrawId, bool emergency) public withValidWithdrawId(withdrawId) returns (uint256) {
-        require(!withdrawPaused, WithdrawsPaused());
-
-        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
-
-        request.isWithdrawn = true;
-
-        uint256 withdrawnAmount = 0;
-
-        if (request.kind == WithdrawKind.POOL) {
-            withdrawnAmount = request.assetAmount;
-        } else {
-            uint256 balanceBefore = address(this).balance;
-
-            SFC.withdraw(request.validatorId, withdrawId);
-            withdrawnAmount = address(this).balance - balanceBefore;
-
-            // can never get more assets than what is owed
-            require(withdrawnAmount <= request.assetAmount, WithdrawnAmountTooHigh());
-
-            if (!emergency) {
-                // In the instance of a slashing event, the amount withdrawn will not match the request amount.
-                // The user must acknowledge this by setting emergency to true. Since the user is absorbing
-                // this loss, there is no impact on the rate.
-                require(request.assetAmount == withdrawnAmount, WithdrawnAmountTooLow());
-            }
-        }
-
-        address user = msg.sender;
-        (bool withdrawnToUser,) = user.call{value: withdrawnAmount}("");
-        require(withdrawnToUser, NativeTransferFailed());
-
-        emit Withdrawn(user, withdrawId, withdrawnAmount, request.kind, emergency);
-
-        return withdrawnAmount;
-    }
-
-    /**
-     * @notice Withdraw undelegated assets for a list of withdrawIds
-     * @param withdrawIds the unique withdraw ids for the undelegation requests
-     * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
-     */
-    function withdrawMany(uint256[] calldata withdrawIds, bool emergency) external {
-        for (uint256 i = 0; i < withdrawIds.length; i++) {
-            withdraw(withdrawIds[i], emergency);
-        }
     }
 
     /**
