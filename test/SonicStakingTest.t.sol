@@ -144,13 +144,12 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.totalDelegated(), 0);
         assertEq(sonicStaking.totalAssets(), 0);
 
-        (, uint256 valId, uint256 assetAmount, bool isWithdrawn,, address userAddress) =
-            sonicStaking.allWithdrawRequests(withdrawId);
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdraw(withdrawId);
 
-        assertEq(assetAmount, amount);
-        assertEq(isWithdrawn, false);
-        assertEq(userAddress, user);
-        assertEq(valId, validatorId);
+        assertEq(withdraw.assetAmount, amount);
+        assertEq(withdraw.isWithdrawn, false);
+        assertEq(withdraw.user, user);
+        assertEq(withdraw.validatorId, validatorId);
     }
 
     function testPartialUndelegateFromValidator() public {
@@ -175,10 +174,9 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.totalAssets(), amount - undelegateAmountAssets);
         assertEq(sonicStaking.totalPool(), 0);
 
-        // do not explode this struct, if we add a new var in the struct, everything breaks
-        (,, uint256 assetAmount,,,) = sonicStaking.allWithdrawRequests(withdrawId);
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdraw(withdrawId);
 
-        assertEq(assetAmount, undelegateAmount);
+        assertEq(withdraw.assetAmount, undelegateAmount);
     }
 
     function testSeveralUndelegatesFromValidator() public {
@@ -218,13 +216,13 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.prank(user);
         sonicStaking.undelegateFromPool(undelegateAmountShares);
 
-        (, uint256 validatorId, uint256 amount, bool isWithdrawn, uint256 requestTimestamp, address userAddress) =
-            sonicStaking.allWithdrawRequests(sonicStaking.withdrawCounter());
-        assertEq(validatorId, 0);
-        assertEq(requestTimestamp, block.timestamp);
-        assertEq(userAddress, user);
-        assertEq(isWithdrawn, false);
-        assertEq(amount, undelegateAmountAssets);
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdraw(sonicStaking.withdrawCounter());
+
+        assertEq(withdraw.validatorId, 0);
+        assertEq(withdraw.requestTimestamp, block.timestamp);
+        assertEq(withdraw.user, user);
+        assertEq(withdraw.isWithdrawn, false);
+        assertEq(withdraw.assetAmount, undelegateAmountAssets);
 
         assertEq(sonicStaking.totalPool(), depositAmountAsset - undelegateAmountAssets);
         assertEq(sonicStaking.balanceOf(user), userSharesBefore - undelegateAmountShares);

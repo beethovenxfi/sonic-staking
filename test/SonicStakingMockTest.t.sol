@@ -88,13 +88,12 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
-        (, uint256 validatorIdWithdrawal, uint256 amountAssets, bool isWithdrawn,, address userAddress) =
-            sonicStaking.allWithdrawRequests(101);
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdraw(101);
 
-        assertEq(validatorIdWithdrawal, validatorId);
-        assertEq(amountAssets, undelegateAmountShares);
-        assertEq(userAddress, user);
-        assertEq(isWithdrawn, false);
+        assertEq(withdraw.validatorId, validatorId);
+        assertEq(withdraw.assetAmount, undelegateAmountShares);
+        assertEq(withdraw.user, user);
+        assertEq(withdraw.isWithdrawn, false);
 
         uint256 balanceBefore = address(user).balance;
 
@@ -102,9 +101,9 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking.withdraw(101, false);
         assertEq(address(user).balance, balanceBefore + undelegateAmountShares);
 
-        (,,, isWithdrawn,,) = sonicStaking.allWithdrawRequests(101);
+        SonicStaking.WithdrawRequest memory withdrawAfter = sonicStaking.getWithdraw(101);
 
-        assertEq(isWithdrawn, true);
+        assertEq(withdrawAfter.isWithdrawn, true);
     }
 
     function testUndelegateAndWithdrawWithIncreasedRate() public {
@@ -136,13 +135,12 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
-        (, uint256 validatorIdWithdrawal, uint256 assetAmount, bool isWithdrawn,, address userAddress) =
-            sonicStaking.allWithdrawRequests(101);
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdraw(101);
 
-        assertEq(validatorIdWithdrawal, validatorId);
-        assertEq(assetAmount, assetsToReceive);
-        assertEq(userAddress, user);
-        assertEq(isWithdrawn, false);
+        assertEq(withdraw.validatorId, validatorId);
+        assertEq(withdraw.assetAmount, assetsToReceive);
+        assertEq(withdraw.user, user);
+        assertEq(withdraw.isWithdrawn, false);
 
         uint256 balanceBefore = address(user).balance;
 

@@ -52,7 +52,7 @@ contract SonicStaking is
         address user;
     }
 
-    mapping(uint256 withdrawId => WithdrawRequest request) public allWithdrawRequests;
+    mapping(uint256 withdrawId => WithdrawRequest request) private _allWithdrawRequests;
 
     /**
      * @dev We track all withdraw ids for each user, in order to allow for easier off-chain UX.
@@ -175,7 +175,7 @@ contract SonicStaking is
      *      - msg.sender is the user that made the initial request
      */
     modifier withValidWithdrawId(uint256 withdrawId) {
-        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
+        WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
         uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;
 
         require(request.requestTimestamp > 0, WithdrawIdDoesNotExist());
@@ -263,15 +263,19 @@ contract SonicStaking is
         for (uint256 i = 0; i < size; i++) {
             if (!reverseOrder) {
                 // In chronological order we simply skip the first (older) entries
-                items[i] = allWithdrawRequests[userWithdraws[user][skip + i]];
+                items[i] = _allWithdrawRequests[userWithdraws[user][skip + i]];
             } else {
                 // In reverse order we go back to front, skipping the last (newer) entries. Note that `remaining` will
                 // equal the total count if `skip` is 0, meaning we'd start with the newest entry.
-                items[i] = allWithdrawRequests[userWithdraws[user][remaining - 1 - i]];
+                items[i] = _allWithdrawRequests[userWithdraws[user][remaining - 1 - i]];
             }
         }
 
         return items;
+    }
+
+    function getWithdraw(uint256 withdrawId) external view returns (WithdrawRequest memory) {
+        return _allWithdrawRequests[withdrawId];
     }
 
     /**
@@ -377,7 +381,7 @@ contract SonicStaking is
     function withdraw(uint256 withdrawId, bool emergency) public withValidWithdrawId(withdrawId) returns (uint256) {
         require(!withdrawPaused, WithdrawsPaused());
 
-        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
+        WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
 
         request.isWithdrawn = true;
 
@@ -483,7 +487,7 @@ contract SonicStaking is
         onlyRole(OPERATOR_ROLE)
         withValidWithdrawId(withdrawId)
     {
-        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
+        WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
 
         request.isWithdrawn = true;
 
@@ -619,7 +623,7 @@ contract SonicStaking is
     {
         address user = msg.sender;
         withdrawId = _incrementWithdrawCounter();
-        WithdrawRequest storage request = allWithdrawRequests[withdrawId];
+        WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
 
         request.kind = kind;
         request.requestTimestamp = _now();
