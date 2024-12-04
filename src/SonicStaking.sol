@@ -308,21 +308,22 @@ contract SonicStaking is
      */
     function undelegate(uint256 validatorId, uint256 amountShares) public returns (uint256 withdrawId) {
         require(!undelegatePaused, UndelegationPaused());
+        require(amountShares > 0, UndelegateAmountCannotBeZero());
 
-        uint256 amountToUndelegate = convertToAssets(amountShares);
+        uint256 amountAssets = convertToAssets(amountShares);
         uint256 amountDelegated = SFC.getStake(address(this), validatorId);
 
-        require(amountToUndelegate <= amountDelegated, UndelegateAmountExceedsDelegated());
+        require(amountAssets <= amountDelegated, UndelegateAmountExceedsDelegated());
 
         _burn(msg.sender, amountShares);
 
-        withdrawId = _createWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountToUndelegate);
+        withdrawId = _createWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
 
-        totalDelegated -= amountToUndelegate;
+        totalDelegated -= amountAssets;
 
-        SFC.undelegate(validatorId, withdrawId, amountToUndelegate);
+        SFC.undelegate(validatorId, withdrawId, amountAssets);
 
-        emit Undelegated(msg.sender, withdrawId, validatorId, amountToUndelegate, WithdrawKind.VALIDATOR);
+        emit Undelegated(msg.sender, withdrawId, validatorId, amountAssets, WithdrawKind.VALIDATOR);
     }
 
     /**
