@@ -181,7 +181,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(sonicStaking.totalPool(), assetAmount);
         assertEq(sonicStaking.totalAssets(), assetAmount);
         assertEq(sonicStaking.getRate(), 1 ether);
-        assertEq(sonicStaking.withdrawCounter()), withdrawCounterStart + 1;
+        assertEq(sonicStaking.withdrawCounter(), withdrawCounterStart + 1);
         assertEq(sonicStaking.pendingOperatorWithdraw(), 0);
     }
 
