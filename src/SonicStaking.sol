@@ -274,7 +274,7 @@ contract SonicStaking is
         return items;
     }
 
-    function getWithdraw(uint256 withdrawId) external view returns (WithdrawRequest memory) {
+    function getWithdrawRequest(uint256 withdrawId) external view returns (WithdrawRequest memory) {
         return _allWithdrawRequests[withdrawId];
     }
 

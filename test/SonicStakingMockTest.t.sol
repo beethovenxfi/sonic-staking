@@ -88,7 +88,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
-        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdraw(101);
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(101);
 
         assertEq(withdraw.validatorId, validatorId);
         assertEq(withdraw.assetAmount, undelegateAmountShares);
@@ -101,7 +101,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking.withdraw(101, false);
         assertEq(address(user).balance, balanceBefore + undelegateAmountShares);
 
-        SonicStaking.WithdrawRequest memory withdrawAfter = sonicStaking.getWithdraw(101);
+        SonicStaking.WithdrawRequest memory withdrawAfter = sonicStaking.getWithdrawRequest(101);
 
         assertEq(withdrawAfter.isWithdrawn, true);
     }
@@ -135,7 +135,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
-        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdraw(101);
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(101);
 
         assertEq(withdraw.validatorId, validatorId);
         assertEq(withdraw.assetAmount, assetsToReceive);

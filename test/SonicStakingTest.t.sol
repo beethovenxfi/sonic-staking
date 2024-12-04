@@ -144,7 +144,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.totalDelegated(), 0);
         assertEq(sonicStaking.totalAssets(), 0);
 
-        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdraw(withdrawId);
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
 
         assertEq(withdraw.assetAmount, amount);
         assertEq(withdraw.isWithdrawn, false);
@@ -174,7 +174,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.totalAssets(), amount - undelegateAmountAssets);
         assertEq(sonicStaking.totalPool(), 0);
 
-        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdraw(withdrawId);
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
 
         assertEq(withdraw.assetAmount, undelegateAmount);
     }
@@ -216,7 +216,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.prank(user);
         sonicStaking.undelegateFromPool(undelegateAmountShares);
 
-        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdraw(sonicStaking.withdrawCounter());
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(sonicStaking.withdrawCounter());
 
         assertEq(withdraw.validatorId, 0);
         assertEq(withdraw.requestTimestamp, block.timestamp);
