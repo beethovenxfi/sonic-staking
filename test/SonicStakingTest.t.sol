@@ -224,8 +224,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 undelegateAmount = 250 ether;
         uint256 undelegateAmountShares = sonicStaking.convertToShares(undelegateAmount);
         uint256 undelegateAmountAssets = sonicStaking.convertToAssets(undelegateAmountShares);
-        console.log("undelegateAmountShares", undelegateAmountShares);
-        console.log("undelegateAmountAssets", undelegateAmountAssets);
         uint256 validatorId = 1;
 
         address user = makeDeposit(amount);
