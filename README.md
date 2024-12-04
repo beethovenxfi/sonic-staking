@@ -24,10 +24,35 @@ deploy to fork
 
 ## Todo
 
-1. Add timelock for admin and test
-2. Think about dealing with slashed validators on an operator level, i.e. could operator withdraw and add funds at the same time to keep rate. Or could operator withdraw and let the rate decrease. Currently, the users pay it since they will withdraw less $S that what they are entitled to.
-3. maybe change calc of the pool size to use balance(this) and keep track of pending withdrawals instead of tracking via variables.
-4. Should we track validators that we delegated to (instead of having `currentDelegations` and `totalDelegated`) and query the stake and pending rewards on chain? Could then also create a `claimAllRewards()` function. Would make rate calc more accurate and linear. Would make `currentDelegations` and `totalDelegated` obsolete as we would query SFC for that info. We wont have thousands of validators, max hunders. Dont think this is an issue with gas.
+1. Add timelock for owner
+
+## Access concept
+
+The Sonic Staking contract is `ownable` and also uses OpenZeppelin `AccessControl`. Under access-control, we define the following roles:
+
+1. Operator
+2. Claim
+
+The owner of the contract will be a Timelock and has the following permissions:
+
+1. Upgrade the contract
+2. Set the withdrawal delay
+3. Set treasury address
+4. Set protocol fees
+5. Pause/Unpause deposit
+6. Pause/Unpause undelegate
+7. Pause/Unpause withdraw
+
+The Operator role will be granted to a multisig and has the following permissions:
+
+1. delegate
+2. operator undelegate to pool
+3. operator withdraw to pool
+4. pause (which pauses deposits, undelegations and withdraws)
+
+The Claim role will be given to an EOA (for automation purposes) and has the following permissions:
+
+1. Claim rewards
 
 ## SFC
 
