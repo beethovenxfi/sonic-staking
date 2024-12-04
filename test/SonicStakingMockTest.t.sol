@@ -177,11 +177,11 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         vm.prank(SONIC_STAKING_OPERATOR);
         sonicStaking.operatorWithdrawToPool(101, false);
 
-        assertEq(0, sonicStaking.totalDelegated());
-        assertEq(assetAmount, sonicStaking.totalPool());
-        assertEq(assetAmount, sonicStaking.totalAssets());
-        assertEq(1 ether, sonicStaking.getRate());
-        assertEq(withdrawCounterStart + 1, sonicStaking.withdrawCounter());
+        assertEq(sonicStaking.totalDelegated(), 0);
+        assertEq(sonicStaking.totalPool(), assetAmount);
+        assertEq(sonicStaking.totalAssets(), assetAmount);
+        assertEq(sonicStaking.getRate(), 1 ether);
+        assertEq(sonicStaking.withdrawCounter()), withdrawCounterStart + 1;
         assertEq(sonicStaking.pendingOperatorWithdraw(), 0);
     }
 
