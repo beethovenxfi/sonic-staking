@@ -412,6 +412,58 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(withdrawAfter2.isWithdrawn, true);
     }
 
+    function testWithdrawManyWithIncreasedRate() public {
+        uint256 assetAmount = 10_000 ether;
+        uint256 delegateAmount1 = 5_000 ether;
+        uint256 delegateAmount2 = 5_000 ether;
+        uint256 undelegateAmount1 = 4_000 ether;
+        uint256 undelegateAmount2 = 4_000 ether;
+        uint256 pendingRewards = 1 ether;
+        uint256 validatorId1 = 1;
+        uint256 validatorId2 = 2;
+
+        address user = makeDeposit(assetAmount);
+
+        delegate(validatorId1, delegateAmount1);
+        delegate(validatorId2, delegateAmount2);
+
+        SFCMock(sfcMock).setPendingRewards{value: pendingRewards}(address(sonicStaking), 1, pendingRewards);
+
+        uint256[] memory claimValidatorIds = new uint256[](1);
+        claimValidatorIds[0] = 1;
+        vm.prank(SONIC_STAKING_CLAIMOR);
+        sonicStaking.claimRewards(claimValidatorIds);
+
+        uint256[] memory validatorIds = new uint256[](2);
+        validatorIds[0] = 1;
+        validatorIds[1] = 2;
+
+        uint256[] memory amountShares = new uint256[](2);
+        amountShares[0] = undelegateAmount1;
+        amountShares[1] = undelegateAmount2;
+
+        uint256 undelegateAmountAssets1 = sonicStaking.convertToAssets(undelegateAmount1);
+        uint256 undelegateAmountAssets2 = sonicStaking.convertToAssets(undelegateAmount2);
+
+        vm.prank(user);
+        uint256[] memory withdrawIds = sonicStaking.undelegateMany(validatorIds, amountShares);
+
+        // need to increase time to allow for withdraw
+        vm.warp(block.timestamp + 14 days);
+
+        uint256 balanceBefore = user.balance;
+
+        vm.prank(user);
+        sonicStaking.withdrawMany(withdrawIds, false);
+        assertEq(address(user).balance, balanceBefore + undelegateAmountAssets1 + undelegateAmountAssets2);
+
+        SonicStaking.WithdrawRequest memory withdrawAfter1 = sonicStaking.getWithdrawRequest(101);
+        assertEq(withdrawAfter1.isWithdrawn, true);
+
+        SonicStaking.WithdrawRequest memory withdrawAfter2 = sonicStaking.getWithdrawRequest(102);
+        assertEq(withdrawAfter2.isWithdrawn, true);
+    }
+
     function getState()
         public
         view
