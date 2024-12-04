@@ -258,6 +258,9 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         sonicStaking.setWithdrawPaused(true);
         assertTrue(sonicStaking.withdrawPaused());
 
+        sonicStaking.setDepositPaused(true);
+        assertTrue(sonicStaking.depositPaused());
+
         sonicStaking.setProtocolFeeBIPS(100);
         assertEq(sonicStaking.protocolFeeBIPS(), 100);
 
@@ -410,5 +413,18 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(withdraw2.isWithdrawn, false);
         assertEq(withdraw2.user, user);
         assertEq(withdraw2.validatorId, validatorId2);
+    }
+
+    function testPause() public {
+        assertTrue(sonicStaking.hasRole(sonicStaking.OPERATOR_ROLE(), SONIC_STAKING_OPERATOR));
+
+        vm.startPrank(SONIC_STAKING_OPERATOR);
+
+        sonicStaking.pause();
+        assertTrue(sonicStaking.undelegatePaused());
+        assertTrue(sonicStaking.withdrawPaused());
+        assertTrue(sonicStaking.depositPaused());
+
+        vm.stopPrank();
     }
 }
