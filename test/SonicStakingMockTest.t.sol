@@ -325,6 +325,49 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(sonicStaking.convertToAssets(1 ether), assetsCalculated);
     }
 
+    function testWithdrawAlreadyProcessed() public {
+        uint256 assetAmount = 10_000 ether;
+        uint256 delegateAmount = 10_000 ether;
+        uint256 undelegateAmount = 10_000 ether;
+        uint256 validatorId = 1;
+
+        address user = makeDeposit(assetAmount);
+        delegate(validatorId, delegateAmount);
+
+        vm.prank(user);
+        sonicStaking.undelegate(validatorId, undelegateAmount);
+
+        // need to increase time to allow for withdraw
+        vm.warp(block.timestamp + 14 days);
+
+        vm.prank(user);
+        sonicStaking.withdraw(101, false);
+
+        // try to withdraw the same ID again
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawAlreadyProcessed.selector));
+        sonicStaking.withdraw(101, false);
+    }
+
+    function testWithdrawFromDifferentUser() public {
+        uint256 assetAmount = 10_000 ether;
+        uint256 delegateAmount = 10_000 ether;
+        uint256 undelegateAmount = 10_000 ether;
+        uint256 validatorId = 1;
+
+        address user = makeDeposit(assetAmount);
+        delegate(validatorId, delegateAmount);
+
+        vm.prank(user);
+        sonicStaking.undelegate(validatorId, undelegateAmount);
+
+        // need to increase time to allow for withdraw
+        vm.warp(block.timestamp + 14 days);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UnauthorizedWithdraw.selector));
+        sonicStaking.withdraw(101, false);
+    }
+
     function getState()
         public
         view

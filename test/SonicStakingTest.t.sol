@@ -335,4 +335,30 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(withdraws[0].assetAmount, undelegateAmount2);
         assertEq(withdraws[1].assetAmount, undelegateAmount1);
     }
+
+    function testInvalidWithdrawId() public {
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawIdDoesNotExist.selector));
+        sonicStaking.withdraw(0, false);
+    }
+
+    function testWithdrawTooEarly() public {
+        uint256 assetAmount = 10_000 ether;
+        uint256 delegateAmount = 10_000 ether;
+        uint256 undelegateAmount = 10_000 ether;
+        uint256 validatorId = 1;
+
+        address user = makeDeposit(assetAmount);
+        delegate(validatorId, delegateAmount);
+
+        vm.prank(user);
+        sonicStaking.undelegate(validatorId, undelegateAmount);
+
+        vm.prank(user);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SonicStaking.WithdrawDelayNotElapsed.selector, block.timestamp + sonicStaking.withdrawDelay()
+            )
+        );
+        sonicStaking.withdraw(101, false);
+    }
 }
