@@ -164,11 +164,12 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         vm.prank(SONIC_STAKING_OPERATOR);
         sonicStaking.operatorUndelegateToPool(1, undelegateAmount);
 
-        assertEq(0, sonicStaking.totalDelegated());
-        assertEq(assetAmount - delegateAmount, sonicStaking.totalPool());
-        assertEq(assetAmount, sonicStaking.totalAssets());
-        assertEq(1 ether, sonicStaking.getRate());
-        assertEq(withdrawCounterStart + 1, sonicStaking.withdrawCounter());
+        assertEq(sonicStaking.totalDelegated(), 0);
+        assertEq(sonicStaking.totalPool(), assetAmount - delegateAmount);
+        assertEq(sonicStaking.totalAssets(), assetAmount);
+        assertEq(sonicStaking.getRate(), 1 ether);
+        assertEq(sonicStaking.withdrawCounter(), withdrawCounterStart + 1);
+        assertEq(sonicStaking.pendingOperatorWithdraw(), undelegateAmount);
 
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
@@ -181,6 +182,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(assetAmount, sonicStaking.totalAssets());
         assertEq(1 ether, sonicStaking.getRate());
         assertEq(withdrawCounterStart + 1, sonicStaking.withdrawCounter());
+        assertEq(sonicStaking.pendingOperatorWithdraw(), 0);
     }
 
     function testConversionRate() public {
@@ -462,6 +464,67 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         SonicStaking.WithdrawRequest memory withdrawAfter2 = sonicStaking.getWithdrawRequest(102);
         assertEq(withdrawAfter2.isWithdrawn, true);
+    }
+
+    function testSlashedValidatorHasNoImpactWithoutWithdraw() public {
+        uint256 assetAmount = 1_000 ether;
+        uint256 delegateAmount = 1_000 ether;
+        uint256 validatorId = 1;
+        makeDeposit(assetAmount);
+        delegate(validatorId, delegateAmount);
+
+        uint256 rateBefore = sonicStaking.getRate();
+        uint256 totalPoolBefore = sonicStaking.totalPool();
+        uint256 totalAssetsBefore = sonicStaking.totalAssets();
+        uint256 totalDelegatedBefore = sonicStaking.totalDelegated();
+
+        // slash the validator (slash half of the stake)
+        sfcMock.setCheater(validatorId, true);
+        sfcMock.setSlashRefundRatio(validatorId, 5 * 1e17);
+
+        assertEq(SFC.getStake(address(sonicStaking), validatorId), delegateAmount);
+
+        assertEq(sonicStaking.getRate(), rateBefore);
+        assertEq(sonicStaking.totalPool(), totalPoolBefore);
+        assertEq(sonicStaking.totalAssets(), totalAssetsBefore);
+        assertEq(sonicStaking.totalDelegated(), totalDelegatedBefore);
+    }
+
+    function testSlashedValidatorImpactOnOperatorWithdraw() public {
+        uint256 assetAmount = 1_000 ether;
+        uint256 delegateAmount = 1_000 ether;
+        uint256 undelegateAmount = 1_000 ether;
+        uint256 validatorId = 1;
+        makeDeposit(assetAmount);
+        delegate(validatorId, delegateAmount);
+
+        uint256 rateBefore = sonicStaking.getRate();
+
+        // slash the validator (slash half of the stake)
+        sfcMock.setCheater(validatorId, true);
+        sfcMock.setSlashRefundRatio(validatorId, 5 * 1e17);
+
+        uint256 undelegateAmountAsset = sonicStaking.convertToAssets(undelegateAmount);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        uint256 withdrawId = sonicStaking.operatorUndelegateToPool(1, undelegateAmount);
+
+        // need to increase time to allow for withdraw
+        vm.warp(block.timestamp + 14 days);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawnAmountTooLow.selector));
+        sonicStaking.withdraw(withdrawId, false);
+
+        // emergency withdraw
+        vm.prank(SONIC_STAKING_OPERATOR);
+        sonicStaking.operatorWithdrawToPool(withdrawId, true);
+        assertEq(sonicStaking.totalDelegated(), 0);
+        // the SFC rounds the penalty 1 wei up, so we need to account for this
+        assertApproxEqAbs(sonicStaking.totalPool(), undelegateAmountAsset / 2, 1);
+        assertApproxEqAbs(sonicStaking.totalAssets(), undelegateAmountAsset / 2, 1);
+        assertLt(sonicStaking.getRate(), rateBefore);
+        assertApproxEqAbs(sonicStaking.getRate(), rateBefore / 2, 1);
     }
 
     function getState()
