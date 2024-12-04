@@ -110,9 +110,9 @@ contract SonicStaking is
     event Deposited(address indexed user, uint256 assetAmount, uint256 wrappedAmount);
     event Delegated(uint256 indexed toValidator, uint256 assetAmount);
     event Undelegated(
-        address indexed user, uint256 withdarwId, uint256 assetAmount, uint256 fromValidator, WithdrawKind kind
+        address indexed user, uint256 withdrawId, uint256 assetAmount, uint256 fromValidator, WithdrawKind kind
     );
-    event Withdrawn(address indexed user, uint256 withdarwId, uint256 assetAmount, WithdrawKind kind, bool emergency);
+    event Withdrawn(address indexed user, uint256 withdrawId, uint256 assetAmount, WithdrawKind kind, bool emergency);
 
     error DelegateAmountCannotBeZero();
     error DelegateAmountLargerThanPool();
@@ -138,6 +138,7 @@ contract SonicStaking is
     error UndelegateAmountExceedsPool();
     error UserWithdrawsSkipTooLarge();
     error UserWithdrawsMaxSizeZero();
+    error ArrayLengthMismatch();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -299,44 +300,50 @@ contract SonicStaking is
         emit Deposited(user, amount, sharesAmount);
     }
 
-    struct UndelegateRequest {
-        uint256 validatorId;
-        uint256 amountShares;
+    /**
+     * @notice Undelegate staked assets. The shares are burnt from the msg.sender and a withdraw request is created.
+     * The assets are withdrawable after the `withdrawDelay` has passed.
+     * @param validatorId the validator to undelegate from
+     * @param amountShares the amount of shares to undelegate
+     */
+    function undelegate(uint256 validatorId, uint256 amountShares) public returns (uint256 withdrawId) {
+        require(!undelegatePaused, UndelegationPaused());
+
+        uint256 amountToUndelegate = convertToAssets(amountShares);
+        uint256 amountDelegated = SFC.getStake(address(this), validatorId);
+
+        require(amountToUndelegate <= amountDelegated, UndelegateAmountExceedsDelegated());
+
+        _burn(msg.sender, amountShares);
+
+        withdrawId = _createWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountToUndelegate);
+
+        totalDelegated -= amountToUndelegate;
+
+        SFC.undelegate(validatorId, withdrawId, amountToUndelegate);
+
+        emit Undelegated(msg.sender, withdrawId, amountToUndelegate, validatorId, WithdrawKind.VALIDATOR);
     }
 
     /**
-     * @notice Undelegate staked assets. The shares are burnt from the msg.sender and withdraw request(s) are created.
-     * The assets are withdrawable after the `withdrawDelay` has passed.
-     * @dev Requests is defined as an array to allow for off-chain optimizations for large withdraws. Most undelegation requests
-     * will be for a single validator.
-     * @param requests an array of undelegate requests, specifying the validatorId and the amountShares
+     * @notice Undelegate staked assets from multiple validators.
+     * @dev This function is provided as a convenience for bulking large undelegation requests across several
+     * validators. This function is not gas optimized as we operate in an environment where gas is less of a concern.
+     * We instead optimize for simpler code that is easier to reason about.
+     * @param validatorIds an array of validator ids to undelegate from
+     * @param amountShares an array of amounts of shares to undelegate
      */
-    function undelegate(UndelegateRequest[] calldata requests) external returns (uint256[] memory withdrawIds) {
-        require(!undelegatePaused, UndelegationPaused());
+    function undelegateMany(uint256[] calldata validatorIds, uint256[] calldata amountShares)
+        external
+        returns (uint256[] memory withdrawIds)
+    {
+        require(validatorIds.length == amountShares.length, ArrayLengthMismatch());
 
-        uint256 totalAmountShares = 0;
-        uint256 totalAmountToUndelegate = 0;
-        withdrawIds = new uint256[](requests.length);
+        withdrawIds = new uint256[](validatorIds.length);
 
-        for (uint256 i = 0; i < requests.length; i++) {
-            require(requests[i].amountShares > 0, UndelegateAmountCannotBeZero());
-
-            uint256 amountToUndelegate = convertToAssets(requests[i].amountShares);
-            uint256 amountDelegated = SFC.getStake(address(this), requests[i].validatorId);
-
-            require(amountToUndelegate <= amountDelegated, UndelegateAmountExceedsDelegated());
-
-            withdrawIds[i] = _createWithdrawRequest(WithdrawKind.VALIDATOR, requests[i].validatorId, amountToUndelegate);
-
-            SFC.undelegate(requests[i].validatorId, withdrawIds[i], amountToUndelegate);
-
-            totalAmountShares += requests[i].amountShares;
-            totalAmountToUndelegate += amountToUndelegate;
+        for (uint256 i = 0; i < validatorIds.length; i++) {
+            withdrawIds[i] = undelegate(validatorIds[i], amountShares[i]);
         }
-
-        totalDelegated -= totalAmountToUndelegate;
-
-        _burn(msg.sender, totalAmountShares);
     }
 
     /**

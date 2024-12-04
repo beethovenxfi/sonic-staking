@@ -81,11 +81,8 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         delegate(delegateAmountAsset, validatorId);
 
-        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
-        requests[0] = createUndelegateRequest(undelegateAmountShares, validatorId);
-
         vm.prank(user);
-        sonicStaking.undelegate(requests);
+        sonicStaking.undelegate(validatorId, undelegateAmountShares);
         assertEq(sonicStaking.withdrawCounter(), 101);
 
         // need to increase time to allow for withdraw
@@ -133,11 +130,8 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         uint256 assetsToReceive = sonicStaking.convertToAssets(undelegateAmountShares);
 
-        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
-        requests[0] = createUndelegateRequest(undelegateAmountShares, validatorId);
-
         vm.prank(user);
-        sonicStaking.undelegate(requests);
+        sonicStaking.undelegate(validatorId, undelegateAmountShares);
 
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
@@ -238,11 +232,8 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sfcMock.setCheater(validatorId, true);
         sfcMock.setSlashRefundRatio(validatorId, 5 * 1e17);
 
-        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
-        requests[0] = createUndelegateRequest(delegateAmountAsset, validatorId);
-
         vm.prank(user);
-        sonicStaking.undelegate(requests);
+        sonicStaking.undelegate(validatorId, delegateAmountAsset);
         assertEq(sonicStaking.withdrawCounter(), 101);
 
         vm.warp(block.timestamp + 14 days);

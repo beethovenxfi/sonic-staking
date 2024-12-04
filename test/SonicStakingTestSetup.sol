@@ -83,11 +83,4 @@ contract SonicStakingTestSetup is Test {
         rate = sonicStaking.getRate();
         lastUsedWrId = sonicStaking.withdrawCounter();
     }
-
-    function createUndelegateRequest(uint256 amount, uint256 validatorId)
-        public
-        returns (SonicStaking.UndelegateRequest memory)
-    {
-        return SonicStaking.UndelegateRequest({validatorId: validatorId, amountShares: amount});
-    }
 }

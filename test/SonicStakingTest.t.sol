@@ -146,16 +146,9 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         delegate(delegateAmountAsset1, toValidatorId1);
         delegate(delegateAmountAsset2, toValidatorId2);
 
-        // only provide validator2, which doesnt have sufficient S to undelegate
-        uint256[] memory validatorIds = new uint256[](1);
-        validatorIds[0] = 2;
-
-        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
-        requests[0] = createUndelegateRequest(undelegateAmountShares, toValidatorId2);
-
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
-        sonicStaking.undelegate(requests);
+        sonicStaking.undelegate(toValidatorId2, undelegateAmountShares);
     }
 
     function testStateSetters() public {
@@ -204,13 +197,10 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         address user = makeDeposit(amount);
         delegate(amount, validatorId);
 
-        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
-        requests[0] = createUndelegateRequest(amountShares, validatorId);
-
         uint256 userSharesBefore = sonicStaking.balanceOf(user);
 
         vm.prank(user);
-        uint256[] memory withdrawIds = sonicStaking.undelegate(requests);
+        uint256 withdrawId = sonicStaking.undelegate(validatorId, amountShares);
 
         assertEq(sonicStaking.balanceOf(user), userSharesBefore - amountShares);
         assertEq(sonicStaking.totalDelegated(), 0);
@@ -219,7 +209,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         // do not explode this struct, if we add a new var in the struct, everything breaks
         (, uint256 valId, uint256 assetAmount, bool isWithdrawn,, address userAddress) =
-            sonicStaking.allWithdrawRequests(withdrawIds[0]);
+            sonicStaking.allWithdrawRequests(withdrawId);
 
         assertEq(assetAmount, amount);
         assertEq(isWithdrawn, false);
@@ -242,13 +232,10 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         delegate(amount, validatorId);
 
-        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](1);
-        requests[0] = createUndelegateRequest(undelegateAmountShares, validatorId);
-
         uint256 userSharesBefore = sonicStaking.balanceOf(user);
 
         vm.prank(user);
-        uint256[] memory withdrawIds = sonicStaking.undelegate(requests);
+        uint256 withdrawId = sonicStaking.undelegate(validatorId, undelegateAmountShares);
 
         assertEq(sonicStaking.balanceOf(user), userSharesBefore - undelegateAmountShares);
         assertEq(sonicStaking.totalDelegated(), amount - undelegateAmountAssets);
@@ -256,8 +243,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.totalPool(), 0);
 
         // do not explode this struct, if we add a new var in the struct, everything breaks
-        (,, uint256 assetAmount,,,) = sonicStaking.allWithdrawRequests(withdrawIds[0]);
-        console.log("withdrawIds[0]", withdrawIds[0]);
+        (,, uint256 assetAmount,,,) = sonicStaking.allWithdrawRequests(withdrawId);
 
         assertEq(assetAmount, undelegateAmount);
     }
@@ -273,13 +259,19 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         delegate(amount, validatorId);
 
         // Create 3 undelegate requests
-        SonicStaking.UndelegateRequest[] memory requests = new SonicStaking.UndelegateRequest[](3);
-        requests[0] = createUndelegateRequest(undelegateAmount1, validatorId);
-        requests[1] = createUndelegateRequest(undelegateAmount2, validatorId);
-        requests[2] = createUndelegateRequest(undelegateAmount3, validatorId);
+        uint256[] memory validatorIds = new uint256[](3);
+        uint256[] memory undelegateAmountShares = new uint256[](3);
+
+        validatorIds[0] = validatorId;
+        validatorIds[1] = validatorId;
+        validatorIds[2] = validatorId;
+
+        undelegateAmountShares[0] = undelegateAmount1;
+        undelegateAmountShares[1] = undelegateAmount2;
+        undelegateAmountShares[2] = undelegateAmount3;
 
         vm.prank(user);
-        sonicStaking.undelegate(requests);
+        sonicStaking.undelegateMany(validatorIds, undelegateAmountShares);
 
         // Test getting all withdraws
         SonicStaking.WithdrawRequest[] memory withdraws = sonicStaking.getUserWithdraws(user, 0, 3, false);
