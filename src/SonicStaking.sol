@@ -110,7 +110,7 @@ contract SonicStaking is
     event Deposited(address indexed user, uint256 amountAssets, uint256 amountShares);
     event Delegated(uint256 indexed validatorId, uint256 amountAssets);
     event Undelegated(
-        address indexed user, uint256 withdrawId, uint256 indexed validatorId, uint256 amountAssets, WithdrawKind kind
+        address indexed user, uint256 withdrawId, uint256 validatorId, uint256 amountAssets, WithdrawKind kind
     );
     event Withdrawn(address indexed user, uint256 withdrawId, uint256 amountAssets, WithdrawKind kind, bool emergency);
 
@@ -294,7 +294,7 @@ contract SonicStaking is
 
         _mint(user, sharesAmount);
 
-        // Deposits are added to the pool initially. The assets are delegated to validators by the operator.
+        // Deposits are added to the pool initially. The assets are delegated to validators by the operator
         totalPool += amount;
 
         emit Deposited(user, amount, sharesAmount);
@@ -317,7 +317,7 @@ contract SonicStaking is
 
         _burn(msg.sender, amountShares);
 
-        withdrawId = _createWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
+        withdrawId = _createAndStoreWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
 
         totalDelegated -= amountAssets;
 
@@ -362,7 +362,7 @@ contract SonicStaking is
         _burn(msg.sender, amountShares);
 
         // The validatorId is ignored for pool withdrawals
-        uint256 withdrawId = _createWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
+        uint256 withdrawId = _createAndStoreWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
 
         totalPool -= amountToUndelegate;
 
@@ -462,7 +462,7 @@ contract SonicStaking is
         require(delegatedAmount > 0, NoDelegationForValidator(validatorId));
         require(amountAssets <= delegatedAmount, UndelegateAmountExceedsDelegated());
 
-        withdrawId = _createWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
+        withdrawId = _createAndStoreWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
 
         totalDelegated -= amountAssets;
 
@@ -613,7 +613,7 @@ contract SonicStaking is
      * Internal functions
      *
      */
-    function _createWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
+    function _createAndStoreWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
         internal
         returns (uint256 withdrawId)
     {
