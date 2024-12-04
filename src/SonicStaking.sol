@@ -107,12 +107,12 @@ contract SonicStaking is
     event UndelegatePausedUpdated(address indexed owner, bool newValue);
     event WithdrawPausedUpdated(address indexed owner, bool newValue);
     event DepositPausedUpdated(address indexed owner, bool newValue);
-    event Deposited(address indexed user, uint256 assetAmount, uint256 wrappedAmount);
-    event Delegated(uint256 indexed toValidator, uint256 assetAmount);
+    event Deposited(address indexed user, uint256 amountAssets, uint256 amountShares);
+    event Delegated(uint256 indexed validatorId, uint256 amountAssets);
     event Undelegated(
-        address indexed user, uint256 withdrawId, uint256 assetAmount, uint256 fromValidator, WithdrawKind kind
+        address indexed user, uint256 withdrawId, uint256 indexed validatorId, uint256 amountAssets, WithdrawKind kind
     );
-    event Withdrawn(address indexed user, uint256 withdrawId, uint256 assetAmount, WithdrawKind kind, bool emergency);
+    event Withdrawn(address indexed user, uint256 withdrawId, uint256 amountAssets, WithdrawKind kind, bool emergency);
 
     error DelegateAmountCannotBeZero();
     error DelegateAmountLargerThanPool();
@@ -322,7 +322,7 @@ contract SonicStaking is
 
         SFC.undelegate(validatorId, withdrawId, amountToUndelegate);
 
-        emit Undelegated(msg.sender, withdrawId, amountToUndelegate, validatorId, WithdrawKind.VALIDATOR);
+        emit Undelegated(msg.sender, withdrawId, validatorId, amountToUndelegate, WithdrawKind.VALIDATOR);
     }
 
     /**
@@ -365,7 +365,7 @@ contract SonicStaking is
 
         totalPool -= amountToUndelegate;
 
-        emit Undelegated(msg.sender, withdrawId, amountToUndelegate, 0, WithdrawKind.POOL);
+        emit Undelegated(msg.sender, withdrawId, 0, amountToUndelegate, WithdrawKind.POOL);
     }
 
     /**
@@ -429,10 +429,10 @@ contract SonicStaking is
 
     /**
      * @notice Delegate from the pool to a specific validator
-     * @param amount the amount of assets to delegate
      * @param validatorId the ID of the validator to delegate to
+     * @param amount the amount of assets to delegate
      */
-    function delegate(uint256 amount, uint256 validatorId) external onlyRole(OPERATOR_ROLE) {
+    function delegate(uint256 validatorId, uint256 amount) external onlyRole(OPERATOR_ROLE) {
         require(amount > 0, DelegateAmountCannotBeZero());
         require(amount <= totalPool, DelegateAmountLargerThanPool());
 
@@ -446,20 +446,30 @@ contract SonicStaking is
 
     /**
      * @notice Undelegate assets, assets can then be withdrawn to the pool after `withdrawDelay`
-     * @param amount the amount of assets to undelegate from given validator
      * @param validatorId the validator to undelegate from
+     * @param amountAssets the amount of assets to undelegate from given validator
      */
-    function operatorUndelegateToPool(uint256 amount, uint256 validatorId) external onlyRole(OPERATOR_ROLE) {
-        require(amount > 0, UndelegateAmountCannotBeZero());
+    function operatorUndelegateToPool(uint256 validatorId, uint256 amountAssets)
+        external
+        onlyRole(OPERATOR_ROLE)
+        returns (uint256 withdrawId)
+    {
+        require(amountAssets > 0, UndelegateAmountCannotBeZero());
 
         uint256 delegatedAmount = SFC.getStake(address(this), validatorId);
 
         require(delegatedAmount > 0, NoDelegationForValidator(validatorId));
-        require(amount <= delegatedAmount, UndelegateAmountExceedsDelegated());
+        require(amountAssets <= delegatedAmount, UndelegateAmountExceedsDelegated());
 
-        _undelegateFromValidator(validatorId, amount);
+        withdrawId = _createWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
 
-        pendingOperatorWithdraw += amount;
+        totalDelegated -= amountAssets;
+
+        pendingOperatorWithdraw += amountAssets;
+
+        SFC.undelegate(validatorId, withdrawId, amountAssets);
+
+        emit Undelegated(msg.sender, withdrawId, validatorId, amountAssets, WithdrawKind.VALIDATOR);
     }
 
     /**
@@ -602,22 +612,6 @@ contract SonicStaking is
      * Internal functions
      *
      */
-
-    /**
-     * @notice Undelegate from the validator.
-     * @param validatorId the validator to undelegate
-     * @param amount the amount to undelegate
-     */
-    function _undelegateFromValidator(uint256 validatorId, uint256 amount) internal {
-        uint256 withdrawId = _createWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amount);
-
-        SFC.undelegate(validatorId, withdrawId, amount);
-
-        totalDelegated -= amount;
-
-        emit Undelegated(msg.sender, withdrawId, amount, validatorId, WithdrawKind.VALIDATOR);
-    }
-
     function _createWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
         internal
         returns (uint256 withdrawId)

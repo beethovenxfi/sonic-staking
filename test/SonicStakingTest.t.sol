@@ -55,7 +55,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 rateBefore = sonicStaking.getRate();
 
         makeDeposit(depositAmountAsset);
-        delegate(delegateAssetAmount, toValidatorId);
+        delegate(toValidatorId, delegateAssetAmount);
 
         assertEq(sonicStaking.totalPool(), depositAmountAsset - delegateAssetAmount);
         assertEq(sonicStaking.totalDelegated(), delegateAssetAmount);
@@ -72,13 +72,13 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 toValidatorId = 1;
 
         makeDeposit(depositAmountAsset);
-        delegate(delegateAssetAmount, toValidatorId);
+        delegate(toValidatorId, delegateAssetAmount);
 
         // need to increase time to allow for another delegation
         vm.warp(block.timestamp + 1 hours);
 
         // second delegation to the same validator
-        delegate(delegateAssetAmount, toValidatorId);
+        delegate(toValidatorId, delegateAssetAmount);
 
         assertEq(sonicStaking.totalDelegated(), delegateAssetAmount * 2);
         assertEq(sonicStaking.totalAssets(), depositAmountAsset);
@@ -94,13 +94,13 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 toValidatorId2 = 2;
 
         makeDeposit(depositAmountAsset);
-        delegate(delegateAmountAsset1, toValidatorId1);
+        delegate(toValidatorId1, delegateAmountAsset1);
 
         // need to increase time to allow for another delegation
         vm.warp(block.timestamp + 1 hours);
 
         // second delegation to a different validator
-        delegate(delegateAmountAsset2, toValidatorId2);
+        delegate(toValidatorId2, delegateAmountAsset2);
 
         assertEq(sonicStaking.totalDelegated(), delegateAmountAsset1 + delegateAmountAsset2);
         assertEq(sonicStaking.totalAssets(), depositAmountAsset);
@@ -143,8 +143,8 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         address user = makeDeposit(depositAmountAsset);
 
-        delegate(delegateAmountAsset1, toValidatorId1);
-        delegate(delegateAmountAsset2, toValidatorId2);
+        delegate(toValidatorId1, delegateAmountAsset1);
+        delegate(toValidatorId2, delegateAmountAsset2);
 
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
@@ -195,7 +195,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 validatorId = 1;
 
         address user = makeDeposit(amount);
-        delegate(amount, validatorId);
+        delegate(validatorId, amount);
 
         uint256 userSharesBefore = sonicStaking.balanceOf(user);
 
@@ -230,7 +230,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         address user = makeDeposit(amount);
 
-        delegate(amount, validatorId);
+        delegate(validatorId, amount);
 
         uint256 userSharesBefore = sonicStaking.balanceOf(user);
 
@@ -256,7 +256,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 undelegateAmount3 = 300 ether;
         address user = makeDeposit(amount);
 
-        delegate(amount, validatorId);
+        delegate(validatorId, amount);
 
         // Create 3 undelegate requests
         uint256[] memory validatorIds = new uint256[](3);

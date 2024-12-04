@@ -11,32 +11,32 @@ import {SonicStakingTestSetup} from "./SonicStakingTestSetup.sol";
 contract SonicStakingRevertTest is Test, SonicStakingTestSetup {
     function testDelegateRevert() public {
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountCannotBeZero.selector));
-        delegate(0, 1);
+        delegate(1, 0);
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountLargerThanPool.selector));
-        delegate(100 ether, 1);
+        delegate(1, 100 ether);
 
         makeDeposit(100 ether);
-        delegate(10 ether, 1);
+        delegate(1, 10 ether);
 
         // vm.expectRevert("ERR_WAIT_FOR_NEXT_EPOCH");
-        delegate(10 ether, 1);
+        delegate(1, 10 ether);
     }
 
     function testUndelegateToPoolRevert() public {
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountCannotBeZero.selector));
-        sonicStaking.operatorUndelegateToPool(0, 1);
+        sonicStaking.operatorUndelegateToPool(1, 0);
 
         makeDeposit(100 ether);
-        delegate(100 ether, 1);
+        delegate(1, 100 ether);
 
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.NoDelegationForValidator.selector, 2));
-        sonicStaking.operatorUndelegateToPool(100 ether, 2);
+        sonicStaking.operatorUndelegateToPool(2, 100 ether);
 
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
-        sonicStaking.operatorUndelegateToPool(1000 ether, 1);
+        sonicStaking.operatorUndelegateToPool(1, 1000 ether);
     }
 }

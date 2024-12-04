@@ -28,7 +28,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 delegateAmountAsset = 1_000 ether;
         uint256 toValidatorId = 1;
         makeDeposit(depositAmountAsset);
-        delegate(delegateAmountAsset, toValidatorId);
+        delegate(toValidatorId, delegateAmountAsset);
 
         SFCMock(sfcMock).setPendingRewards{value: 100 ether}(address(sonicStaking), 1, 100 ether);
         assertEq(sfcMock.pendingRewards(address(sonicStaking), 1), 100 ether);
@@ -44,7 +44,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 toValidatorId = 1;
         uint256 pendingRewards = 100 ether;
         makeDeposit(depositAmountAsset);
-        delegate(delegateAmountAsset, toValidatorId);
+        delegate(toValidatorId, delegateAmountAsset);
 
         SFCMock(sfcMock).setPendingRewards{value: pendingRewards}(address(sonicStaking), 1, pendingRewards);
         assertEq(sfcMock.pendingRewards(address(sonicStaking), 1), pendingRewards);
@@ -79,7 +79,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         address user = makeDeposit(depositAmountAsset);
 
-        delegate(delegateAmountAsset, validatorId);
+        delegate(validatorId, delegateAmountAsset);
 
         vm.prank(user);
         sonicStaking.undelegate(validatorId, undelegateAmountShares);
@@ -117,7 +117,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         address user = makeDeposit(depositAmountAsset);
         uint256 userBalanceBefore = address(user).balance;
 
-        delegate(delegateAmountAsset, validatorId);
+        delegate(validatorId, delegateAmountAsset);
 
         uint256[] memory validatorIds = new uint256[](1);
         validatorIds[0] = 1;
@@ -161,10 +161,10 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         (,,,, uint256 withdrawCounterStart) = getState();
 
         makeDeposit(depositAmountAsset);
-        delegate(delegateAmountAsset, toValidatorId);
+        delegate(toValidatorId, delegateAmountAsset);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.operatorUndelegateToPool(undelegateAmountShares, 1);
+        sonicStaking.operatorUndelegateToPool(1, undelegateAmountShares);
 
         assertEq(0, sonicStaking.totalDelegated());
         assertEq(depositAmountAsset - delegateAmountAsset, sonicStaking.totalPool());
@@ -191,7 +191,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 toValidatorId = 1;
         uint256 pendingRewards = 1 ether;
         address user = makeDeposit(depositAmountAsset);
-        delegate(delegateAmountAsset, toValidatorId);
+        delegate(toValidatorId, delegateAmountAsset);
 
         SFCMock(sfcMock).setPendingRewards{value: pendingRewards}(address(sonicStaking), 1, pendingRewards);
 
@@ -226,7 +226,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 delegateAmountAsset = 1_000 ether;
         uint256 validatorId = 1;
         address user = makeDeposit(depositAmountAsset);
-        delegate(delegateAmountAsset, validatorId);
+        delegate(validatorId, delegateAmountAsset);
 
         // slash the validator (slash half of the stake)
         sfcMock.setCheater(validatorId, true);
@@ -271,7 +271,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 toValidatorId = 1;
         uint256 pendingRewards = 1 ether;
         address user = makeDeposit(depositAmountAsset);
-        delegate(delegateAmountAsset, toValidatorId);
+        delegate(toValidatorId, delegateAmountAsset);
 
         SFCMock(sfcMock).setPendingRewards{value: pendingRewards}(address(sonicStaking), 1, pendingRewards);
 
@@ -302,7 +302,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 toValidatorId = 1;
         uint256 pendingRewards = 1 ether;
         address user = makeDeposit(depositAmountAsset);
-        delegate(delegateAmountAsset, toValidatorId);
+        delegate(toValidatorId, delegateAmountAsset);
 
         SFCMock(sfcMock).setPendingRewards{value: pendingRewards}(address(sonicStaking), 1, pendingRewards);
 

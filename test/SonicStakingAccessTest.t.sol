@@ -21,12 +21,12 @@ contract SonicStakingAccessTest is Test, SonicStakingTestSetup {
         vm.expectRevert(
             abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.OPERATOR_ROLE())
         );
-        sonicStaking.delegate(1 ether, 1);
+        sonicStaking.delegate(1, 1 ether);
 
         vm.expectRevert(
             abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.OPERATOR_ROLE())
         );
-        sonicStaking.operatorUndelegateToPool(1 ether, 1);
+        sonicStaking.operatorUndelegateToPool(1, 1 ether);
 
         vm.expectRevert(
             abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.OPERATOR_ROLE())

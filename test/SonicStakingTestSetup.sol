@@ -67,9 +67,9 @@ contract SonicStakingTestSetup is Test {
         return user;
     }
 
-    function delegate(uint256 amount, uint256 validatorId) public {
+    function delegate(uint256 validatorId, uint256 amount) public {
         vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.delegate(amount, validatorId);
+        sonicStaking.delegate(validatorId, amount);
     }
 
     function getAmounts()
