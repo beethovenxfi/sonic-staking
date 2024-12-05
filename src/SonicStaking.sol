@@ -114,6 +114,7 @@ contract SonicStaking is
         address indexed user, uint256 withdrawId, uint256 validatorId, uint256 amountAssets, WithdrawKind kind
     );
     event Withdrawn(address indexed user, uint256 withdrawId, uint256 amountAssets, WithdrawKind kind, bool emergency);
+    event Donated(address indexed user, uint256 amountAssets);
 
     error DelegateAmountCannotBeZero();
     error DelegateAmountLargerThanPool();
@@ -522,9 +523,9 @@ contract SonicStaking is
 
         require(donationAmount > 0, DonationAmountCannotBeZero());
 
-        // TODO: discuss if we should add limits to the donation amount here
-
         totalPool += donationAmount;
+
+        emit Donated(msg.sender, donationAmount);
     }
 
     /**
