@@ -151,7 +151,15 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(SFC.getStake(address(sonicStaking), validatorId2), delegateAmountAsset2);
     }
 
-    function testUndelegateFromValidator() public {
+    function testDelegateErrors() public {
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountCannotBeZero.selector));
+        delegate(1, 0);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountLargerThanPool.selector));
+        delegate(1, 100 ether);
+    }
+
+    function testUndelegate() public {
         uint256 amount = 1000 ether;
         uint256 amountShares = sonicStaking.convertToShares(amount);
         uint256 validatorId = 1;
@@ -164,11 +172,9 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.expectEmit(true, true, true, true);
         emit IERC20.Transfer(user, address(0), amountShares);
 
-        // TODO: come back to this, can't get it to work
-        //vm.expectEmit(false, false, false, true);
-        //emit SonicStaking.Undelegated(user, 0, validatorId, amount, SonicStaking.WithdrawKind.VALIDATOR);
-
         vm.prank(user);
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.Undelegated(user, 101, validatorId, amount, SonicStaking.WithdrawKind.VALIDATOR);
         uint256 withdrawId = sonicStaking.undelegate(validatorId, amountShares);
 
         assertEq(sonicStaking.balanceOf(user), userSharesBefore - amountShares);
@@ -544,13 +550,5 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
         sonicStaking.operatorUndelegateToPool(1, 1000 ether);
-    }
-
-    function testDelegateRevert() public {
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountCannotBeZero.selector));
-        delegate(1, 0);
-
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountLargerThanPool.selector));
-        delegate(1, 100 ether);
     }
 }
