@@ -141,6 +141,7 @@ contract SonicStaking is
     error UserWithdrawsMaxSizeZero();
     error ArrayLengthMismatch();
     error UndelegateAmountTooSmall();
+    error DonationAmountCannotBeZero();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -514,6 +515,16 @@ contract SonicStaking is
         // We then account for the actual amount we were able to withdraw
         // In the instance of a realized slashing event, this will result in a drop in the rate.
         totalPool += actualWithdrawnAmount;
+    }
+
+    function donate() external payable onlyRole(OPERATOR_ROLE) {
+        uint256 donationAmount = msg.value;
+
+        require(donationAmount > 0, DonationAmountCannotBeZero());
+
+        // TODO: discuss if we should add limits to the donation amount here
+
+        totalPool += donationAmount;
     }
 
     /**

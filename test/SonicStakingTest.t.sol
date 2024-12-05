@@ -8,6 +8,7 @@ import {SonicStakingTestSetup} from "./SonicStakingTestSetup.sol";
 
 import {ISFC} from "src/interfaces/ISFC.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import {IAccessControl} from "openzeppelin-contracts/access/IAccessControl.sol";
 
 contract SonicStakingTest is Test, SonicStakingTestSetup {
     function testInitialization() public view {
@@ -426,5 +427,55 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertTrue(sonicStaking.depositPaused());
 
         vm.stopPrank();
+    }
+
+    function testDonate() public {
+        uint256 assetAmount = 10_000 ether;
+        uint256 donationAmount = 100 ether;
+
+        makeDeposit(assetAmount);
+
+        vm.deal(SONIC_STAKING_OPERATOR, donationAmount);
+        vm.startPrank(SONIC_STAKING_OPERATOR);
+
+        sonicStaking.donate{value: donationAmount}();
+
+        assertEq(sonicStaking.totalPool(), assetAmount + donationAmount);
+    }
+
+    function testDonateError() public {
+        vm.deal(SONIC_STAKING_OPERATOR, 100 ether);
+
+        address user = makeDeposit(100 ether);
+        vm.deal(user, 100 ether);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DonationAmountCannotBeZero.selector));
+        sonicStaking.donate{value: 0}();
+    }
+
+    function testRateGrowth() public {
+        uint256 assetAmount = 1_000 ether;
+
+        makeDeposit(assetAmount);
+
+        assertEq(sonicStaking.getRate(), 1 ether);
+        assertEq(sonicStaking.convertToAssets(1 ether), 1 ether);
+        assertEq(sonicStaking.convertToShares(1 ether), 1 ether);
+
+        donate(100 ether);
+        assertEq(sonicStaking.getRate(), 1.1 ether);
+        assertEq(sonicStaking.convertToAssets(1 ether), 1.1 ether);
+        assertEq(sonicStaking.convertToShares(1.1 ether), 1 ether);
+
+        donate(200 ether);
+        assertEq(sonicStaking.getRate(), 1.3 ether);
+        assertEq(sonicStaking.convertToAssets(1 ether), 1.3 ether);
+        assertEq(sonicStaking.convertToShares(1.3 ether), 1 ether);
+
+        donate(500 ether);
+        assertEq(sonicStaking.getRate(), 1.8 ether);
+        assertEq(sonicStaking.convertToAssets(1 ether), 1.8 ether);
+        assertEq(sonicStaking.convertToShares(1.8 ether), 1 ether);
     }
 }

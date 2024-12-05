@@ -72,6 +72,13 @@ contract SonicStakingTestSetup is Test {
         sonicStaking.delegate(validatorId, amount);
     }
 
+    function donate(uint256 amount) public {
+        vm.deal(SONIC_STAKING_OPERATOR, amount);
+        vm.prank(SONIC_STAKING_OPERATOR);
+
+        sonicStaking.donate{value: amount}();
+    }
+
     function getAmounts()
         public
         view
