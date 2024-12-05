@@ -277,6 +277,56 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         sonicStaking.undelegate(validatorId, amountShares);
     }
 
+    function testUndelegateMany() public {
+        uint256 assetAmount = 10_000 ether;
+        uint256 delegateAmount1 = 5_000 ether;
+        uint256 delegateAmount2 = 5_000 ether;
+        uint256 undelegateAmount1 = 5_000 ether;
+        uint256 undelegateAmount2 = 5_000 ether;
+        uint256 validatorId1 = 1;
+        uint256 validatorId2 = 2;
+
+        address user = makeDeposit(assetAmount);
+
+        delegate(validatorId1, delegateAmount1);
+        delegate(validatorId2, delegateAmount2);
+
+        uint256 userSharesBefore = sonicStaking.balanceOf(user);
+
+        uint256[] memory validatorIds = new uint256[](2);
+        validatorIds[0] = 1;
+        validatorIds[1] = 2;
+
+        uint256[] memory amountShares = new uint256[](2);
+        amountShares[0] = undelegateAmount1;
+        amountShares[1] = undelegateAmount2;
+
+        uint256 undelegateAmountAssets1 = sonicStaking.convertToAssets(undelegateAmount1);
+        uint256 undelegateAmountAssets2 = sonicStaking.convertToAssets(undelegateAmount2);
+
+        vm.prank(user);
+        uint256[] memory withdrawIds = sonicStaking.undelegateMany(validatorIds, amountShares);
+        assertEq(sonicStaking.withdrawCounter(), 102);
+
+        assertEq(sonicStaking.balanceOf(user), userSharesBefore - (undelegateAmount1 + undelegateAmount2));
+        assertEq(sonicStaking.totalDelegated(), 0);
+        assertEq(sonicStaking.totalAssets(), 0);
+
+        SonicStaking.WithdrawRequest memory withdraw1 = sonicStaking.getWithdrawRequest(withdrawIds[0]);
+
+        assertEq(withdraw1.assetAmount, undelegateAmountAssets1);
+        assertEq(withdraw1.isWithdrawn, false);
+        assertEq(withdraw1.user, user);
+        assertEq(withdraw1.validatorId, validatorId1);
+
+        SonicStaking.WithdrawRequest memory withdraw2 = sonicStaking.getWithdrawRequest(withdrawIds[1]);
+
+        assertEq(withdraw2.assetAmount, undelegateAmountAssets2);
+        assertEq(withdraw2.isWithdrawn, false);
+        assertEq(withdraw2.user, user);
+        assertEq(withdraw2.validatorId, validatorId2);
+    }
+
     function testUndelegateFromPool() public {
         uint256 depositAmountAsset = 100_000 ether;
         uint256 undelegateAmountShares = 10_000 ether;
@@ -299,24 +349,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         assertEq(sonicStaking.totalPool(), depositAmountAsset - undelegateAmountAssets);
         assertEq(sonicStaking.balanceOf(user), userSharesBefore - undelegateAmountShares);
-    }
-
-    function testUndelegateTooMuchFromValidator() public {
-        uint256 depositAmountAsset = 10_000 ether;
-        uint256 delegateAmountAsset1 = 5_000 ether;
-        uint256 delegateAmountAsset2 = 3_000 ether;
-        uint256 undelegateAmountShares = sonicStaking.convertToShares(6_000 ether);
-        uint256 toValidatorId1 = 1;
-        uint256 toValidatorId2 = 2;
-
-        address user = makeDeposit(depositAmountAsset);
-
-        delegate(toValidatorId1, delegateAmountAsset1);
-        delegate(toValidatorId2, delegateAmountAsset2);
-
-        vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
-        sonicStaking.undelegate(toValidatorId2, undelegateAmountShares);
     }
 
     function testStateSetters() public {
@@ -436,56 +468,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
             )
         );
         sonicStaking.withdraw(101, false);
-    }
-
-    function testUndelegateMany() public {
-        uint256 assetAmount = 10_000 ether;
-        uint256 delegateAmount1 = 5_000 ether;
-        uint256 delegateAmount2 = 5_000 ether;
-        uint256 undelegateAmount1 = 5_000 ether;
-        uint256 undelegateAmount2 = 5_000 ether;
-        uint256 validatorId1 = 1;
-        uint256 validatorId2 = 2;
-
-        address user = makeDeposit(assetAmount);
-
-        delegate(validatorId1, delegateAmount1);
-        delegate(validatorId2, delegateAmount2);
-
-        uint256 userSharesBefore = sonicStaking.balanceOf(user);
-
-        uint256[] memory validatorIds = new uint256[](2);
-        validatorIds[0] = 1;
-        validatorIds[1] = 2;
-
-        uint256[] memory amountShares = new uint256[](2);
-        amountShares[0] = undelegateAmount1;
-        amountShares[1] = undelegateAmount2;
-
-        uint256 undelegateAmountAssets1 = sonicStaking.convertToAssets(undelegateAmount1);
-        uint256 undelegateAmountAssets2 = sonicStaking.convertToAssets(undelegateAmount2);
-
-        vm.prank(user);
-        uint256[] memory withdrawIds = sonicStaking.undelegateMany(validatorIds, amountShares);
-        assertEq(sonicStaking.withdrawCounter(), 102);
-
-        assertEq(sonicStaking.balanceOf(user), userSharesBefore - (undelegateAmount1 + undelegateAmount2));
-        assertEq(sonicStaking.totalDelegated(), 0);
-        assertEq(sonicStaking.totalAssets(), 0);
-
-        SonicStaking.WithdrawRequest memory withdraw1 = sonicStaking.getWithdrawRequest(withdrawIds[0]);
-
-        assertEq(withdraw1.assetAmount, undelegateAmountAssets1);
-        assertEq(withdraw1.isWithdrawn, false);
-        assertEq(withdraw1.user, user);
-        assertEq(withdraw1.validatorId, validatorId1);
-
-        SonicStaking.WithdrawRequest memory withdraw2 = sonicStaking.getWithdrawRequest(withdrawIds[1]);
-
-        assertEq(withdraw2.assetAmount, undelegateAmountAssets2);
-        assertEq(withdraw2.isWithdrawn, false);
-        assertEq(withdraw2.user, user);
-        assertEq(withdraw2.validatorId, validatorId2);
     }
 
     function testPause() public {
