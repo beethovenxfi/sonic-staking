@@ -13,6 +13,7 @@ import {ERC20PermitUpgradeable} from
     "openzeppelin-contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title Sonic Staking Contract
@@ -27,7 +28,8 @@ contract SonicStaking is
     ERC20PermitUpgradeable,
     OwnableUpgradeable,
     UUPSUpgradeable,
-    AccessControlUpgradeable
+    AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable
 {
     // These constants have been taken from the SFC contract
     uint256 public constant DECIMAL_UNIT = 1e18;
@@ -159,6 +161,7 @@ contract SonicStaking is
 
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
+        __ReentrancyGuard_init();
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         SFC = _sfc;
@@ -210,9 +213,10 @@ contract SonicStaking is
 
     /**
      * @notice Returns the amount of asset equivalent to 1 share (with 18 decimals)
+     * @dev This function is provided for native compatability with balancer pools
      */
     function getRate() public view returns (uint256) {
-        return convertToAssets(1e18);
+        return convertToAssets(1 ether);
     }
 
     /**
@@ -314,7 +318,7 @@ contract SonicStaking is
      * @param validatorId the validator to undelegate from
      * @param amountShares the amount of shares to undelegate
      */
-    function undelegate(uint256 validatorId, uint256 amountShares) public returns (uint256 withdrawId) {
+    function undelegate(uint256 validatorId, uint256 amountShares) public nonReentrant returns (uint256 withdrawId) {
         require(!undelegatePaused, UndelegationPaused());
         require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
@@ -382,7 +386,12 @@ contract SonicStaking is
      * @param withdrawId the unique withdraw id for the undelegation request
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
-    function withdraw(uint256 withdrawId, bool emergency) public withValidWithdrawId(withdrawId) returns (uint256) {
+    function withdraw(uint256 withdrawId, bool emergency)
+        public
+        nonReentrant
+        withValidWithdrawId(withdrawId)
+        returns (uint256)
+    {
         require(!withdrawPaused, WithdrawsPaused());
 
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
@@ -441,7 +450,7 @@ contract SonicStaking is
      * @param validatorId the ID of the validator to delegate to
      * @param amount the amount of assets to delegate
      */
-    function delegate(uint256 validatorId, uint256 amount) external onlyRole(OPERATOR_ROLE) {
+    function delegate(uint256 validatorId, uint256 amount) external nonReentrant onlyRole(OPERATOR_ROLE) {
         require(amount > 0, DelegateAmountCannotBeZero());
         require(amount <= totalPool, DelegateAmountLargerThanPool());
 
@@ -460,6 +469,7 @@ contract SonicStaking is
      */
     function operatorUndelegateToPool(uint256 validatorId, uint256 amountAssets)
         external
+        nonReentrant
         onlyRole(OPERATOR_ROLE)
         returns (uint256 withdrawId)
     {
@@ -488,6 +498,7 @@ contract SonicStaking is
      */
     function operatorWithdrawToPool(uint256 withdrawId, bool emergency)
         external
+        nonReentrant
         onlyRole(OPERATOR_ROLE)
         withValidWithdrawId(withdrawId)
     {
@@ -606,7 +617,7 @@ contract SonicStaking is
      * @notice Claim rewards from all contracts and add them to the pool
      * @param validatorIds an array of validator IDs to claim rewards from
      */
-    function claimRewards(uint256[] calldata validatorIds) external onlyRole(CLAIM_ROLE) {
+    function claimRewards(uint256[] calldata validatorIds) external nonReentrant onlyRole(CLAIM_ROLE) {
         uint256 balanceBefore = address(this).balance;
 
         for (uint256 i = 0; i < validatorIds.length; i++) {
