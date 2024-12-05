@@ -131,7 +131,7 @@ contract SonicStaking is
     error ProtocolFeeTooHigh();
     error DepositTooSmall();
     error DepositPaused();
-    error UndelegationPaused();
+    error UndelegatePaused();
     error WithdrawsPaused();
     error RewardClaimingPaused();
     error WithdrawnAmountTooHigh();
@@ -319,7 +319,7 @@ contract SonicStaking is
      * @param amountShares the amount of shares to undelegate
      */
     function undelegate(uint256 validatorId, uint256 amountShares) public nonReentrant returns (uint256 withdrawId) {
-        require(!undelegatePaused, UndelegationPaused());
+        require(!undelegatePaused, UndelegatePaused());
         require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
         uint256 amountAssets = convertToAssets(amountShares);

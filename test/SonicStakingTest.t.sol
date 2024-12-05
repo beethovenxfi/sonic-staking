@@ -181,15 +181,15 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.totalDelegated(), 0);
         assertEq(sonicStaking.totalAssets(), 0);
 
-        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
+        SonicStaking.WithdrawRequest memory withdrawRequest = sonicStaking.getWithdrawRequest(withdrawId);
 
-        assertEq(withdraw.assetAmount, amount);
-        assertEq(withdraw.isWithdrawn, false);
-        assertEq(withdraw.user, user);
-        assertEq(withdraw.validatorId, validatorId);
+        assertEq(withdrawRequest.assetAmount, amount);
+        assertEq(withdrawRequest.isWithdrawn, false);
+        assertEq(withdrawRequest.user, user);
+        assertEq(withdrawRequest.validatorId, validatorId);
     }
 
-    function testPartialUndelegateFromValidator() public {
+    function testPartialUndelegate() public {
         uint256 amount = 1000 ether;
         // we undelegate 250 of the 1000 deposited
         uint256 undelegateAmount = 250 ether;
@@ -211,9 +211,9 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.totalAssets(), amount - undelegateAmountAssets);
         assertEq(sonicStaking.totalPool(), 0);
 
-        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
+        SonicStaking.WithdrawRequest memory withdrawRequest = sonicStaking.getWithdrawRequest(withdrawId);
 
-        assertEq(withdraw.assetAmount, undelegateAmount);
+        assertEq(withdrawRequest.assetAmount, undelegateAmount);
     }
 
     function testSeveralUndelegatesFromValidator() public {
@@ -239,6 +239,22 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
             assertEq(sonicStaking.totalDelegated(), amount - totalUndelegated);
             assertEq(sonicStaking.balanceOf(user), userSharesBefore - totalSharesBurned);
         }
+    }
+
+    function testUndelegatePaused() public {
+        uint256 amountAssets = 1 ether;
+
+        vm.prank(SONIC_STAKING_OWNER);
+
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.UndelegatePausedUpdated(address(SONIC_STAKING_OWNER), true);
+        sonicStaking.setUndelegatePaused(true);
+
+        assertTrue(sonicStaking.undelegatePaused());
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegatePaused.selector));
+        sonicStaking.undelegate(1, amountAssets);
     }
 
     function testUndelegateFromPool() public {
