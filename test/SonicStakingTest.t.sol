@@ -500,4 +500,29 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.convertToAssets(1 ether), finalRate);
         assertEq(sonicStaking.convertToShares(finalRate), 1 ether);
     }
+
+    function testUndelegateToPoolRevert() public {
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountCannotBeZero.selector));
+        sonicStaking.operatorUndelegateToPool(1, 0);
+
+        makeDeposit(100 ether);
+        delegate(1, 100 ether);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.NoDelegationForValidator.selector, 2));
+        sonicStaking.operatorUndelegateToPool(2, 100 ether);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
+        sonicStaking.operatorUndelegateToPool(1, 1000 ether);
+    }
+
+    function testDelegateRevert() public {
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountCannotBeZero.selector));
+        delegate(1, 0);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountLargerThanPool.selector));
+        delegate(1, 100 ether);
+    }
 }
