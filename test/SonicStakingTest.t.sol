@@ -263,6 +263,20 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         sonicStaking.undelegate(1, amountShares);
     }
 
+    function testUndelegateAmountExceedsDelegated() public {
+        uint256 amount = 1000 ether;
+        uint256 amountDelegated = 200 ether;
+        uint256 amountShares = sonicStaking.convertToShares(amount);
+        uint256 validatorId = 1;
+
+        address user = makeDeposit(amount);
+        delegate(validatorId, amountDelegated);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
+        sonicStaking.undelegate(validatorId, amountShares);
+    }
+
     function testUndelegateFromPool() public {
         uint256 depositAmountAsset = 100_000 ether;
         uint256 undelegateAmountShares = 10_000 ether;
