@@ -242,7 +242,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     }
 
     function testUndelegatePaused() public {
-        uint256 amountAssets = 1 ether;
+        uint256 amountShares = 1 ether;
 
         vm.prank(SONIC_STAKING_OWNER);
 
@@ -252,9 +252,15 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         assertTrue(sonicStaking.undelegatePaused());
 
-        vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegatePaused.selector));
-        sonicStaking.undelegate(1, amountAssets);
+        sonicStaking.undelegate(1, amountShares);
+    }
+
+    function testUndelegateAmountTooSmall() public {
+        uint256 amountShares = 1;
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegatePaused.selector));
+        sonicStaking.undelegate(1, amountShares);
     }
 
     function testUndelegateFromPool() public {
