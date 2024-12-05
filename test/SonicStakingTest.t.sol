@@ -327,6 +327,32 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(withdraw2.validatorId, validatorId2);
     }
 
+    function testUndelegateManyLengthMismatch() public {
+        uint256 assetAmount = 10_000 ether;
+        uint256 delegateAmount1 = 5_000 ether;
+        uint256 delegateAmount2 = 5_000 ether;
+        uint256 undelegateAmount1 = 5_000 ether;
+        uint256 undelegateAmount2 = 5_000 ether;
+        uint256 validatorId1 = 1;
+        uint256 validatorId2 = 2;
+
+        address user = makeDeposit(assetAmount);
+
+        delegate(validatorId1, delegateAmount1);
+        delegate(validatorId2, delegateAmount2);
+
+        uint256[] memory validatorIds = new uint256[](1);
+        validatorIds[0] = 1;
+
+        uint256[] memory amountShares = new uint256[](2);
+        amountShares[0] = undelegateAmount1;
+        amountShares[1] = undelegateAmount2;
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.ArrayLengthMismatch.selector));
+        sonicStaking.undelegateMany(validatorIds, amountShares);
+    }
+
     function testUndelegateFromPool() public {
         uint256 depositAmountAsset = 100_000 ether;
         uint256 undelegateAmountShares = 10_000 ether;
