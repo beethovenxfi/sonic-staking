@@ -70,6 +70,20 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         sonicStaking.deposit{value: amountAssets}();
     }
 
+    function testDepositPaused() public {
+        uint256 amountAssets = 1 ether;
+        address user = vm.addr(200);
+
+        vm.prank(SONIC_STAKING_OWNER);
+        sonicStaking.setDepositPaused(true);
+        assertTrue(sonicStaking.depositPaused());
+
+        vm.deal(user, amountAssets);
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DepositPaused.selector));
+        sonicStaking.deposit{value: amountAssets}();
+    }
+
     function testDelegate() public {
         uint256 depositAmountAsset = 100_000 ether;
         uint256 delegateAmountAsset = 1_000 ether;
