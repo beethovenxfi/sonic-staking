@@ -37,6 +37,7 @@ contract SonicStaking is
 
     uint256 public constant MAX_PROTOCOL_FEE_BIPS = 10_000;
     uint256 public constant MIN_DEPOSIT = 1 ether;
+    uint256 public constant MIN_UNDELEGATE_AMOUNT_SHARES = 1 ether;
 
     enum WithdrawKind {
         POOL,
@@ -139,6 +140,7 @@ contract SonicStaking is
     error UserWithdrawsSkipTooLarge();
     error UserWithdrawsMaxSizeZero();
     error ArrayLengthMismatch();
+    error UndelegateAmountTooSmall();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -312,7 +314,7 @@ contract SonicStaking is
      */
     function undelegate(uint256 validatorId, uint256 amountShares) public returns (uint256 withdrawId) {
         require(!undelegatePaused, UndelegationPaused());
-        require(amountShares > 0, UndelegateAmountCannotBeZero());
+        require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
         uint256 amountAssets = convertToAssets(amountShares);
         uint256 amountDelegated = SFC.getStake(address(this), validatorId);
@@ -357,7 +359,7 @@ contract SonicStaking is
      * @param amountShares the amount of shares to undelegate
      */
     function undelegateFromPool(uint256 amountShares) external {
-        require(amountShares > 0, UndelegateAmountCannotBeZero());
+        require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
         uint256 amountToUndelegate = convertToAssets(amountShares);
 
