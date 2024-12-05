@@ -71,39 +71,36 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertGt(sonicStaking.getRate(), rateBefore);
     }
 
-    function testUndelegateAndWithdraw() public {
-        uint256 assetAmount = 10_000 ether;
+    function testWithdraw() public {
+        uint256 amount = 10_000 ether;
         uint256 delegateAmount = 10_000 ether;
-        uint256 undelegateAmount = 10_000 ether;
+        uint256 undelegateShares = sonicStaking.convertToShares(10_000 ether);
         uint256 validatorId = 1;
 
-        address user = makeDeposit(assetAmount);
+        address user = makeDeposit(amount);
 
         delegate(validatorId, delegateAmount);
 
         vm.prank(user);
-        sonicStaking.undelegate(validatorId, undelegateAmount);
-        assertEq(sonicStaking.withdrawCounter(), 101);
+        uint256 withdrawId = sonicStaking.undelegate(validatorId, undelegateShares);
+        SonicStaking.WithdrawRequest memory withdrawRequestBefore = sonicStaking.getWithdrawRequest(withdrawId);
 
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
-        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(101);
-
-        assertEq(withdraw.validatorId, validatorId);
-        assertEq(withdraw.assetAmount, undelegateAmount);
-        assertEq(withdraw.user, user);
-        assertEq(withdraw.isWithdrawn, false);
-
         uint256 balanceBefore = address(user).balance;
 
         vm.prank(user);
-        sonicStaking.withdraw(101, false);
-        assertEq(address(user).balance, balanceBefore + undelegateAmount);
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.Withdrawn(
+            user, withdrawId, withdrawRequestBefore.assetAmount, SonicStaking.WithdrawKind.VALIDATOR, false
+        );
+        sonicStaking.withdraw(withdrawId, false);
 
-        SonicStaking.WithdrawRequest memory withdrawAfter = sonicStaking.getWithdrawRequest(101);
+        SonicStaking.WithdrawRequest memory withdrawRequest = sonicStaking.getWithdrawRequest(withdrawId);
+        assertEq(address(user).balance, balanceBefore + withdrawRequest.assetAmount);
 
-        assertEq(withdrawAfter.isWithdrawn, true);
+        assertEq(withdrawRequest.isWithdrawn, true);
     }
 
     function testUndelegateAndWithdrawWithIncreasedRate() public {
