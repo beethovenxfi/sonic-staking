@@ -259,7 +259,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     function testUndelegateAmountTooSmall() public {
         uint256 amountShares = 1;
 
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegatePaused.selector));
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountTooSmall.selector));
         sonicStaking.undelegate(1, amountShares);
     }
 
