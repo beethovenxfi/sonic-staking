@@ -60,6 +60,16 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.balanceOf(user), amountShares);
     }
 
+    function testMinDeposit() public {
+        uint256 amountAssets = 1;
+        address user = vm.addr(200);
+        vm.deal(user, amountAssets);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DepositTooSmall.selector));
+        sonicStaking.deposit{value: amountAssets}();
+    }
+
     function testDelegate() public {
         uint256 depositAmountAsset = 100_000 ether;
         uint256 delegateAmountAsset = 1_000 ether;
