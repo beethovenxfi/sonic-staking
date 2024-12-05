@@ -11,6 +11,8 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {IAccessControl} from "openzeppelin-contracts/access/IAccessControl.sol";
 
 contract SonicStakingTest is Test, SonicStakingTestSetup {
+    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
+
     function testInitialization() public view {
         // make sure roles are set properly
         assertEq(sonicStaking.owner(), SONIC_STAKING_OWNER);
@@ -452,6 +454,12 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.DonationAmountCannotBeZero.selector));
         sonicStaking.donate{value: 0}();
+
+        vm.startPrank(user);
+        vm.expectRevert(
+            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.OPERATOR_ROLE())
+        );
+        sonicStaking.donate{value: 100 ether}();
     }
 
     function testRateGrowth() public {

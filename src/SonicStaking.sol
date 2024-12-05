@@ -518,6 +518,10 @@ contract SonicStaking is
         totalPool += actualWithdrawnAmount;
     }
 
+    /**
+     * @notice Donate assets to the pool
+     * @dev Donations are added to the pool, causing the rate to increase. Only the operator can donate.
+     */
     function donate() external payable onlyRole(OPERATOR_ROLE) {
         uint256 donationAmount = msg.value;
 
