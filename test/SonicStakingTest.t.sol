@@ -363,6 +363,8 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 userSharesBefore = sonicStaking.balanceOf(user);
 
         vm.prank(user);
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.Undelegated(user, 101, 0, undelegateAmountAssets, SonicStaking.WithdrawKind.POOL);
         sonicStaking.undelegateFromPool(undelegateAmountShares);
 
         SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(sonicStaking.withdrawCounter());
