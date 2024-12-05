@@ -75,7 +75,11 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         address user = vm.addr(200);
 
         vm.prank(SONIC_STAKING_OWNER);
+
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.DepositPausedUpdated(address(SONIC_STAKING_OWNER), true);
         sonicStaking.setDepositPaused(true);
+
         assertTrue(sonicStaking.depositPaused());
 
         vm.deal(user, amountAssets);
