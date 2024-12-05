@@ -457,7 +457,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     function testRateGrowth() public {
         uint256 assetAmount = 1_000 ether;
 
-        makeDeposit(assetAmount);
+        address user = makeDeposit(assetAmount);
 
         assertEq(sonicStaking.getRate(), 1 ether);
         assertEq(sonicStaking.convertToAssets(1 ether), 1 ether);
@@ -473,9 +473,23 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.convertToAssets(1 ether), 1.3 ether);
         assertEq(sonicStaking.convertToShares(1.3 ether), 1 ether);
 
+        uint256 finalRate = 1.8 ether;
         donate(500 ether);
-        assertEq(sonicStaking.getRate(), 1.8 ether);
-        assertEq(sonicStaking.convertToAssets(1 ether), 1.8 ether);
-        assertEq(sonicStaking.convertToShares(1.8 ether), 1 ether);
+        assertEq(sonicStaking.getRate(), finalRate);
+        assertEq(sonicStaking.convertToAssets(1 ether), finalRate);
+        assertEq(sonicStaking.convertToShares(finalRate), 1 ether);
+
+        // delegation should not impact the rate
+        delegate(1, 400 ether);
+        assertEq(sonicStaking.getRate(), finalRate);
+        assertEq(sonicStaking.convertToAssets(1 ether), finalRate);
+        assertEq(sonicStaking.convertToShares(finalRate), 1 ether);
+
+        // undelegation should not impact the rate
+        vm.prank(user);
+        sonicStaking.undelegate(1, 200 ether);
+        assertEq(sonicStaking.getRate(), finalRate);
+        assertEq(sonicStaking.convertToAssets(1 ether), finalRate);
+        assertEq(sonicStaking.convertToShares(finalRate), 1 ether);
     }
 }
