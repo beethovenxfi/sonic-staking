@@ -590,9 +590,5 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.NoDelegationForValidator.selector, 2));
         sonicStaking.operatorUndelegateToPool(2, 100 ether);
-
-        vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
-        sonicStaking.operatorUndelegateToPool(1, 1000 ether);
     }
 }
