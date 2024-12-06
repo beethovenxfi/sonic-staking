@@ -502,7 +502,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(sonicStaking.totalDelegated(), totalDelegatedBefore);
     }
 
-    function testSlashedValidatorImpactOnOperatorWithdraw() public {
+    function testSlashedValidatorImpactOnOperatorClawBack() public {
         uint256 assetAmount = 1_000 ether;
         uint256 delegateAmount = 1_000 ether;
         uint256 undelegateAmount = 1_000 ether;
@@ -540,7 +540,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertApproxEqAbs(sonicStaking.getRate(), rateBefore / 2, 1);
     }
 
-    function testOperatorUndelegateAndWithdrawToPool() public {
+    function testOperatorClawBackUndelegateAndWithdraw() public {
         uint256 assetAmount = 10_000 ether;
         uint256 delegateAmount = 1_000 ether;
         uint256 undelegateAmount = 1_000 ether;
