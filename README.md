@@ -30,12 +30,17 @@ deploy to fork
 
 The Sonic Staking contract is `ownable` and also uses OpenZeppelin `AccessControl`. Under access-control, we define the following roles:
 
-1. Operator
-2. Claim
+1. Default Admin Role
+2. Operator
+3. Claim
 
-The owner of the contract will be a Timelock and has the following permissions:
+The owner of the contract will be a Timelock with 1 week lock and has the following permissions:
 
 1. Upgrade the contract
+
+The default Admin role will be grant to a Timelock with 1 day lock and has the following permissions:
+
+1. Grant/Revoe roles
 2. Set the withdrawal delay
 3. Set treasury address
 4. Set protocol fees

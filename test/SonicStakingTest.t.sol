@@ -17,7 +17,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         // make sure roles are set properly
         assertEq(sonicStaking.owner(), SONIC_STAKING_OWNER);
         assertTrue(sonicStaking.hasRole(sonicStaking.OPERATOR_ROLE(), SONIC_STAKING_OPERATOR));
-        assertTrue(sonicStaking.hasRole(sonicStaking.DEFAULT_ADMIN_ROLE(), SONIC_STAKING_OWNER));
+        assertTrue(sonicStaking.hasRole(sonicStaking.DEFAULT_ADMIN_ROLE(), SONIC_STAKING_ADMIN));
         assertFalse(sonicStaking.hasRole(sonicStaking.OPERATOR_ROLE(), address(this)));
         assertFalse(sonicStaking.hasRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this)));
 
@@ -126,10 +126,10 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 amountAssets = 1 ether;
         address user = vm.addr(200);
 
-        vm.prank(SONIC_STAKING_OWNER);
+        vm.prank(SONIC_STAKING_ADMIN);
 
         vm.expectEmit(true, true, true, true);
-        emit SonicStaking.DepositPausedUpdated(address(SONIC_STAKING_OWNER), true);
+        emit SonicStaking.DepositPausedUpdated(address(SONIC_STAKING_ADMIN), true);
         sonicStaking.setDepositPaused(true);
 
         assertTrue(sonicStaking.depositPaused());
@@ -225,10 +225,10 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     function testUndelegatePaused() public {
         uint256 amountShares = 1 ether;
 
-        vm.prank(SONIC_STAKING_OWNER);
+        vm.prank(SONIC_STAKING_ADMIN);
 
         vm.expectEmit(true, true, true, true);
-        emit SonicStaking.UndelegatePausedUpdated(address(SONIC_STAKING_OWNER), true);
+        emit SonicStaking.UndelegatePausedUpdated(address(SONIC_STAKING_ADMIN), true);
         sonicStaking.setUndelegatePaused(true);
 
         assertTrue(sonicStaking.undelegatePaused());
@@ -533,7 +533,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     }
 
     function testStateSetters() public {
-        vm.startPrank(SONIC_STAKING_OWNER);
+        vm.startPrank(SONIC_STAKING_ADMIN);
 
         sonicStaking.setWithdrawDelay(1);
         assertEq(sonicStaking.withdrawDelay(), 1);
@@ -555,7 +555,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     }
 
     function testStateSettersRevert() public {
-        vm.startPrank(SONIC_STAKING_OWNER);
+        vm.startPrank(SONIC_STAKING_ADMIN);
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setUndelegatePaused(false);

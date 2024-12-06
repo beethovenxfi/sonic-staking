@@ -613,7 +613,7 @@ contract SonicStaking is
      * @notice Set withdraw delay
      * @param delay the new delay
      */
-    function setWithdrawDelay(uint256 delay) external onlyOwner {
+    function setWithdrawDelay(uint256 delay) external onlyRole(DEFAULT_ADMIN_ROLE) {
         withdrawDelay = delay;
         emit WithdrawDelaySet(msg.sender, delay);
     }
@@ -622,7 +622,7 @@ contract SonicStaking is
      * @notice Pause/unpause user undelegations
      * @param newValue the desired value of the switch
      */
-    function setUndelegatePaused(bool newValue) external onlyOwner {
+    function setUndelegatePaused(bool newValue) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setUndelegatePaused(newValue);
     }
 
@@ -630,7 +630,7 @@ contract SonicStaking is
      * @notice Pause/unpause user withdraws
      * @param newValue the desired value of the switch
      */
-    function setWithdrawPaused(bool newValue) external onlyOwner {
+    function setWithdrawPaused(bool newValue) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setWithdrawPaused(newValue);
     }
 
@@ -638,7 +638,7 @@ contract SonicStaking is
      * @notice Pause/unpause deposit function
      * @param newValue the desired value of the switch
      */
-    function setDepositPaused(bool newValue) external onlyOwner {
+    function setDepositPaused(bool newValue) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDepositPaused(newValue);
     }
 
@@ -646,7 +646,7 @@ contract SonicStaking is
      * @notice Update the treasury address
      * @param newTreasury the new treasury address
      */
-    function setTreasury(address newTreasury) external onlyOwner {
+    function setTreasury(address newTreasury) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(newTreasury != address(0), TreasuryAddressCannotBeZero());
 
         treasury = newTreasury;
@@ -656,7 +656,7 @@ contract SonicStaking is
      * @notice Update the protocol fee
      * @param newFeeBIPS the value of the fee (in BIPS)
      */
-    function setProtocolFeeBIPS(uint256 newFeeBIPS) external onlyOwner {
+    function setProtocolFeeBIPS(uint256 newFeeBIPS) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(newFeeBIPS <= MAX_PROTOCOL_FEE_BIPS, ProtocolFeeTooHigh());
 
         protocolFeeBIPS = newFeeBIPS;

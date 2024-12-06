@@ -13,6 +13,7 @@ contract DeploySonicStaking is Script {
         address sfcAddress,
         address treasuryAddress,
         address sonicStakingOwner,
+        address sonicStakingAdmin,
         address sonicStakingOperator,
         address sonicStakingClaimor
     ) public returns (SonicStaking) {
@@ -27,7 +28,7 @@ contract DeploySonicStaking is Script {
         sonicStaking.transferOwnership(sonicStakingOwner);
         sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), sonicStakingOperator);
         sonicStaking.grantRole(sonicStaking.CLAIM_ROLE(), sonicStakingClaimor);
-        sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), sonicStakingOwner);
+        sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), sonicStakingAdmin);
         sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), msg.sender);
 
         vm.stopBroadcast();

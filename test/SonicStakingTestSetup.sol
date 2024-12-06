@@ -13,6 +13,7 @@ contract SonicStakingTestSetup is Test {
     address SONIC_STAKING_CLAIMOR;
     address SONIC_STAKING_OPERATOR;
     address SONIC_STAKING_OWNER;
+    address SONIC_STAKING_ADMIN;
     SonicStaking sonicStaking;
 
     ISFC SFC;
@@ -34,7 +35,8 @@ contract SonicStakingTestSetup is Test {
         // deploy Sonic Staking
         SONIC_STAKING_OPERATOR = vm.addr(1);
         SONIC_STAKING_OWNER = vm.addr(2);
-        SONIC_STAKING_CLAIMOR = vm.addr(3);
+        SONIC_STAKING_ADMIN = vm.addr(3);
+        SONIC_STAKING_CLAIMOR = vm.addr(4);
 
         address sonicStakingAddress = Upgrades.deployUUPSProxy(
             "SonicStaking.sol:SonicStaking", abi.encodeCall(SonicStaking.initialize, (SFC, TREASURY_ADDRESS))
@@ -45,7 +47,7 @@ contract SonicStakingTestSetup is Test {
         sonicStaking.transferOwnership(SONIC_STAKING_OWNER);
         sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), SONIC_STAKING_OPERATOR);
         sonicStaking.grantRole(sonicStaking.CLAIM_ROLE(), SONIC_STAKING_CLAIMOR);
-        sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), SONIC_STAKING_OWNER);
+        sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), SONIC_STAKING_ADMIN);
         sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this));
     }
 

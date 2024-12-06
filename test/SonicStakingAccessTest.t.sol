@@ -41,29 +41,41 @@ contract SonicStakingAccessTest is Test, SonicStakingTestSetup {
         vm.stopPrank();
     }
 
-    function testOwnerDeny() public {
+    function testAdminDeny() public {
         assertEq(sonicStaking.owner(), SONIC_STAKING_OWNER);
 
         address user = vm.addr(200);
         assertFalse(sonicStaking.owner() == address(user));
 
         vm.startPrank(user);
-        vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, user));
+        vm.expectRevert(
+            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.DEFAULT_ADMIN_ROLE())
+        );
         sonicStaking.setWithdrawDelay(7);
 
-        vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, user));
+        vm.expectRevert(
+            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.DEFAULT_ADMIN_ROLE())
+        );
         sonicStaking.setUndelegatePaused(true);
 
-        vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, user));
+        vm.expectRevert(
+            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.DEFAULT_ADMIN_ROLE())
+        );
         sonicStaking.setWithdrawPaused(true);
 
-        vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, user));
+        vm.expectRevert(
+            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.DEFAULT_ADMIN_ROLE())
+        );
         sonicStaking.setDepositPaused(true);
 
-        vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, user));
+        vm.expectRevert(
+            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.DEFAULT_ADMIN_ROLE())
+        );
         sonicStaking.setTreasury(address(user));
 
-        vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, user));
+        vm.expectRevert(
+            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.DEFAULT_ADMIN_ROLE())
+        );
         sonicStaking.setProtocolFeeBIPS(9_000);
 
         vm.stopPrank();
