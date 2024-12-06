@@ -31,13 +31,13 @@
             <td class="headerValue">lcov.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">155</td>
             <td class="headerCovTableEntry">157</td>
-            <td class="headerCovTableEntryHi">98.7 %</td>
+            <td class="headerCovTableEntry">157</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2024-12-06 16:38:15</td>
+            <td class="headerValue">2024-12-06 16:59:33</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">36</td>
@@ -49,9 +49,9 @@
             <td></td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntry">73</td>
+            <td class="headerCovTableEntry">74</td>
             <td class="headerCovTableEntry">78</td>
-            <td class="headerCovTableEntryHi">93.6 %</td>
+            <td class="headerCovTableEntryHi">94.9 %</td>
           </tr>
           <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
         </table>
@@ -230,21 +230,21 @@
 <a name="159"><span class="lineNum">     159 </span>                :            :     /**</a>
 <a name="160"><span class="lineNum">     160 </span>                :            :      * @notice Initializer</a>
 <a name="161"><span class="lineNum">     161 </span>                :            :      * @param _sfc the address of the SFC contract (is NOT modifiable)</a>
-<a name="162"><span class="lineNum">     162 </span>                :<span class="lineCov">         89 :      * @param _treasury The address of the treasury where fees are sent to (is modifiable)</span></a>
+<a name="162"><span class="lineNum">     162 </span>                :<span class="lineCov">         91 :      * @param _treasury The address of the treasury where fees are sent to (is modifiable)</span></a>
 <a name="163"><span class="lineNum">     163 </span>                :            :      */</a>
-<a name="164"><span class="lineNum">     164 </span>                :<span class="lineCov">         89 :     function initialize(ISFC _sfc, address _treasury) public initializer {</span></a>
-<a name="165"><span class="lineNum">     165 </span>                :<span class="lineCov">         89 :         __ERC20_init(&quot;Beets Staked Sonic&quot;, &quot;stS&quot;);</span></a>
-<a name="166"><span class="lineNum">     166 </span>                :<span class="lineCov">         89 :         __ERC20Burnable_init();</span></a>
-<a name="167"><span class="lineNum">     167 </span>                :<span class="lineCov">         89 :         __ERC20Permit_init(&quot;Beets Staked Sonic&quot;);</span></a>
+<a name="164"><span class="lineNum">     164 </span>                :<span class="lineCov">         91 :     function initialize(ISFC _sfc, address _treasury) public initializer {</span></a>
+<a name="165"><span class="lineNum">     165 </span>                :<span class="lineCov">         91 :         __ERC20_init(&quot;Beets Staked Sonic&quot;, &quot;stS&quot;);</span></a>
+<a name="166"><span class="lineNum">     166 </span>                :<span class="lineCov">         91 :         __ERC20Burnable_init();</span></a>
+<a name="167"><span class="lineNum">     167 </span>                :<span class="lineCov">         91 :         __ERC20Permit_init(&quot;Beets Staked Sonic&quot;);</span></a>
 <a name="168"><span class="lineNum">     168 </span>                :            : </a>
-<a name="169"><span class="lineNum">     169 </span>                :<span class="lineCov">         89 :         __Ownable_init(msg.sender);</span></a>
-<a name="170"><span class="lineNum">     170 </span>                :<span class="lineCov">         89 :         __UUPSUpgradeable_init();</span></a>
-<a name="171"><span class="lineNum">     171 </span>                :<span class="lineCov">         89 :         __ReentrancyGuard_init();</span></a>
-<a name="172"><span class="lineNum">     172 </span>                :<span class="lineCov">         89 :         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);</span></a>
+<a name="169"><span class="lineNum">     169 </span>                :<span class="lineCov">         91 :         __Ownable_init(msg.sender);</span></a>
+<a name="170"><span class="lineNum">     170 </span>                :<span class="lineCov">         91 :         __UUPSUpgradeable_init();</span></a>
+<a name="171"><span class="lineNum">     171 </span>                :<span class="lineCov">         91 :         __ReentrancyGuard_init();</span></a>
+<a name="172"><span class="lineNum">     172 </span>                :<span class="lineCov">         91 :         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);</span></a>
 <a name="173"><span class="lineNum">     173 </span>                :            : </a>
 <a name="174"><span class="lineNum">     174 </span>                :            :         SFC = _sfc;</a>
-<a name="175"><span class="lineNum">     175 </span>                :<span class="lineCov">         89 :         treasury = _treasury;</span></a>
-<a name="176"><span class="lineNum">     176 </span>                :<span class="lineCov">         89 :         withdrawDelay = 604800 * 2; // 14 days</span></a>
+<a name="175"><span class="lineNum">     175 </span>                :<span class="lineCov">         91 :         treasury = _treasury;</span></a>
+<a name="176"><span class="lineNum">     176 </span>                :<span class="lineCov">         91 :         withdrawDelay = 604800 * 2; // 14 days</span></a>
 <a name="177"><span class="lineNum">     177 </span>                :            :         undelegatePaused = false;</a>
 <a name="178"><span class="lineNum">     178 </span>                :            :         withdrawPaused = false;</a>
 <a name="179"><span class="lineNum">     179 </span>                :            :         depositPaused = false;</a>
@@ -259,13 +259,13 @@
 <a name="188"><span class="lineNum">     188 </span>                :            :      *      - has passed the withdraw delay</a>
 <a name="189"><span class="lineNum">     189 </span>                :<span class="lineCov">          4 :      *      - msg.sender is the user that made the initial request</span></a>
 <a name="190"><span class="lineNum">     190 </span>                :            :      */</a>
-<a name="191"><span class="lineNum">     191 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 15 times"> + </span>]:<span class="lineCov">          4 :     modifier withValidWithdrawId(uint256 withdrawId) {</span></a>
-<a name="192"><span class="lineNum">     192 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 14 times"> + </span>]:<span class="lineCov">          4 :         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];</span></a>
-<a name="193"><span class="lineNum">     193 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 13 times"> + </span>]:<span class="lineCov">          4 :         uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;</span></a>
+<a name="191"><span class="lineNum">     191 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 16 times"> + </span>]:<span class="lineCov">          4 :     modifier withValidWithdrawId(uint256 withdrawId) {</span></a>
+<a name="192"><span class="lineNum">     192 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 15 times"> + </span>]:<span class="lineCov">          4 :         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];</span></a>
+<a name="193"><span class="lineNum">     193 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 14 times"> + </span>]:<span class="lineCov">          4 :         uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;</span></a>
 <a name="194"><span class="lineNum">     194 </span>                :            : </a>
-<a name="195"><span class="lineNum">     195 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 12 times"> + </span>]:<span class="lineCov">          4 :         require(request.requestTimestamp &gt; 0, WithdrawIdDoesNotExist());</span></a>
+<a name="195"><span class="lineNum">     195 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 13 times"> + </span>]:<span class="lineCov">          4 :         require(request.requestTimestamp &gt; 0, WithdrawIdDoesNotExist());</span></a>
 <a name="196"><span class="lineNum">     196 </span>                :            :         require(_now() &gt;= earliestWithdrawTime, WithdrawDelayNotElapsed(earliestWithdrawTime));</a>
-<a name="197"><span class="lineNum">     197 </span>                :<span class="lineCov">         16 :         require(!request.isWithdrawn, WithdrawAlreadyProcessed());</span></a>
+<a name="197"><span class="lineNum">     197 </span>                :<span class="lineCov">         17 :         require(!request.isWithdrawn, WithdrawAlreadyProcessed());</span></a>
 <a name="198"><span class="lineNum">     198 </span>                :            :         require(msg.sender == request.user, UnauthorizedWithdraw());</a>
 <a name="199"><span class="lineNum">     199 </span>                :<span class="lineCov">          7 : </span></a>
 <a name="200"><span class="lineNum">     200 </span>                :            :         _;</a>
@@ -296,7 +296,7 @@
 <a name="225"><span class="lineNum">     225 </span>                :            :      */</a>
 <a name="226"><span class="lineNum">     226 </span>                :            : </a>
 <a name="227"><span class="lineNum">     227 </span>                :            :     /**</a>
-<a name="228"><span class="lineNum">     228 </span>                :<span class="lineCov">        684 :      * @notice Returns the current asset worth of the protocol</span></a>
+<a name="228"><span class="lineNum">     228 </span>                :<span class="lineCov">        693 :      * @notice Returns the current asset worth of the protocol</span></a>
 <a name="229"><span class="lineNum">     229 </span>                :            :      *</a>
 <a name="230"><span class="lineNum">     230 </span>                :            :      * Considers:</a>
 <a name="231"><span class="lineNum">     231 </span>                :            :      *  - current staked assets</a>
@@ -307,17 +307,17 @@
 <a name="236"><span class="lineNum">     236 </span>                :            :         return totalPool + totalDelegated + pendingOperatorWithdraw;</a>
 <a name="237"><span class="lineNum">     237 </span>                :            :     }</a>
 <a name="238"><span class="lineNum">     238 </span>                :            : </a>
-<a name="239"><span class="lineNum">     239 </span>                :<span class="lineCov">        481 :     /**</span></a>
-<a name="240"><span class="lineNum">     240 </span>                :<span class="lineCov">        481 :      * @notice Returns the amount of asset equivalent to 1 share (with 18 decimals)</span></a>
+<a name="239"><span class="lineNum">     239 </span>                :<span class="lineCov">        487 :     /**</span></a>
+<a name="240"><span class="lineNum">     240 </span>                :<span class="lineCov">        487 :      * @notice Returns the amount of asset equivalent to 1 share (with 18 decimals)</span></a>
 <a name="241"><span class="lineNum">     241 </span>                :            :      * @dev This function is provided for native compatability with balancer pools</a>
 <a name="242"><span class="lineNum">     242 </span>                :            :      */</a>
 <a name="243"><span class="lineNum">     243 </span>                :            :     function getRate() public view returns (uint256) {</a>
 <a name="244"><span class="lineNum">     244 </span>                :            :         return convertToAssets(1 ether);</a>
 <a name="245"><span class="lineNum">     245 </span>                :            :     }</a>
 <a name="246"><span class="lineNum">     246 </span>                :            : </a>
-<a name="247"><span class="lineNum">     247 </span>                :<span class="lineCov">         89 :     /**</span></a>
-<a name="248"><span class="lineNum">     248 </span>                :<span class="lineCov">         89 :      * @notice Returns the amount of share equivalent to the provided number of assets</span></a>
-<a name="249"><span class="lineNum">     249 </span>           [<span class="branchCov" title="Branch 0 was taken 73 times"> + </span>]:<span class="lineCov">         89 :      * @param assetAmount the amount of assets to convert</span></a>
+<a name="247"><span class="lineNum">     247 </span>                :<span class="lineCov">         91 :     /**</span></a>
+<a name="248"><span class="lineNum">     248 </span>                :<span class="lineCov">         91 :      * @notice Returns the amount of share equivalent to the provided number of assets</span></a>
+<a name="249"><span class="lineNum">     249 </span>           [<span class="branchCov" title="Branch 0 was taken 75 times"> + </span>]:<span class="lineCov">         91 :      * @param assetAmount the amount of assets to convert</span></a>
 <a name="250"><span class="lineNum">     250 </span>                :            :      */</a>
 <a name="251"><span class="lineNum">     251 </span>                :<span class="lineCov">         16 :     function convertToShares(uint256 assetAmount) public view returns (uint256) {</span></a>
 <a name="252"><span class="lineNum">     252 </span>                :            :         uint256 assetsTotal = totalAssets();</a>
@@ -328,13 +328,13 @@
 <a name="257"><span class="lineNum">     257 </span>                :            :         }</a>
 <a name="258"><span class="lineNum">     258 </span>                :            : </a>
 <a name="259"><span class="lineNum">     259 </span>                :            :         return (assetAmount * totalShares) / assetsTotal;</a>
-<a name="260"><span class="lineNum">     260 </span>                :<span class="lineCov">        569 :     }</span></a>
+<a name="260"><span class="lineNum">     260 </span>                :<span class="lineCov">        576 :     }</span></a>
 <a name="261"><span class="lineNum">     261 </span>                :            : </a>
 <a name="262"><span class="lineNum">     262 </span>                :            :     /**</a>
-<a name="263"><span class="lineNum">     263 </span>                :<span class="lineCov">        569 :      * @notice Returns the amount of asset equivalent to the provided number of shares</span></a>
-<a name="264"><span class="lineNum">     264 </span>           [<span class="branchCov" title="Branch 0 was taken 112 times"> + </span>]:<span class="lineCov">        457 :      * @param sharesAmount the amount of shares to convert</span></a>
+<a name="263"><span class="lineNum">     263 </span>                :<span class="lineCov">        576 :      * @notice Returns the amount of asset equivalent to the provided number of shares</span></a>
+<a name="264"><span class="lineNum">     264 </span>           [<span class="branchCov" title="Branch 0 was taken 116 times"> + </span>]:<span class="lineCov">        460 :      * @param sharesAmount the amount of shares to convert</span></a>
 <a name="265"><span class="lineNum">     265 </span>                :            :      */</a>
-<a name="266"><span class="lineNum">     266 </span>                :<span class="lineCov">        457 :     function convertToAssets(uint256 sharesAmount) public view returns (uint256) {</span></a>
+<a name="266"><span class="lineNum">     266 </span>                :<span class="lineCov">        460 :     function convertToAssets(uint256 sharesAmount) public view returns (uint256) {</span></a>
 <a name="267"><span class="lineNum">     267 </span>                :            :         uint256 assetsTotal = totalAssets();</a>
 <a name="268"><span class="lineNum">     268 </span>                :            :         uint256 totalShares = totalSupply();</a>
 <a name="269"><span class="lineNum">     269 </span>                :            : </a>
@@ -370,7 +370,7 @@
 <a name="299"><span class="lineNum">     299 </span>                :<span class="lineCov">         10 :                 items[i] = _allWithdrawRequests[userWithdraws[user][skip + i]];</span></a>
 <a name="300"><span class="lineNum">     300 </span>                :            :             } else {</a>
 <a name="301"><span class="lineNum">     301 </span>                :<span class="lineCov">          8 :                 // In reverse order we go back to front, skipping the last (newer) entries. Note that `remaining` will</span></a>
-<a name="302"><span class="lineNum">     302 </span>                :<span class="lineCov">         19 :                 // equal the total count if `skip` is 0, meaning we'd start with the newest entry.</span></a>
+<a name="302"><span class="lineNum">     302 </span>                :<span class="lineCov">         21 :                 // equal the total count if `skip` is 0, meaning we'd start with the newest entry.</span></a>
 <a name="303"><span class="lineNum">     303 </span>                :            :                 items[i] = _allWithdrawRequests[userWithdraws[user][remaining - 1 - i]];</a>
 <a name="304"><span class="lineNum">     304 </span>                :            :             }</a>
 <a name="305"><span class="lineNum">     305 </span>                :            :         }</a>
@@ -378,23 +378,23 @@
 <a name="307"><span class="lineNum">     307 </span>                :            :         return items;</a>
 <a name="308"><span class="lineNum">     308 </span>                :            :     }</a>
 <a name="309"><span class="lineNum">     309 </span>                :            : </a>
-<a name="310"><span class="lineNum">     310 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 62 times"> + </span>]:<span class="lineCov">         64 :     function getWithdrawRequest(uint256 withdrawId) external view returns (WithdrawRequest memory) {</span></a>
-<a name="311"><span class="lineNum">     311 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 60 times"> + </span>]:<span class="lineCov">         62 :         return _allWithdrawRequests[withdrawId];</span></a>
+<a name="310"><span class="lineNum">     310 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 63 times"> + </span>]:<span class="lineCov">         65 :     function getWithdrawRequest(uint256 withdrawId) external view returns (WithdrawRequest memory) {</span></a>
+<a name="311"><span class="lineNum">     311 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 61 times"> + </span>]:<span class="lineCov">         63 :         return _allWithdrawRequests[withdrawId];</span></a>
 <a name="312"><span class="lineNum">     312 </span>                :            :     }</a>
 <a name="313"><span class="lineNum">     313 </span>                :            : </a>
 <a name="314"><span class="lineNum">     314 </span>                :            :     /**</a>
 <a name="315"><span class="lineNum">     315 </span>                :            :      *</a>
-<a name="316"><span class="lineNum">     316 </span>                :<span class="lineCov">         60 :      * End User Functions</span></a>
+<a name="316"><span class="lineNum">     316 </span>                :<span class="lineCov">         61 :      * End User Functions</span></a>
 <a name="317"><span class="lineNum">     317 </span>                :            :      *</a>
 <a name="318"><span class="lineNum">     318 </span>                :            :      */</a>
 <a name="319"><span class="lineNum">     319 </span>                :            : </a>
 <a name="320"><span class="lineNum">     320 </span>                :            :     /**</a>
-<a name="321"><span class="lineNum">     321 </span>                :<span class="lineCov">         60 :      * @notice Deposit native assets and mint shares of the LST.</span></a>
+<a name="321"><span class="lineNum">     321 </span>                :<span class="lineCov">         61 :      * @notice Deposit native assets and mint shares of the LST.</span></a>
 <a name="322"><span class="lineNum">     322 </span>                :            :      */</a>
 <a name="323"><span class="lineNum">     323 </span>                :            :     function deposit() external payable enforceInvariant {</a>
 <a name="324"><span class="lineNum">     324 </span>                :            :         uint256 amount = msg.value;</a>
-<a name="325"><span class="lineNum">     325 </span>                :<span class="lineCov">         60 :         require(amount &gt;= MIN_DEPOSIT, DepositTooSmall());</span></a>
-<a name="326"><span class="lineNum">     326 </span>                :<span class="lineCov">         60 :         require(!depositPaused, DepositPaused());</span></a>
+<a name="325"><span class="lineNum">     325 </span>                :<span class="lineCov">         61 :         require(amount &gt;= MIN_DEPOSIT, DepositTooSmall());</span></a>
+<a name="326"><span class="lineNum">     326 </span>                :<span class="lineCov">         61 :         require(!depositPaused, DepositPaused());</span></a>
 <a name="327"><span class="lineNum">     327 </span>                :            : </a>
 <a name="328"><span class="lineNum">     328 </span>                :            :         address user = msg.sender;</a>
 <a name="329"><span class="lineNum">     329 </span>                :            : </a>
@@ -456,19 +456,19 @@
 <a name="385"><span class="lineNum">     385 </span>                :            :         withdrawIds = new uint256[](validatorIds.length);</a>
 <a name="386"><span class="lineNum">     386 </span>                :            : </a>
 <a name="387"><span class="lineNum">     387 </span>                :            :         for (uint256 i = 0; i &lt; validatorIds.length; i++) {</a>
-<a name="388"><span class="lineNum">     388 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 4 times"> + </span>]:<span class="lineCov">          6 :             withdrawIds[i] = undelegate(validatorIds[i], amountShares[i]);</span></a>
+<a name="388"><span class="lineNum">     388 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 5 times"> + </span>]:<span class="lineCov">          7 :             withdrawIds[i] = undelegate(validatorIds[i], amountShares[i]);</span></a>
 <a name="389"><span class="lineNum">     389 </span>                :            :         }</a>
 <a name="390"><span class="lineNum">     390 </span>                :            :     }</a>
 <a name="391"><span class="lineNum">     391 </span>                :            : </a>
 <a name="392"><span class="lineNum">     392 </span>                :            :     /**</a>
 <a name="393"><span class="lineNum">     393 </span>                :            :      * @notice Undelegate from the pool.</a>
-<a name="394"><span class="lineNum">     394 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 2 times"> + </span>]:<span class="lineCov">          4 :      * @dev While always possible to undelegate from the pool, the standard flow is to undelegate from a validator.</span></a>
-<a name="395"><span class="lineNum">     395 </span>                :<span class="lineCov">          2 :      * @param amountShares the amount of shares to undelegate</span></a>
+<a name="394"><span class="lineNum">     394 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 3 times"> + </span>]:<span class="lineCov">          5 :      * @dev While always possible to undelegate from the pool, the standard flow is to undelegate from a validator.</span></a>
+<a name="395"><span class="lineNum">     395 </span>                :<span class="lineCov">          3 :      * @param amountShares the amount of shares to undelegate</span></a>
 <a name="396"><span class="lineNum">     396 </span>                :            :      */</a>
-<a name="397"><span class="lineNum">     397 </span>                :<span class="lineCov">          2 :     function undelegateFromPool(uint256 amountShares) external enforceInvariant returns (uint256 withdrawId) {</span></a>
-<a name="398"><span class="lineNum">     398 </span>                :<span class="lineCov">          2 :         require(amountShares &gt;= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());</span></a>
+<a name="397"><span class="lineNum">     397 </span>                :<span class="lineCov">          3 :     function undelegateFromPool(uint256 amountShares) external enforceInvariant returns (uint256 withdrawId) {</span></a>
+<a name="398"><span class="lineNum">     398 </span>                :<span class="lineCov">          3 :         require(amountShares &gt;= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());</span></a>
 <a name="399"><span class="lineNum">     399 </span>                :            : </a>
-<a name="400"><span class="lineNum">     400 </span>                :<span class="lineCov">          2 :         uint256 amountToUndelegate = convertToAssets(amountShares);</span></a>
+<a name="400"><span class="lineNum">     400 </span>                :<span class="lineCov">          3 :         uint256 amountToUndelegate = convertToAssets(amountShares);</span></a>
 <a name="401"><span class="lineNum">     401 </span>                :            : </a>
 <a name="402"><span class="lineNum">     402 </span>                :            :         require(amountToUndelegate &lt;= totalPool, UndelegateAmountExceedsPool());</a>
 <a name="403"><span class="lineNum">     403 </span>                :            : </a>
@@ -483,15 +483,15 @@
 <a name="412"><span class="lineNum">     412 </span>                :            :     }</a>
 <a name="413"><span class="lineNum">     413 </span>                :            : </a>
 <a name="414"><span class="lineNum">     414 </span>                :            :     /**</a>
-<a name="415"><span class="lineNum">     415 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 11 times"> + </span>]:<span class="lineCov">         12 :      * @notice Withdraw undelegated assets</span></a>
-<a name="416"><span class="lineNum">     416 </span>                :<span class="lineCov">         11 :      * @param withdrawId the unique withdraw id for the undelegation request</span></a>
-<a name="417"><span class="lineNum">     417 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 9 times"> + </span>]:<span class="lineCov">         11 :      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed</span></a>
-<a name="418"><span class="lineNum">     418 </span>                :<span class="lineCov">          9 :      */</span></a>
-<a name="419"><span class="lineNum">     419 </span>                :<span class="lineCov">          9 :     function withdraw(uint256 withdrawId, bool emergency)</span></a>
-<a name="420"><span class="lineNum">     420 </span>           [<span class="branchCov" title="Branch 1 was taken 7 times"> + </span>]:<span class="lineCov">          9 :         public</span></a>
+<a name="415"><span class="lineNum">     415 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 12 times"> + </span>]:<span class="lineCov">         13 :      * @notice Withdraw undelegated assets</span></a>
+<a name="416"><span class="lineNum">     416 </span>                :<span class="lineCov">         12 :      * @param withdrawId the unique withdraw id for the undelegation request</span></a>
+<a name="417"><span class="lineNum">     417 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 10 times"> + </span>]:<span class="lineCov">         12 :      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed</span></a>
+<a name="418"><span class="lineNum">     418 </span>                :<span class="lineCov">         10 :      */</span></a>
+<a name="419"><span class="lineNum">     419 </span>                :<span class="lineCov">         10 :     function withdraw(uint256 withdrawId, bool emergency)</span></a>
+<a name="420"><span class="lineNum">     420 </span>           [<span class="branchCov" title="Branch 1 was taken 7 times"> + </span>]:<span class="lineCov">         10 :         public</span></a>
 <a name="421"><span class="lineNum">     421 </span>                :            :         nonReentrant</a>
-<a name="422"><span class="lineNum">     422 </span>           [<span class="branchNoExec" title="Branch 0 was not executed"> # </span>]:<span class="lineNoCov">          0 :         enforceInvariant</span></a>
-<a name="423"><span class="lineNum">     423 </span>                :<span class="lineNoCov">          0 :         withValidWithdrawId(withdrawId)</span></a>
+<a name="422"><span class="lineNum">     422 </span>           [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span>]:<span class="lineCov">          1 :         enforceInvariant</span></a>
+<a name="423"><span class="lineNum">     423 </span>                :<span class="lineCov">          1 :         withValidWithdrawId(withdrawId)</span></a>
 <a name="424"><span class="lineNum">     424 </span>                :            :         returns (uint256)</a>
 <a name="425"><span class="lineNum">     425 </span>                :<span class="lineCov">          9 :     {</span></a>
 <a name="426"><span class="lineNum">     426 </span>                :<span class="lineCov">          9 :         require(!withdrawPaused, WithdrawsPaused());</span></a>
@@ -513,11 +513,11 @@
 <a name="442"><span class="lineNum">     442 </span>                :            :             withdrawnAmount = address(this).balance - balanceBefore;</a>
 <a name="443"><span class="lineNum">     443 </span>                :            : </a>
 <a name="444"><span class="lineNum">     444 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 7 times"> + </span>]:<span class="lineCov">          8 :             // can never get more assets than what is owed</span></a>
-<a name="445"><span class="lineNum">     445 </span>                :<span class="lineCov">          8 :             require(withdrawnAmount &lt;= request.assetAmount, WithdrawnAmountTooHigh());</span></a>
+<a name="445"><span class="lineNum">     445 </span>                :<span class="lineCov">          9 :             require(withdrawnAmount &lt;= request.assetAmount, WithdrawnAmountTooHigh());</span></a>
 <a name="446"><span class="lineNum">     446 </span>                :            : </a>
-<a name="447"><span class="lineNum">     447 </span>                :<span class="lineCov">          8 :             if (!emergency) {</span></a>
-<a name="448"><span class="lineNum">     448 </span>        [<span class="branchNoExec" title="Branch 0 was not executed"> # </span><span class="branchCov" title="Branch 1 was taken 8 times"> + </span>]:<span class="lineCov">          8 :                 // In the instance of a slashing event, the amount withdrawn will not match the request amount.</span></a>
-<a name="449"><span class="lineNum">     449 </span>                :<span class="lineCov">          8 :                 // The user must acknowledge this by setting emergency to true. Since the user is absorbing</span></a>
+<a name="447"><span class="lineNum">     447 </span>                :<span class="lineCov">          9 :             if (!emergency) {</span></a>
+<a name="448"><span class="lineNum">     448 </span>        [<span class="branchNoExec" title="Branch 0 was not executed"> # </span><span class="branchCov" title="Branch 1 was taken 9 times"> + </span>]:<span class="lineCov">          9 :                 // In the instance of a slashing event, the amount withdrawn will not match the request amount.</span></a>
+<a name="449"><span class="lineNum">     449 </span>                :<span class="lineCov">          9 :                 // The user must acknowledge this by setting emergency to true. Since the user is absorbing</span></a>
 <a name="450"><span class="lineNum">     450 </span>                :            :                 // this loss, there is no impact on the rate.</a>
 <a name="451"><span class="lineNum">     451 </span>                :            :                 require(request.assetAmount == withdrawnAmount, WithdrawnAmountTooLow());</a>
 <a name="452"><span class="lineNum">     452 </span>                :            :             }</a>
@@ -755,26 +755,26 @@
 <a name="684"><span class="lineNum">     684 </span>                :            :         }</a>
 <a name="685"><span class="lineNum">     685 </span>                :            : </a>
 <a name="686"><span class="lineNum">     686 </span>                :            :         uint256 totalRewardsClaimed = address(this).balance - balanceBefore;</a>
-<a name="687"><span class="lineNum">     687 </span>                :<span class="lineCov">         62 :         uint256 protocolFee = 0;</span></a>
+<a name="687"><span class="lineNum">     687 </span>                :<span class="lineCov">         63 :         uint256 protocolFee = 0;</span></a>
 <a name="688"><span class="lineNum">     688 </span>                :            : </a>
-<a name="689"><span class="lineNum">     689 </span>                :<span class="lineCov">         62 :         if (totalRewardsClaimed &gt; 0 &amp;&amp; protocolFeeBIPS &gt; 0) {</span></a>
-<a name="690"><span class="lineNum">     690 </span>                :<span class="lineCov">         62 :             protocolFee = (totalRewardsClaimed * protocolFeeBIPS) / MAX_PROTOCOL_FEE_BIPS;</span></a>
+<a name="689"><span class="lineNum">     689 </span>                :<span class="lineCov">         63 :         if (totalRewardsClaimed &gt; 0 &amp;&amp; protocolFeeBIPS &gt; 0) {</span></a>
+<a name="690"><span class="lineNum">     690 </span>                :<span class="lineCov">         63 :             protocolFee = (totalRewardsClaimed * protocolFeeBIPS) / MAX_PROTOCOL_FEE_BIPS;</span></a>
 <a name="691"><span class="lineNum">     691 </span>                :            : </a>
-<a name="692"><span class="lineNum">     692 </span>                :<span class="lineCov">         62 :             (bool protocolFeesClaimed,) = treasury.call{value: protocolFee}(&quot;&quot;);</span></a>
-<a name="693"><span class="lineNum">     693 </span>                :<span class="lineCov">         62 :             require(protocolFeesClaimed, ProtocolFeeTransferFailed());</span></a>
+<a name="692"><span class="lineNum">     692 </span>                :<span class="lineCov">         63 :             (bool protocolFeesClaimed,) = treasury.call{value: protocolFee}(&quot;&quot;);</span></a>
+<a name="693"><span class="lineNum">     693 </span>                :<span class="lineCov">         63 :             require(protocolFeesClaimed, ProtocolFeeTransferFailed());</span></a>
 <a name="694"><span class="lineNum">     694 </span>                :            :         }</a>
 <a name="695"><span class="lineNum">     695 </span>                :            : </a>
-<a name="696"><span class="lineNum">     696 </span>                :<span class="lineCov">         62 :         totalPool += totalRewardsClaimed - protocolFee;</span></a>
+<a name="696"><span class="lineNum">     696 </span>                :<span class="lineCov">         63 :         totalPool += totalRewardsClaimed - protocolFee;</span></a>
 <a name="697"><span class="lineNum">     697 </span>                :            : </a>
 <a name="698"><span class="lineNum">     698 </span>                :            :         emit RewardsClaimed(totalRewardsClaimed, protocolFee);</a>
-<a name="699"><span class="lineNum">     699 </span>                :<span class="lineCov">         62 :     }</span></a>
+<a name="699"><span class="lineNum">     699 </span>                :<span class="lineCov">         63 :     }</span></a>
 <a name="700"><span class="lineNum">     700 </span>                :            : </a>
 <a name="701"><span class="lineNum">     701 </span>                :            :     /**</a>
 <a name="702"><span class="lineNum">     702 </span>                :            :      *</a>
 <a name="703"><span class="lineNum">     703 </span>                :            :      * Internal functions</a>
 <a name="704"><span class="lineNum">     704 </span>                :            :      *</a>
-<a name="705"><span class="lineNum">     705 </span>                :<span class="lineCov">         62 :      */</span></a>
-<a name="706"><span class="lineNum">     706 </span>                :<span class="lineCov">         81 :     function _createAndPersistWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)</span></a>
+<a name="705"><span class="lineNum">     705 </span>                :<span class="lineCov">         63 :      */</span></a>
+<a name="706"><span class="lineNum">     706 </span>                :<span class="lineCov">         83 :     function _createAndPersistWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)</span></a>
 <a name="707"><span class="lineNum">     707 </span>                :            :         internal</a>
 <a name="708"><span class="lineNum">     708 </span>                :            :         returns (uint256 withdrawId)</a>
 <a name="709"><span class="lineNum">     709 </span>                :            :     {</a>
@@ -783,8 +783,8 @@
 <a name="712"><span class="lineNum">     712 </span>                :            :         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];</a>
 <a name="713"><span class="lineNum">     713 </span>                :            : </a>
 <a name="714"><span class="lineNum">     714 </span>                :            :         request.kind = kind;</a>
-<a name="715"><span class="lineNum">     715 </span>                :<span class="lineCov">         62 :         request.requestTimestamp = _now();</span></a>
-<a name="716"><span class="lineNum">     716 </span>                :<span class="lineCov">         62 :         request.user = user;</span></a>
+<a name="715"><span class="lineNum">     715 </span>                :<span class="lineCov">         63 :         request.requestTimestamp = _now();</span></a>
+<a name="716"><span class="lineNum">     716 </span>                :<span class="lineCov">         63 :         request.user = user;</span></a>
 <a name="717"><span class="lineNum">     717 </span>                :            :         request.assetAmount = amount;</a>
 <a name="718"><span class="lineNum">     718 </span>        [<span class="branchCov" title="Branch 0 was taken 2 times"> + </span><span class="branchCov" title="Branch 1 was taken 6 times"> + </span>]:<span class="lineCov">          8 :         request.validatorId = validatorId;</span></a>
 <a name="719"><span class="lineNum">     719 </span>                :            :         request.isWithdrawn = false;</a>
@@ -807,14 +807,14 @@
 <a name="736"><span class="lineNum">     736 </span>                :            :         return withdrawCounter;</a>
 <a name="737"><span class="lineNum">     737 </span>                :            :     }</a>
 <a name="738"><span class="lineNum">     738 </span>                :            : </a>
-<a name="739"><span class="lineNum">     739 </span>                :<span class="lineCov">        191 :     function _setUndelegatePaused(bool newValue) internal {</span></a>
+<a name="739"><span class="lineNum">     739 </span>                :<span class="lineCov">        194 :     function _setUndelegatePaused(bool newValue) internal {</span></a>
 <a name="740"><span class="lineNum">     740 </span>                :            :         require(undelegatePaused != newValue, PausedValueDidNotChange());</a>
 <a name="741"><span class="lineNum">     741 </span>                :            : </a>
 <a name="742"><span class="lineNum">     742 </span>                :            :         undelegatePaused = newValue;</a>
 <a name="743"><span class="lineNum">     743 </span>                :            :         emit UndelegatePausedUpdated(msg.sender, newValue);</a>
 <a name="744"><span class="lineNum">     744 </span>                :            :     }</a>
 <a name="745"><span class="lineNum">     745 </span>                :            : </a>
-<a name="746"><span class="lineNum">     746 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 190 times"> + </span>]:<span class="lineCov">        191 :     function _setWithdrawPaused(bool newValue) internal {</span></a>
+<a name="746"><span class="lineNum">     746 </span>        [<span class="branchCov" title="Branch 0 was taken 1 time"> + </span><span class="branchCov" title="Branch 1 was taken 193 times"> + </span>]:<span class="lineCov">        194 :     function _setWithdrawPaused(bool newValue) internal {</span></a>
 <a name="747"><span class="lineNum">     747 </span>                :            :         require(withdrawPaused != newValue, PausedValueDidNotChange());</a>
 <a name="748"><span class="lineNum">     748 </span>                :            : </a>
 <a name="749"><span class="lineNum">     749 </span>                :            :         withdrawPaused = newValue;</a>
