@@ -141,7 +141,7 @@ contract SonicStaking is
     error PausedValueDidNotChange();
     error UndelegateAmountExceedsPool();
     error UserWithdrawsSkipTooLarge();
-    error UserWithdrawsMaxSizeZero();
+    error UserWithdrawsMaxSizeCannotBeZero();
     error ArrayLengthMismatch();
     error UndelegateAmountTooSmall();
     error DonationAmountCannotBeZero();
@@ -282,7 +282,7 @@ contract SonicStaking is
         returns (WithdrawRequest[] memory)
     {
         require(skip < userNumWithdraws[user], UserWithdrawsSkipTooLarge());
-        require(maxSize > 0, UserWithdrawsMaxSizeZero());
+        require(maxSize > 0, UserWithdrawsMaxSizeCannotBeZero());
 
         uint256 remaining = userNumWithdraws[user] - skip;
         uint256 size = remaining < maxSize ? remaining : maxSize;
@@ -354,7 +354,7 @@ contract SonicStaking is
 
         _burn(msg.sender, amountShares);
 
-        withdrawId = _createAndStoreWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
+        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
 
         totalDelegated -= amountAssets;
 
@@ -399,7 +399,7 @@ contract SonicStaking is
         _burn(msg.sender, amountShares);
 
         // The validatorId is ignored for pool withdrawals
-        withdrawId = _createAndStoreWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
+        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
 
         totalPool -= amountToUndelegate;
 
@@ -512,7 +512,7 @@ contract SonicStaking is
         require(delegatedAmount > 0, NoDelegationForValidator(validatorId));
         require(amountAssets <= delegatedAmount, UndelegateAmountExceedsDelegated());
 
-        withdrawId = _createAndStoreWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
+        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
 
         totalDelegated -= amountAssets;
 
@@ -688,7 +688,7 @@ contract SonicStaking is
      * Internal functions
      *
      */
-    function _createAndStoreWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
+    function _createAndPersistWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
         internal
         returns (uint256 withdrawId)
     {
