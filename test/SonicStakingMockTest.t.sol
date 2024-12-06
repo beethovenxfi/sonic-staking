@@ -303,6 +303,55 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertGt(address(user).balance, userBalanceBefore);
     }
 
+    function testWithdrawsPaused() public {
+        uint256 amount = 10_000 ether;
+        uint256 delegateAmount = 10_000 ether;
+        uint256 undelegateShares = sonicStaking.convertToShares(10_000 ether);
+        uint256 validatorId = 1;
+
+        vm.prank(SONIC_STAKING_ADMIN);
+
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.WithdrawPausedUpdated(address(SONIC_STAKING_ADMIN), true);
+        sonicStaking.setWithdrawPaused(true);
+
+        assertTrue(sonicStaking.withdrawPaused());
+
+        address user = makeDeposit(amount);
+
+        delegate(validatorId, delegateAmount);
+
+        vm.prank(user);
+        uint256 withdrawId = sonicStaking.undelegate(validatorId, undelegateShares);
+
+        // need to increase time to allow for withdraw
+        vm.warp(block.timestamp + 14 days);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawsPaused.selector));
+        sonicStaking.withdraw(withdrawId, false);
+    }
+
+    function testUnsupportedWithdrawKind() public {
+        uint256 amount = 10_000 ether;
+        uint256 delegateAmount = 10_000 ether;
+        uint256 validatorId = 1;
+
+        makeDeposit(amount);
+
+        delegate(validatorId, delegateAmount);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        uint256 withdrawId = sonicStaking.operatorClawBackUndelegate(validatorId, delegateAmount);
+
+        // need to increase time to allow for withdraw
+        vm.warp(block.timestamp + 14 days);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UnsupportedWithdrawKind.selector));
+        sonicStaking.withdraw(withdrawId, false);
+    }
+
     function testEmergencyWithdraw() public {
         uint256 assetAmount = 1_000 ether;
         uint256 delegateAmount = 1_000 ether;
