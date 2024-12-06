@@ -557,7 +557,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 undelegateAmountAsset = sonicStaking.convertToAssets(undelegateAmount);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        uint256 withdrawId = sonicStaking.operatorClawBackUndelegate(1, undelegateAmount);
+        uint256 withdrawId = sonicStaking.operatorClawBackUndelegate(validatorId, undelegateAmount);
 
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
@@ -569,9 +569,12 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         // emergency withdraw
         vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.operatorClawBackWithdraw(withdrawId, true);
-        assertEq(sonicStaking.totalDelegated(), 0);
+        vm.expectEmit(true, true, true, true);
         // the SFC rounds the penalty 1 wei up, so we need to account for this
+        emit SonicStaking.OperatorClawBackWithdrawn(withdrawId, true, undelegateAmount / 2 - 1);
+        sonicStaking.operatorClawBackWithdraw(withdrawId, true);
+
+        assertEq(sonicStaking.totalDelegated(), 0);
         assertApproxEqAbs(sonicStaking.totalPool(), undelegateAmountAsset / 2, 1);
         assertApproxEqAbs(sonicStaking.totalAssets(), undelegateAmountAsset / 2, 1);
         assertLt(sonicStaking.getRate(), rateBefore);
