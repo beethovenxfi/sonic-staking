@@ -119,7 +119,7 @@ contract SonicStaking is
     event Withdrawn(address indexed user, uint256 withdrawId, uint256 amountAssets, WithdrawKind kind, bool emergency);
     event Donated(address indexed user, uint256 amountAssets);
     event OperatorUndelegatedToPool(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
-    event OperatorWithdrawnToPool(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssets);
+    event OperatorWithdrawnToPool(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssetsWithdrawn);
 
     error DelegateAmountCannotBeZero();
     error DelegateAmountLargerThanPool();
