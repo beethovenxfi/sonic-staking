@@ -90,6 +90,38 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(withdraws[1].assetAmount, undelegateAmount1);
     }
 
+    function testUserWithdrawsErrors() public {
+        uint256 amount = 1000 ether;
+        uint256 validatorId = 1;
+        uint256 undelegateAmount1 = 100 ether;
+        uint256 undelegateAmount2 = 200 ether;
+        uint256 undelegateAmount3 = 300 ether;
+        address user = makeDeposit(amount);
+
+        delegate(validatorId, amount);
+
+        // Create 3 undelegate requests
+        uint256[] memory validatorIds = new uint256[](3);
+        uint256[] memory undelegateAmountShares = new uint256[](3);
+
+        validatorIds[0] = validatorId;
+        validatorIds[1] = validatorId;
+        validatorIds[2] = validatorId;
+
+        undelegateAmountShares[0] = undelegateAmount1;
+        undelegateAmountShares[1] = undelegateAmount2;
+        undelegateAmountShares[2] = undelegateAmount3;
+
+        vm.prank(user);
+        sonicStaking.undelegateMany(validatorIds, undelegateAmountShares);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UserWithdrawsSkipTooLarge.selector));
+        sonicStaking.getUserWithdraws(user, 3, 3, false);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UserWithdrawsMaxSizeCannotBeZero.selector));
+        sonicStaking.getUserWithdraws(user, 0, 0, false);
+    }
+
     function testDeposit() public {
         uint256 amountAssets = 100_000 ether;
         uint256 amountShares = sonicStaking.convertToShares(amountAssets);
