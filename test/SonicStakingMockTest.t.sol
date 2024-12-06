@@ -509,9 +509,10 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
+        // emergency == false, should fail the invariant check
         vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawnAmountTooLow.selector));
-        sonicStaking.withdraw(withdrawId, false);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.InvariantViolated.selector));
+        sonicStaking.operatorWithdrawToPool(withdrawId, false);
 
         // emergency withdraw
         vm.prank(SONIC_STAKING_OPERATOR);

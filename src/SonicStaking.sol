@@ -141,10 +141,12 @@ contract SonicStaking is
     error PausedValueDidNotChange();
     error UndelegateAmountExceedsPool();
     error UserWithdrawsSkipTooLarge();
-    error UserWithdrawsMaxSizeZero();
+    error UserWithdrawsMaxSizeCannotBeZero();
     error ArrayLengthMismatch();
     error UndelegateAmountTooSmall();
     error DonationAmountCannotBeZero();
+    error InvariantViolated();
+    error InvariantGrowthViolated();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -191,6 +193,24 @@ contract SonicStaking is
         require(msg.sender == request.user, UnauthorizedWithdraw());
 
         _;
+    }
+
+    modifier enforceInvariant() {
+        uint256 rateBefore = getRate();
+
+        _;
+
+        _enforceInvariant(rateBefore);
+    }
+
+    modifier enforceInvariantGrowth() {
+        uint256 rateBefore = getRate();
+
+        _;
+
+        uint256 rateAfter = getRate();
+
+        require(rateAfter >= rateBefore, InvariantGrowthViolated());
     }
 
     /**
@@ -262,7 +282,7 @@ contract SonicStaking is
         returns (WithdrawRequest[] memory)
     {
         require(skip < userNumWithdraws[user], UserWithdrawsSkipTooLarge());
-        require(maxSize > 0, UserWithdrawsMaxSizeZero());
+        require(maxSize > 0, UserWithdrawsMaxSizeCannotBeZero());
 
         uint256 remaining = userNumWithdraws[user] - skip;
         uint256 size = remaining < maxSize ? remaining : maxSize;
@@ -295,7 +315,7 @@ contract SonicStaking is
     /**
      * @notice Deposit native assets and mint shares of the LST.
      */
-    function deposit() external payable {
+    function deposit() external payable enforceInvariant {
         uint256 amount = msg.value;
         require(amount >= MIN_DEPOSIT, DepositTooSmall());
         require(!depositPaused, DepositPaused());
@@ -318,7 +338,12 @@ contract SonicStaking is
      * @param validatorId the validator to undelegate from
      * @param amountShares the amount of shares to undelegate
      */
-    function undelegate(uint256 validatorId, uint256 amountShares) public nonReentrant returns (uint256 withdrawId) {
+    function undelegate(uint256 validatorId, uint256 amountShares)
+        public
+        nonReentrant
+        enforceInvariant
+        returns (uint256 withdrawId)
+    {
         require(!undelegatePaused, UndelegatePaused());
         require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
@@ -329,7 +354,7 @@ contract SonicStaking is
 
         _burn(msg.sender, amountShares);
 
-        withdrawId = _createAndStoreWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
+        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
 
         totalDelegated -= amountAssets;
 
@@ -364,7 +389,7 @@ contract SonicStaking is
      * @dev While always possible to undelegate from the pool, the standard flow is to undelegate from a validator.
      * @param amountShares the amount of shares to undelegate
      */
-    function undelegateFromPool(uint256 amountShares) external {
+    function undelegateFromPool(uint256 amountShares) external enforceInvariant returns (uint256 withdrawId) {
         require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
         uint256 amountToUndelegate = convertToAssets(amountShares);
@@ -374,7 +399,7 @@ contract SonicStaking is
         _burn(msg.sender, amountShares);
 
         // The validatorId is ignored for pool withdrawals
-        uint256 withdrawId = _createAndStoreWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
+        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
 
         totalPool -= amountToUndelegate;
 
@@ -389,6 +414,7 @@ contract SonicStaking is
     function withdraw(uint256 withdrawId, bool emergency)
         public
         nonReentrant
+        enforceInvariant
         withValidWithdrawId(withdrawId)
         returns (uint256)
     {
@@ -450,7 +476,12 @@ contract SonicStaking is
      * @param validatorId the ID of the validator to delegate to
      * @param amount the amount of assets to delegate
      */
-    function delegate(uint256 validatorId, uint256 amount) external nonReentrant onlyRole(OPERATOR_ROLE) {
+    function delegate(uint256 validatorId, uint256 amount)
+        external
+        nonReentrant
+        onlyRole(OPERATOR_ROLE)
+        enforceInvariant
+    {
         require(amount > 0, DelegateAmountCannotBeZero());
         require(amount <= totalPool, DelegateAmountLargerThanPool());
 
@@ -471,6 +502,7 @@ contract SonicStaking is
         external
         nonReentrant
         onlyRole(OPERATOR_ROLE)
+        enforceInvariant
         returns (uint256 withdrawId)
     {
         require(amountAssets > 0, UndelegateAmountCannotBeZero());
@@ -480,7 +512,7 @@ contract SonicStaking is
         require(delegatedAmount > 0, NoDelegationForValidator(validatorId));
         require(amountAssets <= delegatedAmount, UndelegateAmountExceedsDelegated());
 
-        withdrawId = _createAndStoreWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
+        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
 
         totalDelegated -= amountAssets;
 
@@ -493,8 +525,10 @@ contract SonicStaking is
 
     /**
      * @notice Withdraw undelegated assets to the pool
+     * @dev This is the only operation that allows for the rate to decrease.
      * @param withdrawId the unique withdrawId for the undelegation request
-     * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
+     * @param emergency when true, the operator acknowledges that the amount withdrawn may be less than what is owed,
+     * potentially decreasing the rate.
      */
     function operatorWithdrawToPool(uint256 withdrawId, bool emergency)
         external
@@ -507,18 +541,13 @@ contract SonicStaking is
         request.isWithdrawn = true;
 
         uint256 balanceBefore = address(this).balance;
+        uint256 rateBefore = getRate();
 
         SFC.withdraw(request.validatorId, withdrawId);
 
         // in the instance of a slahing event, the amount withdrawn will not match the request amount.
         // We track the change of balance for the contract to get the actual amount withdrawn.
         uint256 actualWithdrawnAmount = address(this).balance - balanceBefore;
-
-        if (!emergency) {
-            // In the instance of a slashing event, the amount withdrawn will not match the request amount.
-            // The operator must acknowledge this by setting emergency to true and accept that a drop in the rate will occur.
-            require(request.assetAmount == actualWithdrawnAmount, WithdrawnAmountTooLow());
-        }
 
         // we need to subtract the request amount from the pending amount since that is the value that was added during
         // the operator undelegate
@@ -527,13 +556,21 @@ contract SonicStaking is
         // We then account for the actual amount we were able to withdraw
         // In the instance of a realized slashing event, this will result in a drop in the rate.
         totalPool += actualWithdrawnAmount;
+
+        if (!emergency) {
+            // In the instance of a slashing event, the amount withdrawn will not match the request amount.
+            // The operator must acknowledge this by setting emergency to true and accept that a drop in the rate will occur.
+
+            // When emergency == false, we enforce the rate invariant
+            _enforceInvariant(rateBefore);
+        }
     }
 
     /**
      * @notice Donate assets to the pool
      * @dev Donations are added to the pool, causing the rate to increase. Only the operator can donate.
      */
-    function donate() external payable onlyRole(OPERATOR_ROLE) {
+    function donate() external payable onlyRole(OPERATOR_ROLE) enforceInvariantGrowth {
         uint256 donationAmount = msg.value;
 
         require(donationAmount > 0, DonationAmountCannotBeZero());
@@ -617,7 +654,12 @@ contract SonicStaking is
      * @notice Claim rewards from all contracts and add them to the pool
      * @param validatorIds an array of validator IDs to claim rewards from
      */
-    function claimRewards(uint256[] calldata validatorIds) external nonReentrant onlyRole(CLAIM_ROLE) {
+    function claimRewards(uint256[] calldata validatorIds)
+        external
+        nonReentrant
+        onlyRole(CLAIM_ROLE)
+        enforceInvariantGrowth
+    {
         uint256 balanceBefore = address(this).balance;
 
         for (uint256 i = 0; i < validatorIds.length; i++) {
@@ -646,7 +688,7 @@ contract SonicStaking is
      * Internal functions
      *
      */
-    function _createAndStoreWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
+    function _createAndPersistWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
         internal
         returns (uint256 withdrawId)
     {
@@ -699,6 +741,14 @@ contract SonicStaking is
         depositPaused = newValue;
 
         emit DepositPausedUpdated(msg.sender, newValue);
+    }
+
+    function _enforceInvariant(uint256 rateBefore) internal view {
+        uint256 rateAfter = getRate();
+
+        // in instances where rounding occours, we allow for the rate to be 1 wei higher than it was before.
+        // All operations should round in the favor of the protocol, resulting in a higher rate.
+        require(rateBefore == rateAfter || rateBefore == rateAfter + 1, InvariantViolated());
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
