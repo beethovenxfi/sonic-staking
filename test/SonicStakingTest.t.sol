@@ -38,6 +38,58 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.convertToShares(1 ether), 1 ether);
     }
 
+    function testUserWithdraws() public {
+        uint256 amount = 1000 ether;
+        uint256 validatorId = 1;
+        uint256 undelegateAmount1 = 100 ether;
+        uint256 undelegateAmount2 = 200 ether;
+        uint256 undelegateAmount3 = 300 ether;
+        address user = makeDeposit(amount);
+
+        delegate(validatorId, amount);
+
+        // Create 3 undelegate requests
+        uint256[] memory validatorIds = new uint256[](3);
+        uint256[] memory undelegateAmountShares = new uint256[](3);
+
+        validatorIds[0] = validatorId;
+        validatorIds[1] = validatorId;
+        validatorIds[2] = validatorId;
+
+        undelegateAmountShares[0] = undelegateAmount1;
+        undelegateAmountShares[1] = undelegateAmount2;
+        undelegateAmountShares[2] = undelegateAmount3;
+
+        vm.prank(user);
+        sonicStaking.undelegateMany(validatorIds, undelegateAmountShares);
+
+        // Test getting all withdraws
+        SonicStaking.WithdrawRequest[] memory withdraws = sonicStaking.getUserWithdraws(user, 0, 3, false);
+        assertEq(withdraws.length, 3);
+        assertEq(withdraws[0].assetAmount, undelegateAmount1);
+        assertEq(withdraws[1].assetAmount, undelegateAmount2);
+        assertEq(withdraws[2].assetAmount, undelegateAmount3);
+
+        // Test pagination
+        withdraws = sonicStaking.getUserWithdraws(user, 1, 2, false);
+        assertEq(withdraws.length, 2);
+        assertEq(withdraws[0].assetAmount, undelegateAmount2);
+        assertEq(withdraws[1].assetAmount, undelegateAmount3);
+
+        // Test reverse order
+        withdraws = sonicStaking.getUserWithdraws(user, 0, 3, true);
+        assertEq(withdraws.length, 3);
+        assertEq(withdraws[0].assetAmount, undelegateAmount3);
+        assertEq(withdraws[1].assetAmount, undelegateAmount2);
+        assertEq(withdraws[2].assetAmount, undelegateAmount1);
+
+        // Test reverse order with pagination
+        withdraws = sonicStaking.getUserWithdraws(user, 1, 2, true);
+        assertEq(withdraws.length, 2);
+        assertEq(withdraws[0].assetAmount, undelegateAmount2);
+        assertEq(withdraws[1].assetAmount, undelegateAmount1);
+    }
+
     function testDeposit() public {
         uint256 amountAssets = 100_000 ether;
         uint256 amountShares = sonicStaking.convertToShares(amountAssets);
@@ -86,77 +138,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.DepositPaused.selector));
         sonicStaking.deposit{value: amountAssets}();
-    }
-
-    function testDelegate() public {
-        uint256 depositAmountAsset = 100_000 ether;
-        uint256 delegateAmountAsset = 1_000 ether;
-        uint256 validatorId = 1;
-
-        makeDeposit(depositAmountAsset);
-
-        vm.expectEmit(true, true, true, true);
-        emit SonicStaking.Delegated(validatorId, delegateAmountAsset);
-
-        delegate(validatorId, delegateAmountAsset);
-
-        assertEq(sonicStaking.totalPool(), depositAmountAsset - delegateAmountAsset);
-        assertEq(sonicStaking.totalDelegated(), delegateAmountAsset);
-        assertEq(sonicStaking.totalAssets(), depositAmountAsset);
-        assertEq(SFC.getStake(address(sonicStaking), validatorId), delegateAmountAsset);
-    }
-
-    function testMultipleDelegateToSameValidator() public {
-        uint256 depositAmountAsset = 100_000 ether;
-        uint256 delegateAmountAsset1 = 1_000 ether;
-        uint256 delegateAmountAsset2 = 2_000 ether;
-        uint256 totalDelegatedAmountAsset = delegateAmountAsset1 + delegateAmountAsset2;
-        uint256 validatorId = 1;
-
-        makeDeposit(depositAmountAsset);
-        delegate(validatorId, delegateAmountAsset1);
-
-        // need to increase time to allow for another delegation
-        vm.warp(block.timestamp + 1 hours);
-
-        // second delegation to the same validator
-        delegate(validatorId, delegateAmountAsset2);
-
-        assertEq(sonicStaking.totalDelegated(), totalDelegatedAmountAsset);
-        assertEq(sonicStaking.totalAssets(), depositAmountAsset);
-        assertEq(sonicStaking.totalPool(), depositAmountAsset - totalDelegatedAmountAsset);
-        assertEq(SFC.getStake(address(sonicStaking), validatorId), totalDelegatedAmountAsset);
-    }
-
-    function testMultipleDelegateToDifferentValidator() public {
-        uint256 depositAmountAsset = 100_000 ether;
-        uint256 delegateAmountAsset1 = 1_000 ether;
-        uint256 delegateAmountAsset2 = 5_000 ether;
-        uint256 validatorId1 = 1;
-        uint256 validatorId2 = 2;
-
-        makeDeposit(depositAmountAsset);
-        delegate(validatorId1, delegateAmountAsset1);
-
-        // need to increase time to allow for another delegation
-        vm.warp(block.timestamp + 1 hours);
-
-        // second delegation to a different validator
-        delegate(validatorId2, delegateAmountAsset2);
-
-        assertEq(sonicStaking.totalDelegated(), delegateAmountAsset1 + delegateAmountAsset2);
-        assertEq(sonicStaking.totalAssets(), depositAmountAsset);
-        assertEq(sonicStaking.totalPool(), depositAmountAsset - delegateAmountAsset1 - delegateAmountAsset2);
-        assertEq(SFC.getStake(address(sonicStaking), validatorId1), delegateAmountAsset1);
-        assertEq(SFC.getStake(address(sonicStaking), validatorId2), delegateAmountAsset2);
-    }
-
-    function testDelegateErrors() public {
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountCannotBeZero.selector));
-        delegate(1, 0);
-
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountLargerThanPool.selector));
-        delegate(1, 100 ether);
     }
 
     function testUndelegate() public {
@@ -402,136 +383,109 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         sonicStaking.undelegateFromPool(undelegateAmountShares);
     }
 
-    function testStateSetters() public {
-        vm.startPrank(SONIC_STAKING_OWNER);
-
-        sonicStaking.setWithdrawDelay(1);
-        assertEq(sonicStaking.withdrawDelay(), 1);
-
-        sonicStaking.setUndelegatePaused(true);
-        assertTrue(sonicStaking.undelegatePaused());
-
-        sonicStaking.setWithdrawPaused(true);
-        assertTrue(sonicStaking.withdrawPaused());
-
-        sonicStaking.setDepositPaused(true);
-        assertTrue(sonicStaking.depositPaused());
-
-        sonicStaking.setProtocolFeeBIPS(100);
-        assertEq(sonicStaking.protocolFeeBIPS(), 100);
-
-        sonicStaking.setTreasury(address(this));
-        assertEq(sonicStaking.treasury(), address(this));
-    }
-
-    function testStateSettersRevert() public {
-        vm.startPrank(SONIC_STAKING_OWNER);
-
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
-        sonicStaking.setUndelegatePaused(false);
-
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
-        sonicStaking.setUndelegatePaused(false);
-
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
-        sonicStaking.setWithdrawPaused(false);
-
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.ProtocolFeeTooHigh.selector));
-        sonicStaking.setProtocolFeeBIPS(10001);
-
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.TreasuryAddressCannotBeZero.selector));
-        sonicStaking.setTreasury(address(0));
-    }
-
-    function testUserWithdraws() public {
-        uint256 amount = 1000 ether;
-        uint256 validatorId = 1;
-        uint256 undelegateAmount1 = 100 ether;
-        uint256 undelegateAmount2 = 200 ether;
-        uint256 undelegateAmount3 = 300 ether;
-        address user = makeDeposit(amount);
-
-        delegate(validatorId, amount);
-
-        // Create 3 undelegate requests
-        uint256[] memory validatorIds = new uint256[](3);
-        uint256[] memory undelegateAmountShares = new uint256[](3);
-
-        validatorIds[0] = validatorId;
-        validatorIds[1] = validatorId;
-        validatorIds[2] = validatorId;
-
-        undelegateAmountShares[0] = undelegateAmount1;
-        undelegateAmountShares[1] = undelegateAmount2;
-        undelegateAmountShares[2] = undelegateAmount3;
-
-        vm.prank(user);
-        sonicStaking.undelegateMany(validatorIds, undelegateAmountShares);
-
-        // Test getting all withdraws
-        SonicStaking.WithdrawRequest[] memory withdraws = sonicStaking.getUserWithdraws(user, 0, 3, false);
-        assertEq(withdraws.length, 3);
-        assertEq(withdraws[0].assetAmount, undelegateAmount1);
-        assertEq(withdraws[1].assetAmount, undelegateAmount2);
-        assertEq(withdraws[2].assetAmount, undelegateAmount3);
-
-        // Test pagination
-        withdraws = sonicStaking.getUserWithdraws(user, 1, 2, false);
-        assertEq(withdraws.length, 2);
-        assertEq(withdraws[0].assetAmount, undelegateAmount2);
-        assertEq(withdraws[1].assetAmount, undelegateAmount3);
-
-        // Test reverse order
-        withdraws = sonicStaking.getUserWithdraws(user, 0, 3, true);
-        assertEq(withdraws.length, 3);
-        assertEq(withdraws[0].assetAmount, undelegateAmount3);
-        assertEq(withdraws[1].assetAmount, undelegateAmount2);
-        assertEq(withdraws[2].assetAmount, undelegateAmount1);
-
-        // Test reverse order with pagination
-        withdraws = sonicStaking.getUserWithdraws(user, 1, 2, true);
-        assertEq(withdraws.length, 2);
-        assertEq(withdraws[0].assetAmount, undelegateAmount2);
-        assertEq(withdraws[1].assetAmount, undelegateAmount1);
-    }
-
-    function testInvalidWithdrawId() public {
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawIdDoesNotExist.selector));
-        sonicStaking.withdraw(0, false);
-    }
-
-    function testWithdrawTooEarly() public {
-        uint256 assetAmount = 10_000 ether;
-        uint256 delegateAmount = 10_000 ether;
-        uint256 undelegateAmount = 10_000 ether;
+    function testDelegate() public {
+        uint256 depositAmountAsset = 100_000 ether;
+        uint256 delegateAmountAsset = 1_000 ether;
         uint256 validatorId = 1;
 
-        address user = makeDeposit(assetAmount);
-        delegate(validatorId, delegateAmount);
+        makeDeposit(depositAmountAsset);
 
-        vm.prank(user);
-        sonicStaking.undelegate(validatorId, undelegateAmount);
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.Delegated(validatorId, delegateAmountAsset);
 
-        vm.prank(user);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                SonicStaking.WithdrawDelayNotElapsed.selector, block.timestamp + sonicStaking.withdrawDelay()
-            )
-        );
-        sonicStaking.withdraw(101, false);
+        delegate(validatorId, delegateAmountAsset);
+
+        assertEq(sonicStaking.totalPool(), depositAmountAsset - delegateAmountAsset);
+        assertEq(sonicStaking.totalDelegated(), delegateAmountAsset);
+        assertEq(sonicStaking.totalAssets(), depositAmountAsset);
+        assertEq(SFC.getStake(address(sonicStaking), validatorId), delegateAmountAsset);
     }
 
-    function testPause() public {
-        assertTrue(sonicStaking.hasRole(sonicStaking.OPERATOR_ROLE(), SONIC_STAKING_OPERATOR));
+    function testMultipleDelegateToSameValidator() public {
+        uint256 depositAmountAsset = 100_000 ether;
+        uint256 delegateAmountAsset1 = 1_000 ether;
+        uint256 delegateAmountAsset2 = 2_000 ether;
+        uint256 totalDelegatedAmountAsset = delegateAmountAsset1 + delegateAmountAsset2;
+        uint256 validatorId = 1;
+
+        makeDeposit(depositAmountAsset);
+        delegate(validatorId, delegateAmountAsset1);
+
+        // need to increase time to allow for another delegation
+        vm.warp(block.timestamp + 1 hours);
+
+        // second delegation to the same validator
+        delegate(validatorId, delegateAmountAsset2);
+
+        assertEq(sonicStaking.totalDelegated(), totalDelegatedAmountAsset);
+        assertEq(sonicStaking.totalAssets(), depositAmountAsset);
+        assertEq(sonicStaking.totalPool(), depositAmountAsset - totalDelegatedAmountAsset);
+        assertEq(SFC.getStake(address(sonicStaking), validatorId), totalDelegatedAmountAsset);
+    }
+
+    function testMultipleDelegateToDifferentValidator() public {
+        uint256 depositAmountAsset = 100_000 ether;
+        uint256 delegateAmountAsset1 = 1_000 ether;
+        uint256 delegateAmountAsset2 = 5_000 ether;
+        uint256 validatorId1 = 1;
+        uint256 validatorId2 = 2;
+
+        makeDeposit(depositAmountAsset);
+        delegate(validatorId1, delegateAmountAsset1);
+
+        // need to increase time to allow for another delegation
+        vm.warp(block.timestamp + 1 hours);
+
+        // second delegation to a different validator
+        delegate(validatorId2, delegateAmountAsset2);
+
+        assertEq(sonicStaking.totalDelegated(), delegateAmountAsset1 + delegateAmountAsset2);
+        assertEq(sonicStaking.totalAssets(), depositAmountAsset);
+        assertEq(sonicStaking.totalPool(), depositAmountAsset - delegateAmountAsset1 - delegateAmountAsset2);
+        assertEq(SFC.getStake(address(sonicStaking), validatorId1), delegateAmountAsset1);
+        assertEq(SFC.getStake(address(sonicStaking), validatorId2), delegateAmountAsset2);
+    }
+
+    function testDelegateErrors() public {
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountCannotBeZero.selector));
+        delegate(1, 0);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountLargerThanPool.selector));
+        delegate(1, 100 ether);
+    }
+
+    function testUndelegateToPoolRevert() public {
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountCannotBeZero.selector));
+        sonicStaking.operatorUndelegateToPool(1, 0);
+
+        makeDeposit(100 ether);
+        delegate(1, 100 ether);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.NoDelegationForValidator.selector, 2));
+        sonicStaking.operatorUndelegateToPool(2, 100 ether);
+    }
+
+    function testOperatorUndelegateToPool() public {
+        uint256 amountAssets = 10_000 ether;
+        uint256 amountAssetsToUndelegate = 1_000 ether;
+
+        makeDeposit(amountAssets);
 
         vm.startPrank(SONIC_STAKING_OPERATOR);
+        sonicStaking.delegate(1, amountAssets);
 
-        sonicStaking.pause();
-        assertTrue(sonicStaking.undelegatePaused());
-        assertTrue(sonicStaking.withdrawPaused());
-        assertTrue(sonicStaking.depositPaused());
+        assertEq(sonicStaking.totalDelegated(), amountAssets);
+        assertEq(sonicStaking.pendingOperatorWithdraw(), 0);
 
-        vm.stopPrank();
+        uint256 withdrawId = sonicStaking.operatorUndelegateToPool(1, amountAssetsToUndelegate);
+
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
+        assertEq(withdraw.kind == SonicStaking.WithdrawKind.OPERATOR, true);
+
+        assertEq(sonicStaking.totalDelegated(), amountAssets - amountAssetsToUndelegate);
+        assertEq(sonicStaking.pendingOperatorWithdraw(), amountAssetsToUndelegate);
     }
 
     function testDonate() public {
@@ -563,6 +517,60 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
             abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.OPERATOR_ROLE())
         );
         sonicStaking.donate{value: 100 ether}();
+    }
+
+    function testPause() public {
+        assertTrue(sonicStaking.hasRole(sonicStaking.OPERATOR_ROLE(), SONIC_STAKING_OPERATOR));
+
+        vm.startPrank(SONIC_STAKING_OPERATOR);
+
+        sonicStaking.pause();
+        assertTrue(sonicStaking.undelegatePaused());
+        assertTrue(sonicStaking.withdrawPaused());
+        assertTrue(sonicStaking.depositPaused());
+
+        vm.stopPrank();
+    }
+
+    function testStateSetters() public {
+        vm.startPrank(SONIC_STAKING_OWNER);
+
+        sonicStaking.setWithdrawDelay(1);
+        assertEq(sonicStaking.withdrawDelay(), 1);
+
+        sonicStaking.setUndelegatePaused(true);
+        assertTrue(sonicStaking.undelegatePaused());
+
+        sonicStaking.setWithdrawPaused(true);
+        assertTrue(sonicStaking.withdrawPaused());
+
+        sonicStaking.setDepositPaused(true);
+        assertTrue(sonicStaking.depositPaused());
+
+        sonicStaking.setTreasury(address(this));
+        assertEq(sonicStaking.treasury(), address(this));
+
+        sonicStaking.setProtocolFeeBIPS(100);
+        assertEq(sonicStaking.protocolFeeBIPS(), 100);
+    }
+
+    function testStateSettersRevert() public {
+        vm.startPrank(SONIC_STAKING_OWNER);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
+        sonicStaking.setUndelegatePaused(false);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
+        sonicStaking.setUndelegatePaused(false);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
+        sonicStaking.setWithdrawPaused(false);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.ProtocolFeeTooHigh.selector));
+        sonicStaking.setProtocolFeeBIPS(10001);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.TreasuryAddressCannotBeZero.selector));
+        sonicStaking.setTreasury(address(0));
     }
 
     function testRateGrowth() public {
@@ -602,39 +610,5 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.getRate(), finalRate);
         assertEq(sonicStaking.convertToAssets(1 ether), finalRate);
         assertEq(sonicStaking.convertToShares(finalRate), 1 ether);
-    }
-
-    function testUndelegateToPoolRevert() public {
-        vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountCannotBeZero.selector));
-        sonicStaking.operatorUndelegateToPool(1, 0);
-
-        makeDeposit(100 ether);
-        delegate(1, 100 ether);
-
-        vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.NoDelegationForValidator.selector, 2));
-        sonicStaking.operatorUndelegateToPool(2, 100 ether);
-    }
-
-    function testOperatorUndelegateToPool() public {
-        uint256 amountAssets = 10_000 ether;
-        uint256 amountAssetsToUndelegate = 1_000 ether;
-
-        makeDeposit(amountAssets);
-
-        vm.startPrank(SONIC_STAKING_OPERATOR);
-        sonicStaking.delegate(1, amountAssets);
-
-        assertEq(sonicStaking.totalDelegated(), amountAssets);
-        assertEq(sonicStaking.pendingOperatorWithdraw(), 0);
-
-        uint256 withdrawId = sonicStaking.operatorUndelegateToPool(1, amountAssetsToUndelegate);
-
-        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
-        assertEq(withdraw.kind == SonicStaking.WithdrawKind.OPERATOR, true);
-
-        assertEq(sonicStaking.totalDelegated(), amountAssets - amountAssetsToUndelegate);
-        assertEq(sonicStaking.pendingOperatorWithdraw(), amountAssetsToUndelegate);
     }
 }
