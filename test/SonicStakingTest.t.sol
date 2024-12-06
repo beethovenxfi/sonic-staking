@@ -576,17 +576,54 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.protocolFeeBIPS(), 100);
     }
 
-    function testStateSettersRevert() public {
+    function testStateSettersUnauthorized() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AccessControlUnauthorizedAccount.selector, address(this), sonicStaking.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        sonicStaking.setUndelegatePaused(false);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AccessControlUnauthorizedAccount.selector, address(this), sonicStaking.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        sonicStaking.setWithdrawPaused(false);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AccessControlUnauthorizedAccount.selector, address(this), sonicStaking.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        sonicStaking.setDepositPaused(false);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AccessControlUnauthorizedAccount.selector, address(this), sonicStaking.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        sonicStaking.setProtocolFeeBIPS(10001);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AccessControlUnauthorizedAccount.selector, address(this), sonicStaking.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        sonicStaking.setTreasury(address(0));
+    }
+
+    function testStateSettersValueDidNotChange() public {
         vm.startPrank(SONIC_STAKING_ADMIN);
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setUndelegatePaused(false);
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
-        sonicStaking.setUndelegatePaused(false);
+        sonicStaking.setWithdrawPaused(false);
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
-        sonicStaking.setWithdrawPaused(false);
+        sonicStaking.setDepositPaused(false);
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.ProtocolFeeTooHigh.selector));
         sonicStaking.setProtocolFeeBIPS(10001);
