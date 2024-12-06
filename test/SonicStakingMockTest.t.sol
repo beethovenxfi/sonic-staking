@@ -364,8 +364,8 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sfcMock.setSlashRefundRatio(validatorId, 5 * 1e17);
 
         vm.prank(user);
-        sonicStaking.undelegate(validatorId, delegateAmount);
-        assertEq(sonicStaking.withdrawCounter(), 101);
+        uint256 withdrawId = sonicStaking.undelegate(validatorId, delegateAmount);
+        assertEq(sonicStaking.withdrawCounter(), withdrawId);
 
         vm.warp(block.timestamp + 14 days);
 
@@ -374,12 +374,15 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         // do not emergency withdraw, will revert
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawnAmountTooLow.selector));
-        sonicStaking.withdraw(101, false);
+        sonicStaking.withdraw(withdrawId, false);
 
         // emergency withdraw
         vm.prank(user);
-        sonicStaking.withdraw(101, true);
-        assertApproxEqAbs(address(user).balance, balanceBefore + 500 ether, 1);
+        vm.expectEmit(true, true, true, true);
+        // the SFC rounds the penalty 1 wei up, so we need to account for this
+        emit SonicStaking.Withdrawn(user, withdrawId, delegateAmount / 2 - 1, SonicStaking.WithdrawKind.VALIDATOR, true);
+        sonicStaking.withdraw(withdrawId, true);
+        assertApproxEqAbs(address(user).balance, balanceBefore + (delegateAmount / 2), 1);
     }
 
     function testWithdrawMany() public {
@@ -478,6 +481,41 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertEq(withdrawAfter2.isWithdrawn, true);
     }
 
+    function testOperatorClawBackUndelegateAndWithdraw() public {
+        uint256 assetAmount = 10_000 ether;
+        uint256 delegateAmount = 1_000 ether;
+        uint256 undelegateAmount = 1_000 ether;
+        uint256 toValidatorId = 1;
+
+        (,,,, uint256 withdrawCounterStart) = getState();
+
+        makeDeposit(assetAmount);
+        delegate(toValidatorId, delegateAmount);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        sonicStaking.operatorClawBackUndelegate(1, undelegateAmount);
+
+        assertEq(sonicStaking.totalDelegated(), 0);
+        assertEq(sonicStaking.totalPool(), assetAmount - delegateAmount);
+        assertEq(sonicStaking.totalAssets(), assetAmount);
+        assertEq(sonicStaking.getRate(), 1 ether);
+        assertEq(sonicStaking.withdrawCounter(), withdrawCounterStart + 1);
+        assertEq(sonicStaking.pendingOperatorWithdraw(), undelegateAmount);
+
+        // need to increase time to allow for withdraw
+        vm.warp(block.timestamp + 14 days);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        sonicStaking.operatorClawBackWithdraw(101, false);
+
+        assertEq(sonicStaking.totalDelegated(), 0);
+        assertEq(sonicStaking.totalPool(), assetAmount);
+        assertEq(sonicStaking.totalAssets(), assetAmount);
+        assertEq(sonicStaking.getRate(), 1 ether);
+        assertEq(sonicStaking.withdrawCounter(), withdrawCounterStart + 1);
+        assertEq(sonicStaking.pendingOperatorWithdraw(), 0);
+    }
+
     function testSlashedValidatorHasNoImpactWithoutWithdraw() public {
         uint256 assetAmount = 1_000 ether;
         uint256 delegateAmount = 1_000 ether;
@@ -538,41 +576,6 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertApproxEqAbs(sonicStaking.totalAssets(), undelegateAmountAsset / 2, 1);
         assertLt(sonicStaking.getRate(), rateBefore);
         assertApproxEqAbs(sonicStaking.getRate(), rateBefore / 2, 1);
-    }
-
-    function testOperatorClawBackUndelegateAndWithdraw() public {
-        uint256 assetAmount = 10_000 ether;
-        uint256 delegateAmount = 1_000 ether;
-        uint256 undelegateAmount = 1_000 ether;
-        uint256 toValidatorId = 1;
-
-        (,,,, uint256 withdrawCounterStart) = getState();
-
-        makeDeposit(assetAmount);
-        delegate(toValidatorId, delegateAmount);
-
-        vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.operatorClawBackUndelegate(1, undelegateAmount);
-
-        assertEq(sonicStaking.totalDelegated(), 0);
-        assertEq(sonicStaking.totalPool(), assetAmount - delegateAmount);
-        assertEq(sonicStaking.totalAssets(), assetAmount);
-        assertEq(sonicStaking.getRate(), 1 ether);
-        assertEq(sonicStaking.withdrawCounter(), withdrawCounterStart + 1);
-        assertEq(sonicStaking.pendingOperatorWithdraw(), undelegateAmount);
-
-        // need to increase time to allow for withdraw
-        vm.warp(block.timestamp + 14 days);
-
-        vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.operatorClawBackWithdraw(101, false);
-
-        assertEq(sonicStaking.totalDelegated(), 0);
-        assertEq(sonicStaking.totalPool(), assetAmount);
-        assertEq(sonicStaking.totalAssets(), assetAmount);
-        assertEq(sonicStaking.getRate(), 1 ether);
-        assertEq(sonicStaking.withdrawCounter(), withdrawCounterStart + 1);
-        assertEq(sonicStaking.pendingOperatorWithdraw(), 0);
     }
 
     function testOperatorWithdrawUnsupportedWithdrawKind() public {
