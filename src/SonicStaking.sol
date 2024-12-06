@@ -43,7 +43,8 @@ contract SonicStaking is
 
     enum WithdrawKind {
         POOL,
-        VALIDATOR
+        VALIDATOR,
+        OPERATOR
     }
 
     struct WithdrawRequest {
@@ -117,6 +118,8 @@ contract SonicStaking is
     );
     event Withdrawn(address indexed user, uint256 withdrawId, uint256 amountAssets, WithdrawKind kind, bool emergency);
     event Donated(address indexed user, uint256 amountAssets);
+    event OperatorUndelegatedToPool(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
+    event OperatorWithdrawnToPool(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssets);
 
     error DelegateAmountCannotBeZero();
     error DelegateAmountLargerThanPool();
@@ -147,6 +150,7 @@ contract SonicStaking is
     error DonationAmountCannotBeZero();
     error InvariantViolated();
     error InvariantGrowthViolated();
+    error UnsupportedWithdrawKind();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -422,6 +426,8 @@ contract SonicStaking is
 
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
 
+        require(request.kind != WithdrawKind.OPERATOR, UnsupportedWithdrawKind());
+
         request.isWithdrawn = true;
 
         uint256 withdrawnAmount = 0;
@@ -512,15 +518,17 @@ contract SonicStaking is
         require(delegatedAmount > 0, NoDelegationForValidator(validatorId));
         require(amountAssets <= delegatedAmount, UndelegateAmountExceedsDelegated());
 
-        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
+        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.OPERATOR, validatorId, amountAssets);
 
         totalDelegated -= amountAssets;
 
+        // Undelegation to the pool is an operator only function, it does not change the LST total supply.
+        // As such, we need to track the pending withdraws to ensure the invariant is maintained.
         pendingOperatorWithdraw += amountAssets;
 
         SFC.undelegate(validatorId, withdrawId, amountAssets);
 
-        emit Undelegated(msg.sender, withdrawId, validatorId, amountAssets, WithdrawKind.VALIDATOR);
+        emit OperatorUndelegatedToPool(withdrawId, validatorId, amountAssets);
     }
 
     /**
@@ -537,6 +545,8 @@ contract SonicStaking is
         withValidWithdrawId(withdrawId)
     {
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
+
+        require(request.kind == WithdrawKind.OPERATOR, UnsupportedWithdrawKind());
 
         request.isWithdrawn = true;
 
@@ -564,6 +574,8 @@ contract SonicStaking is
             // When emergency == false, we enforce the rate invariant
             _enforceInvariant(rateBefore);
         }
+
+        emit OperatorWithdrawnToPool(withdrawId, emergency, actualWithdrawnAmount);
     }
 
     /**
