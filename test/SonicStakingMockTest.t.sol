@@ -652,6 +652,15 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking.claimRewards(delegationIds);
     }
 
+    function testClaimRewardUnauthorized() public {
+        uint256[] memory delegationIds = new uint256[](1);
+        delegationIds[0] = 1;
+        vm.expectRevert(
+            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, address(this), sonicStaking.CLAIM_ROLE())
+        );
+        sonicStaking.claimRewards(delegationIds);
+    }
+
     function getState()
         public
         view
