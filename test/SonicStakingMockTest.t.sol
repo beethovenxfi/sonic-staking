@@ -643,6 +643,14 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertGt(sonicStaking.getRate(), rateBefore);
     }
 
+    function testClaimRewardNoRateIncreaseError() public {
+        uint256[] memory delegationIds = new uint256[](1);
+        delegationIds[0] = 1;
+        vm.prank(SONIC_STAKING_CLAIMOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.InvariantGrowthViolated.selector));
+        sonicStaking.claimRewards(delegationIds);
+    }
+
     function getState()
         public
         view

@@ -214,7 +214,7 @@ contract SonicStaking is
 
         uint256 rateAfter = getRate();
 
-        require(rateAfter >= rateBefore, InvariantGrowthViolated());
+        require(rateAfter > rateBefore, InvariantGrowthViolated());
     }
 
     /**
