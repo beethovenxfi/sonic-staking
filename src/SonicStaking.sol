@@ -118,8 +118,8 @@ contract SonicStaking is
     );
     event Withdrawn(address indexed user, uint256 withdrawId, uint256 amountAssets, WithdrawKind kind, bool emergency);
     event Donated(address indexed user, uint256 amountAssets);
-    event OperatorUndelegatedToPool(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
-    event OperatorWithdrawnToPool(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssetsWithdrawn);
+    event OperatorClawBackUndelegated(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
+    event OperatorClawBackWithdrawn(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssetsWithdrawn);
 
     error DelegateAmountCannotBeZero();
     error DelegateAmountLargerThanPool();
@@ -500,11 +500,11 @@ contract SonicStaking is
     }
 
     /**
-     * @notice Undelegate assets, assets can then be withdrawn to the pool after `withdrawDelay`
+     * @notice Claw back delegated assets from a specific validator, assets can then be withdrawn to the pool after `withdrawDelay`
      * @param validatorId the validator to undelegate from
      * @param amountAssets the amount of assets to undelegate from given validator
      */
-    function operatorUndelegateToPool(uint256 validatorId, uint256 amountAssets)
+    function operatorClawBackUndelegate(uint256 validatorId, uint256 amountAssets)
         external
         nonReentrant
         onlyRole(OPERATOR_ROLE)
@@ -528,17 +528,17 @@ contract SonicStaking is
 
         SFC.undelegate(validatorId, withdrawId, amountAssets);
 
-        emit OperatorUndelegatedToPool(withdrawId, validatorId, amountAssets);
+        emit OperatorClawBackUndelegated(withdrawId, validatorId, amountAssets);
     }
 
     /**
-     * @notice Withdraw undelegated assets to the pool
+     * @notice Withdraw undelegated, clawed back assets to the pool
      * @dev This is the only operation that allows for the rate to decrease.
      * @param withdrawId the unique withdrawId for the undelegation request
      * @param emergency when true, the operator acknowledges that the amount withdrawn may be less than what is owed,
      * potentially decreasing the rate.
      */
-    function operatorWithdrawToPool(uint256 withdrawId, bool emergency)
+    function operatorClawBackWithdraw(uint256 withdrawId, bool emergency)
         external
         nonReentrant
         onlyRole(OPERATOR_ROLE)
@@ -575,7 +575,7 @@ contract SonicStaking is
             _enforceInvariant(rateBefore);
         }
 
-        emit OperatorWithdrawnToPool(withdrawId, emergency, actualWithdrawnAmount);
+        emit OperatorClawBackWithdrawn(withdrawId, emergency, actualWithdrawnAmount);
     }
 
     /**

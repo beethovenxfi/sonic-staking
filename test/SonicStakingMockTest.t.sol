@@ -470,7 +470,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 undelegateAmountAsset = sonicStaking.convertToAssets(undelegateAmount);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        uint256 withdrawId = sonicStaking.operatorUndelegateToPool(1, undelegateAmount);
+        uint256 withdrawId = sonicStaking.operatorClawBackUndelegate(1, undelegateAmount);
 
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
@@ -478,11 +478,11 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         // emergency == false, should fail the invariant check
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.InvariantViolated.selector));
-        sonicStaking.operatorWithdrawToPool(withdrawId, false);
+        sonicStaking.operatorClawBackWithdraw(withdrawId, false);
 
         // emergency withdraw
         vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.operatorWithdrawToPool(withdrawId, true);
+        sonicStaking.operatorClawBackWithdraw(withdrawId, true);
         assertEq(sonicStaking.totalDelegated(), 0);
         // the SFC rounds the penalty 1 wei up, so we need to account for this
         assertApproxEqAbs(sonicStaking.totalPool(), undelegateAmountAsset / 2, 1);
@@ -503,7 +503,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         delegate(toValidatorId, delegateAmount);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.operatorUndelegateToPool(1, undelegateAmount);
+        sonicStaking.operatorClawBackUndelegate(1, undelegateAmount);
 
         assertEq(sonicStaking.totalDelegated(), 0);
         assertEq(sonicStaking.totalPool(), assetAmount - delegateAmount);
@@ -516,7 +516,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         vm.warp(block.timestamp + 14 days);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        sonicStaking.operatorWithdrawToPool(101, false);
+        sonicStaking.operatorClawBackWithdraw(101, false);
 
         assertEq(sonicStaking.totalDelegated(), 0);
         assertEq(sonicStaking.totalPool(), assetAmount);
@@ -537,7 +537,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         delegate(validatorId, amount);
 
         vm.startPrank(SONIC_STAKING_OPERATOR);
-        uint256 operatorWithdrawId = sonicStaking.operatorUndelegateToPool(validatorId, undelegateAmount);
+        uint256 operatorWithdrawId = sonicStaking.operatorClawBackUndelegate(validatorId, undelegateAmount);
 
         uint256 userWithdrawId = sonicStaking.undelegate(validatorId, undelegateAmountShares);
 
@@ -548,7 +548,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking.withdraw(operatorWithdrawId, false);
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.UnsupportedWithdrawKind.selector));
-        sonicStaking.operatorWithdrawToPool(userWithdrawId, false);
+        sonicStaking.operatorClawBackWithdraw(userWithdrawId, false);
     }
 
     // when rewards are claimed, a few things happen

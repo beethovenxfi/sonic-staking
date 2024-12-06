@@ -454,19 +454,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         delegate(1, 100 ether);
     }
 
-    function testUndelegateToPoolRevert() public {
-        vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountCannotBeZero.selector));
-        sonicStaking.operatorUndelegateToPool(1, 0);
-
-        makeDeposit(100 ether);
-        delegate(1, 100 ether);
-
-        vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.NoDelegationForValidator.selector, 2));
-        sonicStaking.operatorUndelegateToPool(2, 100 ether);
-    }
-
     function testOperatorUndelegateToPool() public {
         uint256 amountAssets = 10_000 ether;
         uint256 amountAssetsToUndelegate = 1_000 ether;
@@ -479,13 +466,26 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.totalDelegated(), amountAssets);
         assertEq(sonicStaking.pendingOperatorWithdraw(), 0);
 
-        uint256 withdrawId = sonicStaking.operatorUndelegateToPool(1, amountAssetsToUndelegate);
+        uint256 withdrawId = sonicStaking.operatorClawBackUndelegate(1, amountAssetsToUndelegate);
 
         SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
         assertEq(withdraw.kind == SonicStaking.WithdrawKind.OPERATOR, true);
 
         assertEq(sonicStaking.totalDelegated(), amountAssets - amountAssetsToUndelegate);
         assertEq(sonicStaking.pendingOperatorWithdraw(), amountAssetsToUndelegate);
+    }
+
+    function testUndelegateToPoolRevert() public {
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountCannotBeZero.selector));
+        sonicStaking.operatorClawBackUndelegate(1, 0);
+
+        makeDeposit(100 ether);
+        delegate(1, 100 ether);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.NoDelegationForValidator.selector, 2));
+        sonicStaking.operatorClawBackUndelegate(2, 100 ether);
     }
 
     function testDonate() public {
