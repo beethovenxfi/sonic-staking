@@ -504,6 +504,8 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.deal(SONIC_STAKING_OPERATOR, donationAmount);
         vm.startPrank(SONIC_STAKING_OPERATOR);
 
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.Donated(SONIC_STAKING_OPERATOR, donationAmount);
         sonicStaking.donate{value: donationAmount}();
 
         assertEq(sonicStaking.totalPool(), assetAmount + donationAmount);
@@ -529,14 +531,27 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     function testPause() public {
         assertTrue(sonicStaking.hasRole(sonicStaking.OPERATOR_ROLE(), SONIC_STAKING_OPERATOR));
 
-        vm.startPrank(SONIC_STAKING_OPERATOR);
-
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.DepositPausedUpdated(SONIC_STAKING_OPERATOR, true);
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.UndelegatePausedUpdated(SONIC_STAKING_OPERATOR, true);
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.WithdrawPausedUpdated(SONIC_STAKING_OPERATOR, true);
         sonicStaking.pause();
+
         assertTrue(sonicStaking.undelegatePaused());
         assertTrue(sonicStaking.withdrawPaused());
         assertTrue(sonicStaking.depositPaused());
+    }
 
-        vm.stopPrank();
+    function testPauseUnauthorized() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AccessControlUnauthorizedAccount.selector, address(this), sonicStaking.OPERATOR_ROLE()
+            )
+        );
+        sonicStaking.pause();
     }
 
     function testStateSetters() public {
