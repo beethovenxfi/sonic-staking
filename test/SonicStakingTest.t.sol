@@ -616,4 +616,25 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.NoDelegationForValidator.selector, 2));
         sonicStaking.operatorUndelegateToPool(2, 100 ether);
     }
+
+    function testOperatorUndelegateToPool() public {
+        uint256 amountAssets = 10_000 ether;
+        uint256 amountAssetsToUndelegate = 1_000 ether;
+
+        makeDeposit(amountAssets);
+
+        vm.startPrank(SONIC_STAKING_OPERATOR);
+        sonicStaking.delegate(1, amountAssets);
+
+        assertEq(sonicStaking.totalDelegated(), amountAssets);
+        assertEq(sonicStaking.pendingOperatorWithdraw(), 0);
+
+        uint256 withdrawId = sonicStaking.operatorUndelegateToPool(1, amountAssetsToUndelegate);
+
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
+        assertEq(withdraw.kind == SonicStaking.WithdrawKind.OPERATOR, true);
+
+        assertEq(sonicStaking.totalDelegated(), amountAssets - amountAssetsToUndelegate);
+        assertEq(sonicStaking.pendingOperatorWithdraw(), amountAssetsToUndelegate);
+    }
 }
