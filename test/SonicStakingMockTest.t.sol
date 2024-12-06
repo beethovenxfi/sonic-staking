@@ -627,19 +627,20 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 totalAssets = sonicStaking.totalAssets();
 
         assertEq(rateBefore, 1 ether);
+        uint256 protocolFee = pendingRewards * sonicStaking.protocolFeeBIPS() / sonicStaking.MAX_PROTOCOL_FEE_BIPS();
 
         uint256[] memory delegationIds = new uint256[](1);
         delegationIds[0] = 1;
+
         vm.prank(SONIC_STAKING_CLAIMOR);
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.RewardsClaimed(pendingRewards, protocolFee);
         sonicStaking.claimRewards(delegationIds);
+
         assertEq(sfcMock.pendingRewards(address(sonicStaking), 1), 0);
-
-        uint256 protocolFee = pendingRewards * sonicStaking.protocolFeeBIPS() / sonicStaking.MAX_PROTOCOL_FEE_BIPS();
         assertEq(TREASURY_ADDRESS.balance, treasuryBalanceBefore + protocolFee);
-
         assertEq(sonicStaking.totalPool(), poolBefore + (pendingRewards - protocolFee));
         assertEq(sonicStaking.totalAssets(), totalAssets + (pendingRewards - protocolFee));
-
         assertGt(sonicStaking.getRate(), rateBefore);
     }
 

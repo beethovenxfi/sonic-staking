@@ -118,6 +118,7 @@ contract SonicStaking is
     );
     event Withdrawn(address indexed user, uint256 withdrawId, uint256 amountAssets, WithdrawKind kind, bool emergency);
     event Donated(address indexed user, uint256 amountAssets);
+    event RewardsClaimed(uint256 amountClaimed, uint256 protocolFee);
     event OperatorClawBackUndelegated(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
     event OperatorClawBackWithdrawn(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssetsWithdrawn);
 
@@ -693,6 +694,8 @@ contract SonicStaking is
         }
 
         totalPool += totalRewardsClaimed - protocolFee;
+
+        emit RewardsClaimed(totalRewardsClaimed, protocolFee);
     }
 
     /**
