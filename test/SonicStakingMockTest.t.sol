@@ -230,7 +230,6 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 withdrawId = sonicStaking.undelegate(validatorId, undelegateShares);
         SonicStaking.WithdrawRequest memory withdrawRequestBefore = sonicStaking.getWithdrawRequest(withdrawId);
 
-        // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
 
         uint256 balanceBefore = address(user).balance;
@@ -239,6 +238,33 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         vm.expectEmit(true, true, true, true);
         emit SonicStaking.Withdrawn(
             user, withdrawId, withdrawRequestBefore.assetAmount, SonicStaking.WithdrawKind.VALIDATOR, false
+        );
+        sonicStaking.withdraw(withdrawId, false);
+
+        SonicStaking.WithdrawRequest memory withdrawRequest = sonicStaking.getWithdrawRequest(withdrawId);
+        assertEq(address(user).balance, balanceBefore + withdrawRequest.assetAmount);
+
+        assertEq(withdrawRequest.isWithdrawn, true);
+    }
+
+    function testWithdrawFromPool() public {
+        uint256 amount = 10_000 ether;
+        uint256 undelegateShares = sonicStaking.convertToShares(10_000 ether);
+
+        address user = makeDeposit(amount);
+
+        vm.prank(user);
+        uint256 withdrawId = sonicStaking.undelegateFromPool(undelegateShares);
+        SonicStaking.WithdrawRequest memory withdrawRequestBefore = sonicStaking.getWithdrawRequest(withdrawId);
+
+        vm.warp(block.timestamp + 14 days);
+
+        uint256 balanceBefore = address(user).balance;
+
+        vm.prank(user);
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.Withdrawn(
+            user, withdrawId, withdrawRequestBefore.assetAmount, SonicStaking.WithdrawKind.POOL, false
         );
         sonicStaking.withdraw(withdrawId, false);
 
