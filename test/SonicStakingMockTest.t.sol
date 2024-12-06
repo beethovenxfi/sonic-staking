@@ -525,6 +525,31 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertApproxEqAbs(sonicStaking.getRate(), rateBefore / 2, 1);
     }
 
+    function testOperatorWithdrawUnsupportedWithdrawKind() public {
+        uint256 amount = 1_000 ether;
+        uint256 undelegateAmount = 100 ether;
+        uint256 undelegateAmountShares = sonicStaking.convertToShares(undelegateAmount);
+        uint256 validatorId = 1;
+
+        makeDepositFromSpecifcUser(amount, SONIC_STAKING_OPERATOR);
+
+        delegate(validatorId, amount);
+
+        vm.startPrank(SONIC_STAKING_OPERATOR);
+        uint256 operatorWithdrawId = sonicStaking.operatorUndelegateToPool(validatorId, undelegateAmount);
+
+        uint256 userWithdrawId = sonicStaking.undelegate(validatorId, undelegateAmountShares);
+
+        // need to increase time to allow for withdraw
+        vm.warp(block.timestamp + 14 days);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UnsupportedWithdrawKind.selector));
+        sonicStaking.withdraw(operatorWithdrawId, false);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UnsupportedWithdrawKind.selector));
+        sonicStaking.operatorWithdrawToPool(userWithdrawId, false);
+    }
+
     function getState()
         public
         view
