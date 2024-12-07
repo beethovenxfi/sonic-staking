@@ -134,4 +134,8 @@ contract SFCMock is ISFC {
     function setSlashRefundRatio(uint256 validatorID, uint256 _refundRatio) external {
         slashingRefundRatio[validatorID] = _refundRatio;
     }
+
+    function getSelfStake(uint256 validatorID) external view returns (uint256) {
+        return 1;
+    }
 }
