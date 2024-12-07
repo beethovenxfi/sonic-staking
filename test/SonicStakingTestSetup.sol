@@ -18,10 +18,10 @@ contract SonicStakingTestSetup is Test {
 
     ISFC SFC;
 
-    string FANTOM_FORK_URL = "https://rpc.soniclabs.com";
+    string SONIC_FORK_URL = "https://rpc.soniclabs.com";
     uint256 INITIAL_FORK_BLOCK_NUMBER = 10000;
 
-    uint256 fantomFork;
+    uint256 sonicFork;
 
     enum WithdrawKind {
         POOL,
@@ -29,7 +29,7 @@ contract SonicStakingTestSetup is Test {
     }
 
     function setUp() public {
-        fantomFork = vm.createSelectFork(FANTOM_FORK_URL, INITIAL_FORK_BLOCK_NUMBER);
+        sonicFork = vm.createSelectFork(SONIC_FORK_URL, INITIAL_FORK_BLOCK_NUMBER);
         setSFCAddress();
 
         // deploy Sonic Staking
