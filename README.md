@@ -34,13 +34,13 @@ The Sonic Staking contract is `ownable` and also uses OpenZeppelin `AccessContro
 2. Operator
 3. Claim
 
-The owner of the contract will be a Timelock with 1 week lock and has the following permissions:
+The owner of the contract will be a Timelock with 3 week lock and has the following permissions:
 
 1. Upgrade the contract
 
 The default Admin role will be grant to a Timelock with 1 day lock and has the following permissions:
 
-1. Grant/Revoe roles
+1. Grant/Remove roles
 2. Set the withdrawal delay
 3. Set treasury address
 4. Set protocol fees
