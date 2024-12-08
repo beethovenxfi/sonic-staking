@@ -18,7 +18,7 @@ import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/uti
 /**
  * @title Beets Staked Sonic
  * @author Beets
- * @notice The contract for the Sonic Staked Asset (LST), known as stS(onic)
+ * @notice The contract for Beets Staked Sonic (stS)
  */
 contract SonicStaking is
     IRateProvider,
@@ -338,7 +338,7 @@ contract SonicStaking is
      */
 
     /**
-     * @notice Deposit native assets and mint shares of the LST.
+     * @notice Deposit native assets and mint shares of stS.
      */
     function deposit() external payable enforceInvariant {
         uint256 amount = msg.value;
@@ -426,6 +426,8 @@ contract SonicStaking is
         // The validatorId is ignored for pool withdrawals
         withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
 
+        // The amount is subtracted from the pool, but the assets stay in this contract.
+        // The user is able to `withdraw` their assets after the `withdrawDelay` has passed.
         totalPool -= amountToUndelegate;
 
         emit Undelegated(msg.sender, withdrawId, 0, amountToUndelegate, WithdrawKind.POOL);
@@ -491,6 +493,7 @@ contract SonicStaking is
 
     /**
      * @notice Withdraw undelegated assets for a list of withdrawIds
+     * @dev This function is provided as a convenience for bulking multiple withdraws into a single tx.
      * @param withdrawIds the unique withdraw ids for the undelegation requests
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
