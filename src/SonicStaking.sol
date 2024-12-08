@@ -445,37 +445,48 @@ contract SonicStaking is
     {
         require(!withdrawPaused, WithdrawsPaused());
 
+        // We've already checked that the withdrawId exists and is valid, so we can safely access the request
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
 
+        // Claw backs can only be executed by the operator via the operatorExecuteClawBack function
         require(request.kind != WithdrawKind.CLAW_BACK, UnsupportedWithdrawKind());
 
         request.isWithdrawn = true;
 
-        uint256 withdrawnAmount = 0;
+        uint256 amountWithdrawn = 0;
 
         if (request.kind == WithdrawKind.POOL) {
-            withdrawnAmount = request.assetAmount;
+            // An undelegate from the pool only effects the internal accounting of this contract.
+            // The amount has already been subtracted from the pool and the assets were already owned by this contract.
+            // The amount withdrawn is always the same as the request amount.
+            amountWithdrawn = request.assetAmount;
         } else {
+            //The only WithdrawKind left is VALIDATOR
+
+            // The SFC sends the native assets to this contract, increasing it's balance
+            // We measure the change in balance to get the actual amount withdrawn.
             uint256 balanceBefore = address(this).balance;
 
             SFC.withdraw(request.validatorId, withdrawId);
-            withdrawnAmount = address(this).balance - balanceBefore;
+
+            amountWithdrawn = address(this).balance - balanceBefore;
 
             if (!emergency) {
                 // In the instance of a slashing event, the amount withdrawn will not match the request amount.
                 // The user must acknowledge this by setting emergency to true. Since the user is absorbing
                 // this loss, there is no impact on the rate.
-                require(request.assetAmount == withdrawnAmount, WithdrawnAmountTooSmall());
+                require(request.assetAmount == amountWithdrawn, WithdrawnAmountTooSmall());
             }
         }
 
         address user = msg.sender;
-        (bool withdrawnToUser,) = user.call{value: withdrawnAmount}("");
+        (bool withdrawnToUser,) = user.call{value: amountWithdrawn}("");
         require(withdrawnToUser, NativeTransferFailed());
 
-        emit Withdrawn(user, withdrawId, withdrawnAmount, request.kind, emergency);
+        emit Withdrawn(user, withdrawId, amountWithdrawn, request.kind, emergency);
 
-        return withdrawnAmount;
+        // Return the actual amount withdrawn
+        return amountWithdrawn;
     }
 
     /**
@@ -604,6 +615,8 @@ contract SonicStaking is
         uint256 donationAmount = msg.value;
 
         require(donationAmount > 0, DonationAmountCannotBeZero());
+        // Since convertToAssets is a round down operation, very small donations can cause the rate to not grow.
+        // So, we enforce a minimum donation amount.
         require(donationAmount >= MIN_DONATION_AMOUNT, DonationAmountTooSmall());
 
         totalPool += donationAmount;
