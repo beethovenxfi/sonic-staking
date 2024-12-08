@@ -154,8 +154,7 @@ contract SonicStaking is
     error DepositPaused();
     error UndelegatePaused();
     error WithdrawsPaused();
-    error WithdrawnAmountTooHigh();
-    error WithdrawnAmountTooLow();
+    error WithdrawnAmountTooSmall();
     error NativeTransferFailed();
     error ProtocolFeeTransferFailed();
     error PausedValueDidNotChange();
@@ -462,14 +461,11 @@ contract SonicStaking is
             SFC.withdraw(request.validatorId, withdrawId);
             withdrawnAmount = address(this).balance - balanceBefore;
 
-            // can never get more assets than what is owed
-            require(withdrawnAmount <= request.assetAmount, WithdrawnAmountTooHigh());
-
             if (!emergency) {
                 // In the instance of a slashing event, the amount withdrawn will not match the request amount.
                 // The user must acknowledge this by setting emergency to true. Since the user is absorbing
                 // this loss, there is no impact on the rate.
-                require(request.assetAmount == withdrawnAmount, WithdrawnAmountTooLow());
+                require(request.assetAmount == withdrawnAmount, WithdrawnAmountTooSmall());
             }
         }
 
