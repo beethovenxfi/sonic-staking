@@ -553,6 +553,10 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.DonationAmountCannotBeZero.selector));
         sonicStaking.donate{value: 0}();
 
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DonationAmountTooSmall.selector));
+        sonicStaking.donate{value: 1e6}();
+
         vm.startPrank(user);
         vm.expectRevert(
             abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.OPERATOR_ROLE())

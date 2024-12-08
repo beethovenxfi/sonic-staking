@@ -169,6 +169,7 @@ contract SonicStaking is
     error InvariantViolated();
     error InvariantGrowthViolated();
     error UnsupportedWithdrawKind();
+    error RewardsClaimedTooSmall();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -705,6 +706,9 @@ contract SonicStaking is
         }
 
         uint256 totalRewardsClaimed = address(this).balance - balanceBefore;
+
+        require(totalRewardsClaimed > MIN_CLAIM_REWARDS_AMOUNT, RewardsClaimedTooSmall());
+
         uint256 protocolFee = 0;
 
         if (totalRewardsClaimed > 0 && protocolFeeBIPS > 0) {
