@@ -16,9 +16,9 @@ import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/proxy/utils/UU
 import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /**
- * @title Sonic Staking Contract
+ * @title Beets Staked Sonic
  * @author Beets
- * @notice Main point of interaction with Beets liquid staking for Sonic
+ * @notice The contract for the Sonic Staked Asset (LST), known as stS(onic)
  */
 contract SonicStaking is
     IRateProvider,
@@ -31,15 +31,14 @@ contract SonicStaking is
     AccessControlUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    // These constants have been taken from the SFC contract
-    uint256 public constant DECIMAL_UNIT = 1e18;
-
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant CLAIM_ROLE = keccak256("CLAIM_ROLE");
 
     uint256 public constant MAX_PROTOCOL_FEE_BIPS = 10_000;
     uint256 public constant MIN_DEPOSIT = 1 ether;
     uint256 public constant MIN_UNDELEGATE_AMOUNT_SHARES = 1 ether;
+    uint256 public constant MIN_DONATION_AMOUNT = 1e12;
+    uint256 public constant MIN_CLAIM_REWARDS_AMOUNT = 1e12;
 
     enum WithdrawKind {
         POOL,
@@ -56,10 +55,14 @@ contract SonicStaking is
         address user;
     }
 
+    /**
+     * @dev Each undelegate request is given a unique withdraw id. Once the withdraw delay has passed, the request can be
+     * processed, returning the underlying $S tokens to the user.
+     */
     mapping(uint256 withdrawId => WithdrawRequest request) private _allWithdrawRequests;
 
     /**
-     * @dev We track all withdraw ids for each user, in order to allow for easier off-chain UX.
+     * @dev We track all withdraw ids for each user in order to allow for an easier off-chain UX.
      */
     mapping(address user => mapping(uint256 index => uint256 withdrawId)) public userWithdraws;
     mapping(address user => uint256 numWithdraws) public userNumWithdraws;
@@ -84,27 +87,41 @@ contract SonicStaking is
      */
     uint256 public withdrawDelay;
 
+    /**
+     * @dev When true, no new deposits are allowed
+     */
     bool public depositPaused;
 
+    /**
+     * @dev When true, user undelegations are paused. Only the operator can undelegate.
+     */
     bool public undelegatePaused;
 
+    /**
+     * @dev When true, no withdraws are allowed
+     */
     bool public withdrawPaused;
 
     /**
-     * The total assets delegated to validators
+     * @dev The total assets delegated to validators
      */
     uint256 public totalDelegated;
 
     /**
-     * The total assets that is in the pool
+     * @dev The total assets that is in the pool (undelegated)
      */
     uint256 public totalPool;
 
     /**
-     * The total amount of asset that is pending withdraw from the operator which will be withdrawn to the pool.
+     * @dev Pending operator clawbacked asset amounts are stored here to preserve the invariant. Once the withdraw
+     * delay has passed, the assets are returned to the pool.
      */
     uint256 public pendingOperatorWithdraw;
 
+    /**
+     * @dev A counter to track the number of withdraws. Used to generate unique withdraw ids.
+     * The current value of the counter is the last withdraw id used.
+     */
     uint256 public withdrawCounter;
 
     event WithdrawDelaySet(address indexed owner, uint256 delay);
@@ -126,18 +143,17 @@ contract SonicStaking is
     error DelegateAmountLargerThanPool();
     error UndelegateAmountCannotBeZero();
     error NoDelegationForValidator(uint256 validatorId);
-    error UndelegateAmountExceedsDelegated();
-    error WithdrawIdDoesNotExist();
-    error WithdrawDelayNotElapsed(uint256 earliestWithdrawTime);
-    error WithdrawAlreadyProcessed();
-    error UnauthorizedWithdraw();
+    error UndelegateAmountExceedsDelegated(uint256 validatorId);
+    error WithdrawIdDoesNotExist(uint256 withdrawId);
+    error WithdrawDelayNotElapsed(uint256 withdrawId);
+    error WithdrawAlreadyProcessed(uint256 withdrawId);
+    error UnauthorizedWithdraw(uint256 withdrawId);
     error TreasuryAddressCannotBeZero();
     error ProtocolFeeTooHigh();
     error DepositTooSmall();
     error DepositPaused();
     error UndelegatePaused();
     error WithdrawsPaused();
-    error RewardClaimingPaused();
     error WithdrawnAmountTooHigh();
     error WithdrawnAmountTooLow();
     error NativeTransferFailed();
@@ -149,6 +165,7 @@ contract SonicStaking is
     error ArrayLengthMismatch();
     error UndelegateAmountTooSmall();
     error DonationAmountCannotBeZero();
+    error DonationAmountTooSmall();
     error InvariantViolated();
     error InvariantGrowthViolated();
     error UnsupportedWithdrawKind();
@@ -177,7 +194,7 @@ contract SonicStaking is
         undelegatePaused = false;
         withdrawPaused = false;
         depositPaused = false;
-        protocolFeeBIPS = 1000;
+        protocolFeeBIPS = 1000; // 10%
         withdrawCounter = 100;
     }
 
@@ -192,14 +209,17 @@ contract SonicStaking is
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
         uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;
 
-        require(request.requestTimestamp > 0, WithdrawIdDoesNotExist());
-        require(_now() >= earliestWithdrawTime, WithdrawDelayNotElapsed(earliestWithdrawTime));
-        require(!request.isWithdrawn, WithdrawAlreadyProcessed());
-        require(msg.sender == request.user, UnauthorizedWithdraw());
+        require(request.requestTimestamp > 0, WithdrawIdDoesNotExist(withdrawId));
+        require(_now() >= earliestWithdrawTime, WithdrawDelayNotElapsed(withdrawId));
+        require(!request.isWithdrawn, WithdrawAlreadyProcessed(withdrawId));
+        require(msg.sender == request.user, UnauthorizedWithdraw(withdrawId));
 
         _;
     }
 
+    /**
+     * @dev Enforce that the rate invariant is maintained for all operations that modify the rate.
+     */
     modifier enforceInvariant() {
         uint256 rateBefore = getRate();
 
@@ -329,10 +349,10 @@ contract SonicStaking is
 
         uint256 sharesAmount = convertToShares(amount);
 
-        _mint(user, sharesAmount);
-
         // Deposits are added to the pool initially. The assets are delegated to validators by the operator
         totalPool += amount;
+
+        _mint(user, sharesAmount);
 
         emit Deposited(user, amount, sharesAmount);
     }
@@ -355,7 +375,7 @@ contract SonicStaking is
         uint256 amountAssets = convertToAssets(amountShares);
         uint256 amountDelegated = SFC.getStake(address(this), validatorId);
 
-        require(amountAssets <= amountDelegated, UndelegateAmountExceedsDelegated());
+        require(amountAssets <= amountDelegated, UndelegateAmountExceedsDelegated(validatorId));
 
         _burn(msg.sender, amountShares);
 
@@ -514,10 +534,10 @@ contract SonicStaking is
     {
         require(amountAssets > 0, UndelegateAmountCannotBeZero());
 
-        uint256 delegatedAmount = SFC.getStake(address(this), validatorId);
+        uint256 amountDelegated = SFC.getStake(address(this), validatorId);
 
-        require(delegatedAmount > 0, NoDelegationForValidator(validatorId));
-        require(amountAssets <= delegatedAmount, UndelegateAmountExceedsDelegated());
+        require(amountDelegated > 0, NoDelegationForValidator(validatorId));
+        require(amountAssets <= amountDelegated, UndelegateAmountExceedsDelegated(validatorId));
 
         withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.OPERATOR, validatorId, amountAssets);
 
@@ -587,6 +607,7 @@ contract SonicStaking is
         uint256 donationAmount = msg.value;
 
         require(donationAmount > 0, DonationAmountCannotBeZero());
+        require(donationAmount >= MIN_DONATION_AMOUNT, DonationAmountTooSmall());
 
         totalPool += donationAmount;
 
@@ -728,7 +749,8 @@ contract SonicStaking is
     }
 
     /**
-     * @dev Given the size of uint256 and the maximum supply of $S, we can safely assume that this will never overflow with even a 1 wei minimum withdraw amount.
+     * @dev Given the size of uint256 and the maximum supply of $S, we can safely assume that this will never overflow
+     * with a 1e18 minimum undelegate amount.
      */
     function _incrementWithdrawCounter() internal returns (uint256) {
         withdrawCounter++;
@@ -761,7 +783,7 @@ contract SonicStaking is
     function _enforceInvariant(uint256 rateBefore) internal view {
         uint256 rateAfter = getRate();
 
-        // in instances where rounding occours, we allow for the rate to be 1 wei higher than it was before.
+        // In instances where rounding occours, we allow for the rate to be 1 wei higher than it was before.
         // All operations should round in the favor of the protocol, resulting in a higher rate.
         require(rateBefore == rateAfter || rateBefore + 1 == rateAfter, InvariantViolated());
     }

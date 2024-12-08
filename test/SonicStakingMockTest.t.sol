@@ -39,7 +39,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
     */
 
     function testInvalidWithdrawId() public {
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawIdDoesNotExist.selector));
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawIdDoesNotExist.selector, 0));
         sonicStaking.withdraw(0, false);
     }
 
@@ -56,11 +56,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking.undelegate(validatorId, undelegateAmount);
 
         vm.prank(user);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                SonicStaking.WithdrawDelayNotElapsed.selector, block.timestamp + sonicStaking.withdrawDelay()
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawDelayNotElapsed.selector, 101));
         sonicStaking.withdraw(101, false);
     }
 
@@ -82,7 +78,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking.withdraw(101, false);
 
         vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawAlreadyProcessed.selector));
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawAlreadyProcessed.selector, 101));
         sonicStaking.withdraw(101, false);
     }
 
@@ -100,7 +96,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         vm.warp(block.timestamp + 14 days);
 
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UnauthorizedWithdraw.selector));
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UnauthorizedWithdraw.selector, 101));
         sonicStaking.withdraw(101, false);
     }
 

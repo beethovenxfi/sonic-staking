@@ -286,7 +286,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         delegate(validatorId, amountDelegated);
 
         vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector, 1));
         sonicStaking.undelegate(validatorId, amountShares);
     }
 
@@ -523,7 +523,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         sonicStaking.operatorClawBackUndelegate(2, 100 ether);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector));
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector, 1));
         sonicStaking.operatorClawBackUndelegate(1, 200 ether);
     }
 
