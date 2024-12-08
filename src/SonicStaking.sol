@@ -67,6 +67,8 @@ contract SonicStaking is
     mapping(address user => mapping(uint256 index => uint256 withdrawId)) public userWithdraws;
     mapping(address user => uint256 numWithdraws) public userNumWithdraws;
 
+    mapping(uint256 validatorId => bool whiteListed) public validatorWhiteList;
+
     /**
      * @dev A reference to the SFC contract
      */
@@ -170,6 +172,9 @@ contract SonicStaking is
     error InvariantGrowthViolated();
     error UnsupportedWithdrawKind();
     error RewardsClaimedTooSmall();
+    error ValidatorNotWhiteListed();
+    error ValidatorIdCannotBeZero();
+    error ValidatorAlreadyWhiteListed();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -512,6 +517,8 @@ contract SonicStaking is
     {
         require(amount > 0, DelegateAmountCannotBeZero());
         require(amount <= totalPool, DelegateAmountLargerThanPool());
+        // The operator can only delegate to validators in the white list
+        require(validatorWhiteList[validatorId] == true, ValidatorNotWhiteListed());
 
         totalPool -= amount;
         totalDelegated += amount;
@@ -683,6 +690,28 @@ contract SonicStaking is
         require(newFeeBIPS <= MAX_PROTOCOL_FEE_BIPS, ProtocolFeeTooHigh());
 
         protocolFeeBIPS = newFeeBIPS;
+    }
+
+    /**
+     * @notice Add a validator to the white list
+     * @param validatorId the ID of the validator to add to the white list
+     */
+    function addValidatorToWhiteList(uint256 validatorId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(validatorId != 0, ValidatorIdCannotBeZero());
+        require(validatorWhiteList[validatorId] == false, ValidatorAlreadyWhiteListed());
+
+        validatorWhiteList[validatorId] = true;
+    }
+
+    /**
+     * @notice Remove a validator from the white list
+     * @param validatorId the ID of the validator to remove from the white list
+     */
+    function removeValidatorFromWhiteList(uint256 validatorId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(validatorId != 0, ValidatorIdCannotBeZero());
+        require(validatorWhiteList[validatorId] == true, ValidatorNotWhiteListed());
+
+        validatorWhiteList[validatorId] = false;
     }
 
     /**

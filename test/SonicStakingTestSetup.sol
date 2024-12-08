@@ -49,6 +49,11 @@ contract SonicStakingTestSetup is Test {
         sonicStaking.grantRole(sonicStaking.CLAIM_ROLE(), SONIC_STAKING_CLAIMOR);
         sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), SONIC_STAKING_ADMIN);
         sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this));
+
+        vm.startPrank(SONIC_STAKING_ADMIN);
+        sonicStaking.addValidatorToWhiteList(1);
+        sonicStaking.addValidatorToWhiteList(2);
+        vm.stopPrank();
     }
 
     function setSFCAddress() public virtual {
