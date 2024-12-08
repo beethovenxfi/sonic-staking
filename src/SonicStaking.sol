@@ -116,7 +116,7 @@ contract SonicStaking is
      * @dev Pending operator clawbacked asset amounts are stored here to preserve the invariant. Once the withdraw
      * delay has passed, the assets are returned to the pool.
      */
-    uint256 public pendingOperatorWithdraw;
+    uint256 public pendingClawBackAmount;
 
     /**
      * @dev A counter to track the number of withdraws. Used to generate unique withdraw ids.
@@ -136,8 +136,8 @@ contract SonicStaking is
     event Withdrawn(address indexed user, uint256 withdrawId, uint256 amountAssets, WithdrawKind kind, bool emergency);
     event Donated(address indexed user, uint256 amountAssets);
     event RewardsClaimed(uint256 amountClaimed, uint256 protocolFee);
-    event OperatorClawBackUndelegated(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
-    event OperatorClawBackWithdrawn(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssetsWithdrawn);
+    event OperatorClawBackInitiated(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
+    event OperatorClawBackExecuted(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssetsWithdrawn);
 
     error DelegateAmountCannotBeZero();
     error DelegateAmountLargerThanPool();
@@ -254,7 +254,7 @@ contract SonicStaking is
      *  - pending operator withdraws
      */
     function totalAssets() public view returns (uint256) {
-        return totalPool + totalDelegated + pendingOperatorWithdraw;
+        return totalPool + totalDelegated + pendingClawBackAmount;
     }
 
     /**
@@ -522,11 +522,11 @@ contract SonicStaking is
     }
 
     /**
-     * @notice Claw back delegated assets from a specific validator, assets can then be withdrawn to the pool after `withdrawDelay`
-     * @param validatorId the validator to undelegate from
-     * @param amountAssets the amount of assets to undelegate from given validator
+     * @notice Initiate a claw back of delegated assets to a specific validator, the claw back can be executed after `withdrawDelay`
+     * @param validatorId the validator to claw back from
+     * @param amountAssets the amount of assets to claw back from given validator
      */
-    function operatorClawBackUndelegate(uint256 validatorId, uint256 amountAssets)
+    function operatorInitiateClawBack(uint256 validatorId, uint256 amountAssets)
         external
         nonReentrant
         onlyRole(OPERATOR_ROLE)
@@ -544,23 +544,23 @@ contract SonicStaking is
 
         totalDelegated -= amountAssets;
 
-        // Undelegation to the pool is an operator only function, it does not change the LST total supply.
-        // As such, we need to track the pending withdraws to ensure the invariant is maintained.
-        pendingOperatorWithdraw += amountAssets;
+        // The amount clawed back is still considered part of the total assets.
+        // As such, we need to track the pending amount to ensure the invariant is maintained.
+        pendingClawBackAmount += amountAssets;
 
         SFC.undelegate(validatorId, withdrawId, amountAssets);
 
-        emit OperatorClawBackUndelegated(withdrawId, validatorId, amountAssets);
+        emit OperatorClawBackInitiated(withdrawId, validatorId, amountAssets);
     }
 
     /**
-     * @notice Withdraw undelegated, clawed back assets to the pool
+     * @notice Execute a claw back, withdrawing assets to the pool
      * @dev This is the only operation that allows for the rate to decrease.
-     * @param withdrawId the unique withdrawId for the undelegation request
+     * @param withdrawId the unique withdrawId for the claw back request
      * @param emergency when true, the operator acknowledges that the amount withdrawn may be less than what is owed,
      * potentially decreasing the rate.
      */
-    function operatorClawBackWithdraw(uint256 withdrawId, bool emergency)
+    function operatorExecuteClawBack(uint256 withdrawId, bool emergency)
         external
         nonReentrant
         onlyRole(OPERATOR_ROLE)
@@ -582,8 +582,8 @@ contract SonicStaking is
         uint256 actualWithdrawnAmount = address(this).balance - balanceBefore;
 
         // we need to subtract the request amount from the pending amount since that is the value that was added during
-        // the operator undelegate
-        pendingOperatorWithdraw -= request.assetAmount;
+        // the initiate claw back operation.
+        pendingClawBackAmount -= request.assetAmount;
 
         // We then account for the actual amount we were able to withdraw
         // In the instance of a realized slashing event, this will result in a drop in the rate.
@@ -597,7 +597,7 @@ contract SonicStaking is
             _enforceInvariant(rateBefore);
         }
 
-        emit OperatorClawBackWithdrawn(withdrawId, emergency, actualWithdrawnAmount);
+        emit OperatorClawBackExecuted(withdrawId, emergency, actualWithdrawnAmount);
     }
 
     /**
