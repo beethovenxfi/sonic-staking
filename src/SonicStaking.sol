@@ -43,7 +43,7 @@ contract SonicStaking is
     enum WithdrawKind {
         POOL,
         VALIDATOR,
-        OPERATOR
+        CLAW_BACK
     }
 
     struct WithdrawRequest {
@@ -447,7 +447,7 @@ contract SonicStaking is
 
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
 
-        require(request.kind != WithdrawKind.OPERATOR, UnsupportedWithdrawKind());
+        require(request.kind != WithdrawKind.CLAW_BACK, UnsupportedWithdrawKind());
 
         request.isWithdrawn = true;
 
@@ -536,7 +536,7 @@ contract SonicStaking is
         require(amountDelegated > 0, NoDelegationForValidator(validatorId));
         require(amountAssets <= amountDelegated, UndelegateAmountExceedsDelegated(validatorId));
 
-        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.OPERATOR, validatorId, amountAssets);
+        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.CLAW_BACK, validatorId, amountAssets);
 
         totalDelegated -= amountAssets;
 
@@ -564,7 +564,7 @@ contract SonicStaking is
     {
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
 
-        require(request.kind == WithdrawKind.OPERATOR, UnsupportedWithdrawKind());
+        require(request.kind == WithdrawKind.CLAW_BACK, UnsupportedWithdrawKind());
 
         request.isWithdrawn = true;
 

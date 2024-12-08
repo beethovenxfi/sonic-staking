@@ -504,7 +504,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, amountAssetsToUndelegate);
 
         SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
-        assertEq(withdraw.kind == SonicStaking.WithdrawKind.OPERATOR, true);
+        assertEq(withdraw.kind == SonicStaking.WithdrawKind.CLAW_BACK, true);
 
         assertEq(sonicStaking.totalDelegated(), amountAssets - amountAssetsToUndelegate);
         assertEq(sonicStaking.pendingClawBackAmount(), amountAssetsToUndelegate);
