@@ -763,7 +763,7 @@ contract SonicStaking is
 
         // in instances where rounding occours, we allow for the rate to be 1 wei higher than it was before.
         // All operations should round in the favor of the protocol, resulting in a higher rate.
-        require(rateBefore == rateAfter || rateBefore == rateAfter + 1, InvariantViolated());
+        require(rateBefore == rateAfter || rateBefore + 1 == rateAfter, InvariantViolated());
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

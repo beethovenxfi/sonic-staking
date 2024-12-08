@@ -85,8 +85,8 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
     function testInvariantViolatedAtSecondDeposit() public {
         uint256 assetAmount = 1118079717148557899; // [1.118e18]
         uint256 delegateAmount = 1 ether;
-        uint256 pendingRewards = 58356595683764556486; //[5.835e19]
-        uint256 newUserAssetAmount = 56369801950539978978014; //[5.636e22]
+        uint256 pendingRewards = 58356595683764556486; //[58.35e18]
+        uint256 newUserAssetAmount = 56369801950539978978014; //[56,369e18]
 
         uint256 validatorId = 1;
         address user = makeDeposit(assetAmount);
