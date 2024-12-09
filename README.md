@@ -101,6 +101,8 @@ The contract is kept upgradable because the SFC we are integrating against is al
 
 A user deposits $S into the Sonic Staking contract and receives $stS based on the current rate. The $S that has been sent to the contract is first added to the pool and is not immediately delegated.
 
+To ensure it is not possible to bring the supply of $stS back to 0. A small amount (1e18) of $stS should be burnt on first deposit. This is not explicitly enforced, but will be part of the deployment.
+
 ### undelegate (user function)
 
 If a user wants to redeem $stS for $S, this is done with a two-step withdrawal process via the Sonic Staking contract. A user calls `undelegate()` on the Sonic Staking contract. The user needs to pass how many shares and from which validator he wants to undelegate. The $stS will be burned in the process.
