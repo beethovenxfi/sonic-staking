@@ -201,7 +201,6 @@ contract SonicStaking is
      *      - exists
      *      - has not been processed
      *      - has passed the withdraw delay
-     *      - msg.sender is the user that made the initial request
      */
     modifier withValidWithdrawId(uint256 withdrawId) {
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
@@ -210,7 +209,6 @@ contract SonicStaking is
         require(request.requestTimestamp > 0, WithdrawIdDoesNotExist(withdrawId));
         require(_now() >= earliestWithdrawTime, WithdrawDelayNotElapsed(withdrawId));
         require(!request.isWithdrawn, WithdrawAlreadyProcessed(withdrawId));
-        require(msg.sender == request.user, UnauthorizedWithdraw(withdrawId));
 
         _;
     }
@@ -421,6 +419,8 @@ contract SonicStaking is
         // We've already checked that the withdrawId exists and is valid, so we can safely access the request
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
 
+        require(msg.sender == request.user, UnauthorizedWithdraw(withdrawId));
+
         // Claw backs can only be executed by the operator via the operatorExecuteClawBack function
         require(request.kind != WithdrawKind.CLAW_BACK, UnsupportedWithdrawKind());
 
@@ -545,10 +545,12 @@ contract SonicStaking is
 
         require(request.kind == WithdrawKind.CLAW_BACK, UnsupportedWithdrawKind());
 
+        // We allow any address with the operator role to execute a pending clawback.
+        // It does not need to be the same operator that initiated the call.
+
         request.isWithdrawn = true;
 
         uint256 balanceBefore = address(this).balance;
-        uint256 rateBefore = getRate();
 
         SFC.withdraw(request.validatorId, withdrawId);
 
