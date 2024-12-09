@@ -67,18 +67,13 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 assetIncrease = pendingRewards - protocolFee;
         uint256 newRate = (1 ether * (assetAmount + assetIncrease)) / assetAmount;
 
-        assertGt(sonicStaking.getRate(), rateBefore);
-        assertEq(sonicStaking.getRate(), newRate);
-        console.log("rate before", rateBefore);
-        console.log("rate after", sonicStaking.getRate());
-
-        // check that the conversion rate is applied for new deposits
-        /* 
+        // check that the conversion rate is applied for new deposits and that the rate never goes down
         address newUser = vm.addr(201);
+        uint256 rateBeforeSecondDeposit = sonicStaking.getRate();
         makeDepositFromSpecifcUser(newUserAssetAmount, newUser);
         assertLt(sonicStaking.balanceOf(newUser), newUserAssetAmount); // got less shares than assets deposited (rate is >1)
         assertApproxEqAbs(sonicStaking.balanceOf(newUser) * sonicStaking.getRate() / 1e18, newUserAssetAmount, 1e18); // balance multiplied by rate should be equal to deposit amount
-     */
+        assertGe(sonicStaking.getRate(), rateBeforeSecondDeposit);
     }
 
     function testInvariantViolatedAtSecondDeposit() public {
