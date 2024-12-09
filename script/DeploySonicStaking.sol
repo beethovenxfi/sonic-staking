@@ -45,6 +45,15 @@ contract DeploySonicStaking is Script {
         sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(adminTimelock));
         sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), msg.sender);
 
+        // Since these are the first deposits, the rate will be 1.
+        // We burn 3 ether worth of $stS, 1 ether to address 1, 2 and 3
+        // This ensures that the supply will never return to 0, safeguarding the protocol from precision
+        // errors at very small wei values.
+        sonicStaking.deposit{value: 3 ether}();
+        sonicStaking.transfer(address(1), 1 ether);
+        sonicStaking.transfer(address(2), 1 ether);
+        sonicStaking.transfer(address(3), 1 ether);
+
         vm.stopBroadcast();
         return sonicStaking;
     }
