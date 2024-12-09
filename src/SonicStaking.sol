@@ -679,6 +679,7 @@ contract SonicStaking is
 
         uint256 totalRewardsClaimed = address(this).balance - balanceBefore;
 
+        // We enforce a minimum amount to ensure the math stays well behaved
         require(totalRewardsClaimed > MIN_CLAIM_REWARDS_AMOUNT, RewardsClaimedTooSmall());
 
         uint256 protocolFee = 0;
