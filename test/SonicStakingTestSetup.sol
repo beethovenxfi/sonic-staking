@@ -51,8 +51,8 @@ contract SonicStakingTestSetup is Test {
         sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(this));
 
         vm.startPrank(SONIC_STAKING_ADMIN);
-        sonicStaking.addValidatorToWhiteList(1);
-        sonicStaking.addValidatorToWhiteList(2);
+        sonicStaking.addValidatorToAllowList(1);
+        sonicStaking.addValidatorToAllowList(2);
         vm.stopPrank();
     }
 

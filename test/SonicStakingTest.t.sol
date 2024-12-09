@@ -706,4 +706,55 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.convertToAssets(1 ether), finalRate);
         assertEq(sonicStaking.convertToShares(finalRate), 1 ether);
     }
+
+    function testAddValidatorToAllowList() public {
+        uint256 newValidatorId = 3;
+        uint256 amount = 100 ether;
+
+        makeDeposit(amount);
+
+        // Should fail since the validator is not in the allow list
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.ValidatorNotAllowed.selector));
+        delegate(newValidatorId, amount);
+
+        vm.prank(SONIC_STAKING_ADMIN);
+        sonicStaking.addValidatorToAllowList(newValidatorId);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        sonicStaking.delegate(newValidatorId, amount);
+
+        assertEq(sonicStaking.totalDelegated(), amount);
+    }
+
+    function testRemoveValidatorFromAllowList() public {
+        uint256 newValidatorId = 3;
+        uint256 amount = 100 ether;
+
+        makeDeposit(amount);
+
+        vm.prank(SONIC_STAKING_ADMIN);
+        sonicStaking.addValidatorToAllowList(newValidatorId);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        sonicStaking.delegate(newValidatorId, 10 ether);
+
+        vm.prank(SONIC_STAKING_ADMIN);
+        sonicStaking.removeValidatorFromAllowList(newValidatorId);
+
+        // Should fail since the validator is no longer in the allow list
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.ValidatorNotAllowed.selector));
+        delegate(newValidatorId, 10 ether);
+    }
+
+    function testAddInvalidValidatorToAllowList() public {
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.ValidatorIdCannotBeZero.selector));
+        vm.prank(SONIC_STAKING_ADMIN);
+        sonicStaking.addValidatorToAllowList(0);
+    }
+
+    function testRemoveInvalidValidatorFromAllowList() public {
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.ValidatorIdCannotBeZero.selector));
+        vm.prank(SONIC_STAKING_ADMIN);
+        sonicStaking.removeValidatorFromAllowList(0);
+    }
 }
