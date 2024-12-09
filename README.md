@@ -9,7 +9,7 @@ The general flow of this LST is the following:
 - User deposits $S into the contract and receives $stS for it, according to the current rate.
 - Deposited $S will be accumulated in the "pool" first
 - An operator delegates the deposited $S to a validator where it will earn rewards
-- An operator will claim rewards from specific validators to increase the $stS/$S rate.
+- A claimor will claim rewards from specific validators to increase the $stS/$S rate.
 - A protocol fee is deducted from the rewards, the remainder is added to the pool.
 - A user can undelegate $stS and can withdraw the $S two weeks later.
 
@@ -19,13 +19,6 @@ Requires node version >18
 
 run tests with `forge clean && forge test -vvv`
 
-deploy to fork
-`forge script DeploySonicStaking --fork-url https://rpc.fantom.network --fork-block-number 97094615 --force 0xFC00FACE00000000000000000000000000000000 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7 --sig 'run(address,address,address)'`
-
-## Todo
-
-1. Add timelock for owner
-
 ## Access concept
 
 The Sonic Staking contract is `ownable` and also uses OpenZeppelin `AccessControl`. Under access-control, we define the following roles:
@@ -34,11 +27,11 @@ The Sonic Staking contract is `ownable` and also uses OpenZeppelin `AccessContro
 2. Operator
 3. Claim
 
-The owner of the contract will be a Timelock with 3 week lock and has the following permissions:
+The owner of the contract will be a Timelock with multisig and a 3 week lock and has the following permissions:
 
 1. Upgrade the contract
 
-The default Admin role will be grant to a Timelock with 1 day lock and has the following permissions:
+The default Admin role will be grant to a Timelock with multisig and a 1 day lock and has the following permissions:
 
 1. Grant/Remove roles
 2. Set the withdrawal delay
@@ -51,9 +44,10 @@ The default Admin role will be grant to a Timelock with 1 day lock and has the f
 The Operator role will be granted to a multisig and has the following permissions:
 
 1. delegate
-2. operator undelegate to pool
-3. operator withdraw to pool
+2. initiate clawback to the pool
+3. execute clawback to the pool
 4. pause (which pauses deposits, undelegations and withdraws)
+5. Donate to increase the rate
 
 The Claim role will be given to an EOA (for automation purposes) and has the following permissions:
 
@@ -62,8 +56,6 @@ The Claim role will be given to an EOA (for automation purposes) and has the fol
 ## SFC
 
 Staking on Sonic is done via the Special Fees Contract (SFC) as per this [repo](https://github.com/Fantom-foundation/opera-sfc). The contracts in this repository are implemented against [this commit](https://github.com/Fantom-foundation/opera-sfc/tree/8c700e0ef1224cdb29e8afed6ea89eacdfba9dd7).
-
-A brief description of functions used by the LST contract are presented below.
 
 ### Epochs
 
@@ -94,7 +86,7 @@ Pending rewards can be queried via [pendingRewards()](https://github.com/Fantom-
 
 ## Sonic Staking
 
-This contract handles all operations for the LST $stS. In general, a user deposits $S into the contract and receives $stS in returned, based on the current rate.
+This contract handles all operations for the LST $stS. In general, a user deposits $S into the contract and receives $stS in return, based on the current rate.
 The contract is kept upgradable because the SFC we are integrating against is also upgradable.
 
 ### Deposit (user function)
@@ -122,13 +114,13 @@ $S that has been deposited into the pool will be delegated to the supplied valid
 
 ### claimRewards (access controlled function)
 
-To claim rewards and increase the rate of $stS against $S, the operator calls `claimRewards()`. This will claim rewards from the supplied validators, deduct the protocol fee and add the remaining funds to the pool, increasing the amount of $S in the system while the $stS supply stays the same.
+To claim rewards and increase the rate of $stS against $S, the claimor calls `claimRewards()`. This will claim rewards from the supplied validators, deduct the protocol fee and add the remaining funds to the pool, increasing the amount of $S in the system while the $stS supply stays the same.
 
-### operatorClawBackUndelegate (access controlled function)
+### operatorInitiateClawBack (access controlled function)
 
 If a validator has an issue, i.e. is not online anymore, it doesn't produce rewards for the delegated stake. In that case, it is important that the delegated amount can be withdrawn to the pool and delegated to another validator. This function initiates an undelegation without burning $stS, as the withdrawn $S will in the end go back to the pool.
 
-### operatorClawBackWithdraw (access controlled function)
+### operatorExecuteClawBack (access controlled function)
 
 Once the unbonding time is over, the undelegated $S can be withdrawn into the pool. If this stake has been slashed, the `emergency` flag needs to be passed as true. This will result in a decreased rate.
 
