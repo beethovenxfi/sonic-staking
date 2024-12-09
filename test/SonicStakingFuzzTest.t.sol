@@ -76,8 +76,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     }
 
     function testFuzzDeposit(uint256 amountAssets) public {
-        vm.assume(amountAssets >= 1 ether);
-        vm.assume(amountAssets <= S_MAX_SUPPLY);
+        amountAssets = bound(amountAssets, 1 ether, S_MAX_SUPPLY);
         uint256 amountShares = sonicStaking.convertToShares(amountAssets);
 
         assertEq(sonicStaking.totalPool(), 0);
