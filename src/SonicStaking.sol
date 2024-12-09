@@ -165,8 +165,6 @@ contract SonicStaking is
     error UndelegateAmountTooSmall();
     error DonationAmountCannotBeZero();
     error DonationAmountTooSmall();
-    error InvariantViolated();
-    error InvariantGrowthViolated();
     error UnsupportedWithdrawKind();
     error RewardsClaimedTooSmall();
 
@@ -215,27 +213,6 @@ contract SonicStaking is
         require(msg.sender == request.user, UnauthorizedWithdraw(withdrawId));
 
         _;
-    }
-
-    /**
-     * @dev Enforce that the rate invariant is maintained for all operations that modify the rate.
-     */
-    modifier enforceInvariant() {
-        uint256 rateBefore = getRate();
-
-        _;
-
-        _enforceInvariant(rateBefore);
-    }
-
-    modifier enforceInvariantGrowth() {
-        uint256 rateBefore = getRate();
-
-        _;
-
-        uint256 rateAfter = getRate();
-
-        require(rateAfter > rateBefore, InvariantGrowthViolated());
     }
 
     /**
@@ -340,7 +317,7 @@ contract SonicStaking is
     /**
      * @notice Deposit native assets and mint shares of stS.
      */
-    function deposit() external payable enforceInvariant {
+    function deposit() external payable {
         uint256 amount = msg.value;
         require(amount >= MIN_DEPOSIT, DepositTooSmall());
         require(!depositPaused, DepositPaused());
@@ -363,12 +340,7 @@ contract SonicStaking is
      * @param validatorId the validator to undelegate from
      * @param amountShares the amount of shares to undelegate
      */
-    function undelegate(uint256 validatorId, uint256 amountShares)
-        public
-        nonReentrant
-        enforceInvariant
-        returns (uint256 withdrawId)
-    {
+    function undelegate(uint256 validatorId, uint256 amountShares) public nonReentrant returns (uint256 withdrawId) {
         require(!undelegatePaused, UndelegatePaused());
         require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
@@ -414,7 +386,7 @@ contract SonicStaking is
      * @dev While always possible to undelegate from the pool, the standard flow is to undelegate from a validator.
      * @param amountShares the amount of shares to undelegate
      */
-    function undelegateFromPool(uint256 amountShares) external enforceInvariant returns (uint256 withdrawId) {
+    function undelegateFromPool(uint256 amountShares) external returns (uint256 withdrawId) {
         require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
         uint256 amountToUndelegate = convertToAssets(amountShares);
@@ -441,7 +413,6 @@ contract SonicStaking is
     function withdraw(uint256 withdrawId, bool emergency)
         public
         nonReentrant
-        enforceInvariant
         withValidWithdrawId(withdrawId)
         returns (uint256)
     {
@@ -514,12 +485,7 @@ contract SonicStaking is
      * @param validatorId the ID of the validator to delegate to
      * @param amount the amount of assets to delegate
      */
-    function delegate(uint256 validatorId, uint256 amount)
-        external
-        nonReentrant
-        onlyRole(OPERATOR_ROLE)
-        enforceInvariant
-    {
+    function delegate(uint256 validatorId, uint256 amount) external nonReentrant onlyRole(OPERATOR_ROLE) {
         require(amount > 0, DelegateAmountCannotBeZero());
         require(amount <= totalPool, DelegateAmountLargerThanPool());
 
@@ -540,7 +506,6 @@ contract SonicStaking is
         external
         nonReentrant
         onlyRole(OPERATOR_ROLE)
-        enforceInvariant
         returns (uint256 withdrawId)
     {
         require(amountAssets > 0, UndelegateAmountCannotBeZero());
@@ -602,9 +567,7 @@ contract SonicStaking is
         if (!emergency) {
             // In the instance of a slashing event, the amount withdrawn will not match the request amount.
             // The operator must acknowledge this by setting emergency to true and accept that a drop in the rate will occur.
-
-            // When emergency == false, we enforce the rate invariant
-            _enforceInvariant(rateBefore);
+            require(actualWithdrawnAmount == request.assetAmount, WithdrawnAmountTooSmall());
         }
 
         emit OperatorClawBackExecuted(withdrawId, emergency, actualWithdrawnAmount);
@@ -614,7 +577,7 @@ contract SonicStaking is
      * @notice Donate assets to the pool
      * @dev Donations are added to the pool, causing the rate to increase. Only the operator can donate.
      */
-    function donate() external payable onlyRole(OPERATOR_ROLE) enforceInvariantGrowth {
+    function donate() external payable onlyRole(OPERATOR_ROLE) {
         uint256 donationAmount = msg.value;
 
         require(donationAmount > 0, DonationAmountCannotBeZero());
@@ -701,12 +664,7 @@ contract SonicStaking is
      * @notice Claim rewards from all contracts and add them to the pool
      * @param validatorIds an array of validator IDs to claim rewards from
      */
-    function claimRewards(uint256[] calldata validatorIds)
-        external
-        nonReentrant
-        onlyRole(CLAIM_ROLE)
-        enforceInvariantGrowth
-    {
+    function claimRewards(uint256[] calldata validatorIds) external nonReentrant onlyRole(CLAIM_ROLE) {
         uint256 balanceBefore = address(this).balance;
 
         for (uint256 i = 0; i < validatorIds.length; i++) {
@@ -794,14 +752,6 @@ contract SonicStaking is
         depositPaused = newValue;
 
         emit DepositPausedUpdated(msg.sender, newValue);
-    }
-
-    function _enforceInvariant(uint256 rateBefore) internal view {
-        uint256 rateAfter = getRate();
-
-        // In instances where rounding occours, we allow for the rate to be 1 wei higher than it was before.
-        // All operations should round in the favor of the protocol, resulting in a higher rate.
-        require(rateBefore == rateAfter || rateBefore + 1 == rateAfter, InvariantViolated());
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

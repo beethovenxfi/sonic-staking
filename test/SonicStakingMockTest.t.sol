@@ -575,7 +575,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         // emergency == false, should fail the invariant check
         vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.InvariantViolated.selector));
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawnAmountTooSmall.selector));
         sonicStaking.operatorExecuteClawBack(withdrawId, false);
 
         // emergency withdraw
