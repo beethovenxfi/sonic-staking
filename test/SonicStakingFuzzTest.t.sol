@@ -76,8 +76,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     }
 
     function testFuzzDeposit(uint256 amountAssets) public {
-        vm.assume(amountAssets >= 1 ether);
-        vm.assume(amountAssets <= S_MAX_SUPPLY);
+        amountAssets = bound(amountAssets, 1 ether, S_MAX_SUPPLY);
         uint256 amountShares = sonicStaking.convertToShares(amountAssets);
 
         assertEq(sonicStaking.totalPool(), 0);
@@ -129,5 +128,37 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(withdrawRequest.isWithdrawn, false);
         assertEq(withdrawRequest.user, user);
         assertEq(withdrawRequest.validatorId, validatorId);
+    }
+
+    function testFuzzDepositsAgainstExtremeRatesAlwaysRoundInFavorOfProtocol(
+        uint256 depositAmount,
+        uint256 donationAmount
+    ) public {
+        depositAmount = bound(depositAmount, sonicStaking.MIN_DEPOSIT(), S_MAX_SUPPLY);
+        donationAmount = bound(donationAmount, 10_000 ether, S_MAX_SUPPLY);
+
+        makeDeposit(sonicStaking.MIN_DEPOSIT());
+
+        // This will blow up the rate
+        donate(donationAmount);
+
+        uint256 rateBefore = sonicStaking.getRate();
+
+        uint256 sharesExpected = sonicStaking.convertToShares(depositAmount);
+        uint256 sharesExpectedCalculated = depositAmount * rateBefore / 1e18;
+
+        // Make a deposit of various sizes (min - Max s supply)
+        address newUser = vm.addr(201);
+        makeDepositFromSpecifcUser(depositAmount, newUser);
+
+        uint256 rateAfter = sonicStaking.getRate();
+        uint256 sharesActual = sonicStaking.balanceOf(newUser);
+
+        // The rate should never go down after a deposit
+        assertGe(rateAfter, rateBefore);
+        // The shares received should always equal what convertToShares returned
+        assertEq(sharesActual, sharesExpected);
+        // Any rounding should always favor the protocol, so the user should receive less than what was calculated
+        assertLe(sharesActual, sharesExpectedCalculated);
     }
 }

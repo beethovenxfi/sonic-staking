@@ -18,7 +18,7 @@ import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/uti
 /**
  * @title Beets Staked Sonic
  * @author Beets
- * @notice The contract for the Sonic Staked Asset (LST), known as stS(onic)
+ * @notice The contract for Beets Staked Sonic (stS)
  */
 contract SonicStaking is
     IRateProvider,
@@ -43,7 +43,7 @@ contract SonicStaking is
     enum WithdrawKind {
         POOL,
         VALIDATOR,
-        OPERATOR
+        CLAW_BACK
     }
 
     struct WithdrawRequest {
@@ -118,7 +118,7 @@ contract SonicStaking is
      * @dev Pending operator clawbacked asset amounts are stored here to preserve the invariant. Once the withdraw
      * delay has passed, the assets are returned to the pool.
      */
-    uint256 public pendingOperatorWithdraw;
+    uint256 public pendingClawBackAmount;
 
     /**
      * @dev A counter to track the number of withdraws. Used to generate unique withdraw ids.
@@ -138,8 +138,8 @@ contract SonicStaking is
     event Withdrawn(address indexed user, uint256 withdrawId, uint256 amountAssets, WithdrawKind kind, bool emergency);
     event Donated(address indexed user, uint256 amountAssets);
     event RewardsClaimed(uint256 amountClaimed, uint256 protocolFee);
-    event OperatorClawBackUndelegated(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
-    event OperatorClawBackWithdrawn(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssetsWithdrawn);
+    event OperatorClawBackInitiated(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
+    event OperatorClawBackExecuted(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssetsWithdrawn);
 
     error DelegateAmountCannotBeZero();
     error DelegateAmountLargerThanPool();
@@ -156,8 +156,7 @@ contract SonicStaking is
     error DepositPaused();
     error UndelegatePaused();
     error WithdrawsPaused();
-    error WithdrawnAmountTooHigh();
-    error WithdrawnAmountTooLow();
+    error WithdrawnAmountTooSmall();
     error NativeTransferFailed();
     error ProtocolFeeTransferFailed();
     error PausedValueDidNotChange();
@@ -168,8 +167,6 @@ contract SonicStaking is
     error UndelegateAmountTooSmall();
     error DonationAmountCannotBeZero();
     error DonationAmountTooSmall();
-    error InvariantViolated();
-    error InvariantGrowthViolated();
     error UnsupportedWithdrawKind();
     error RewardsClaimedTooSmall();
     error ValidatorNotWhiteListed();
@@ -209,7 +206,6 @@ contract SonicStaking is
      *      - exists
      *      - has not been processed
      *      - has passed the withdraw delay
-     *      - msg.sender is the user that made the initial request
      */
     modifier withValidWithdrawId(uint256 withdrawId) {
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
@@ -218,30 +214,8 @@ contract SonicStaking is
         require(request.requestTimestamp > 0, WithdrawIdDoesNotExist(withdrawId));
         require(_now() >= earliestWithdrawTime, WithdrawDelayNotElapsed(withdrawId));
         require(!request.isWithdrawn, WithdrawAlreadyProcessed(withdrawId));
-        require(msg.sender == request.user, UnauthorizedWithdraw(withdrawId));
 
         _;
-    }
-
-    /**
-     * @dev Enforce that the rate invariant is maintained for all operations that modify the rate.
-     */
-    modifier enforceInvariant() {
-        uint256 rateBefore = getRate();
-
-        _;
-
-        _enforceInvariant(rateBefore);
-    }
-
-    modifier enforceInvariantGrowth() {
-        uint256 rateBefore = getRate();
-
-        _;
-
-        uint256 rateAfter = getRate();
-
-        require(rateAfter > rateBefore, InvariantGrowthViolated());
     }
 
     /**
@@ -259,7 +233,7 @@ contract SonicStaking is
      *  - pending operator withdraws
      */
     function totalAssets() public view returns (uint256) {
-        return totalPool + totalDelegated + pendingOperatorWithdraw;
+        return totalPool + totalDelegated + pendingClawBackAmount;
     }
 
     /**
@@ -344,9 +318,9 @@ contract SonicStaking is
      */
 
     /**
-     * @notice Deposit native assets and mint shares of the LST.
+     * @notice Deposit native assets and mint shares of stS.
      */
-    function deposit() external payable enforceInvariant {
+    function deposit() external payable {
         uint256 amount = msg.value;
         require(amount >= MIN_DEPOSIT, DepositTooSmall());
         require(!depositPaused, DepositPaused());
@@ -369,12 +343,7 @@ contract SonicStaking is
      * @param validatorId the validator to undelegate from
      * @param amountShares the amount of shares to undelegate
      */
-    function undelegate(uint256 validatorId, uint256 amountShares)
-        public
-        nonReentrant
-        enforceInvariant
-        returns (uint256 withdrawId)
-    {
+    function undelegate(uint256 validatorId, uint256 amountShares) public nonReentrant returns (uint256 withdrawId) {
         require(!undelegatePaused, UndelegatePaused());
         require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
@@ -420,7 +389,7 @@ contract SonicStaking is
      * @dev While always possible to undelegate from the pool, the standard flow is to undelegate from a validator.
      * @param amountShares the amount of shares to undelegate
      */
-    function undelegateFromPool(uint256 amountShares) external enforceInvariant returns (uint256 withdrawId) {
+    function undelegateFromPool(uint256 amountShares) external returns (uint256 withdrawId) {
         require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
         uint256 amountToUndelegate = convertToAssets(amountShares);
@@ -432,6 +401,8 @@ contract SonicStaking is
         // The validatorId is ignored for pool withdrawals
         withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.POOL, 0, amountToUndelegate);
 
+        // The amount is subtracted from the pool, but the assets stay in this contract.
+        // The user is able to `withdraw` their assets after the `withdrawDelay` has passed.
         totalPool -= amountToUndelegate;
 
         emit Undelegated(msg.sender, withdrawId, 0, amountToUndelegate, WithdrawKind.POOL);
@@ -445,50 +416,60 @@ contract SonicStaking is
     function withdraw(uint256 withdrawId, bool emergency)
         public
         nonReentrant
-        enforceInvariant
         withValidWithdrawId(withdrawId)
         returns (uint256)
     {
         require(!withdrawPaused, WithdrawsPaused());
 
+        // We've already checked that the withdrawId exists and is valid, so we can safely access the request
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
 
-        require(request.kind != WithdrawKind.OPERATOR, UnsupportedWithdrawKind());
+        require(msg.sender == request.user, UnauthorizedWithdraw(withdrawId));
+
+        // Claw backs can only be executed by the operator via the operatorExecuteClawBack function
+        require(request.kind != WithdrawKind.CLAW_BACK, UnsupportedWithdrawKind());
 
         request.isWithdrawn = true;
 
-        uint256 withdrawnAmount = 0;
+        uint256 amountWithdrawn = 0;
 
         if (request.kind == WithdrawKind.POOL) {
-            withdrawnAmount = request.assetAmount;
+            // An undelegate from the pool only effects the internal accounting of this contract.
+            // The amount has already been subtracted from the pool and the assets were already owned by this contract.
+            // The amount withdrawn is always the same as the request amount.
+            amountWithdrawn = request.assetAmount;
         } else {
+            //The only WithdrawKind left is VALIDATOR
+
+            // The SFC sends the native assets to this contract, increasing it's balance
+            // We measure the change in balance to get the actual amount withdrawn.
             uint256 balanceBefore = address(this).balance;
 
             SFC.withdraw(request.validatorId, withdrawId);
-            withdrawnAmount = address(this).balance - balanceBefore;
 
-            // can never get more assets than what is owed
-            require(withdrawnAmount <= request.assetAmount, WithdrawnAmountTooHigh());
+            amountWithdrawn = address(this).balance - balanceBefore;
 
             if (!emergency) {
                 // In the instance of a slashing event, the amount withdrawn will not match the request amount.
                 // The user must acknowledge this by setting emergency to true. Since the user is absorbing
                 // this loss, there is no impact on the rate.
-                require(request.assetAmount == withdrawnAmount, WithdrawnAmountTooLow());
+                require(request.assetAmount == amountWithdrawn, WithdrawnAmountTooSmall());
             }
         }
 
         address user = msg.sender;
-        (bool withdrawnToUser,) = user.call{value: withdrawnAmount}("");
+        (bool withdrawnToUser,) = user.call{value: amountWithdrawn}("");
         require(withdrawnToUser, NativeTransferFailed());
 
-        emit Withdrawn(user, withdrawId, withdrawnAmount, request.kind, emergency);
+        emit Withdrawn(user, withdrawId, amountWithdrawn, request.kind, emergency);
 
-        return withdrawnAmount;
+        // Return the actual amount withdrawn
+        return amountWithdrawn;
     }
 
     /**
      * @notice Withdraw undelegated assets for a list of withdrawIds
+     * @dev This function is provided as a convenience for bulking multiple withdraws into a single tx.
      * @param withdrawIds the unique withdraw ids for the undelegation requests
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
@@ -509,12 +490,7 @@ contract SonicStaking is
      * @param validatorId the ID of the validator to delegate to
      * @param amount the amount of assets to delegate
      */
-    function delegate(uint256 validatorId, uint256 amount)
-        external
-        nonReentrant
-        onlyRole(OPERATOR_ROLE)
-        enforceInvariant
-    {
+    function delegate(uint256 validatorId, uint256 amount) external nonReentrant onlyRole(OPERATOR_ROLE) {
         require(amount > 0, DelegateAmountCannotBeZero());
         require(amount <= totalPool, DelegateAmountLargerThanPool());
         // The operator can only delegate to validators in the white list
@@ -529,15 +505,14 @@ contract SonicStaking is
     }
 
     /**
-     * @notice Claw back delegated assets from a specific validator, assets can then be withdrawn to the pool after `withdrawDelay`
-     * @param validatorId the validator to undelegate from
-     * @param amountAssets the amount of assets to undelegate from given validator
+     * @notice Initiate a claw back of delegated assets to a specific validator, the claw back can be executed after `withdrawDelay`
+     * @param validatorId the validator to claw back from
+     * @param amountAssets the amount of assets to claw back from given validator
      */
-    function operatorClawBackUndelegate(uint256 validatorId, uint256 amountAssets)
+    function operatorInitiateClawBack(uint256 validatorId, uint256 amountAssets)
         external
         nonReentrant
         onlyRole(OPERATOR_ROLE)
-        enforceInvariant
         returns (uint256 withdrawId)
     {
         require(amountAssets > 0, UndelegateAmountCannotBeZero());
@@ -547,27 +522,27 @@ contract SonicStaking is
         require(amountDelegated > 0, NoDelegationForValidator(validatorId));
         require(amountAssets <= amountDelegated, UndelegateAmountExceedsDelegated(validatorId));
 
-        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.OPERATOR, validatorId, amountAssets);
+        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.CLAW_BACK, validatorId, amountAssets);
 
         totalDelegated -= amountAssets;
 
-        // Undelegation to the pool is an operator only function, it does not change the LST total supply.
-        // As such, we need to track the pending withdraws to ensure the invariant is maintained.
-        pendingOperatorWithdraw += amountAssets;
+        // The amount clawed back is still considered part of the total assets.
+        // As such, we need to track the pending amount to ensure the invariant is maintained.
+        pendingClawBackAmount += amountAssets;
 
         SFC.undelegate(validatorId, withdrawId, amountAssets);
 
-        emit OperatorClawBackUndelegated(withdrawId, validatorId, amountAssets);
+        emit OperatorClawBackInitiated(withdrawId, validatorId, amountAssets);
     }
 
     /**
-     * @notice Withdraw undelegated, clawed back assets to the pool
+     * @notice Execute a claw back, withdrawing assets to the pool
      * @dev This is the only operation that allows for the rate to decrease.
-     * @param withdrawId the unique withdrawId for the undelegation request
+     * @param withdrawId the unique withdrawId for the claw back request
      * @param emergency when true, the operator acknowledges that the amount withdrawn may be less than what is owed,
      * potentially decreasing the rate.
      */
-    function operatorClawBackWithdraw(uint256 withdrawId, bool emergency)
+    function operatorExecuteClawBack(uint256 withdrawId, bool emergency)
         external
         nonReentrant
         onlyRole(OPERATOR_ROLE)
@@ -575,12 +550,14 @@ contract SonicStaking is
     {
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
 
-        require(request.kind == WithdrawKind.OPERATOR, UnsupportedWithdrawKind());
+        require(request.kind == WithdrawKind.CLAW_BACK, UnsupportedWithdrawKind());
+
+        // We allow any address with the operator role to execute a pending clawback.
+        // It does not need to be the same operator that initiated the call.
 
         request.isWithdrawn = true;
 
         uint256 balanceBefore = address(this).balance;
-        uint256 rateBefore = getRate();
 
         SFC.withdraw(request.validatorId, withdrawId);
 
@@ -589,8 +566,8 @@ contract SonicStaking is
         uint256 actualWithdrawnAmount = address(this).balance - balanceBefore;
 
         // we need to subtract the request amount from the pending amount since that is the value that was added during
-        // the operator undelegate
-        pendingOperatorWithdraw -= request.assetAmount;
+        // the initiate claw back operation.
+        pendingClawBackAmount -= request.assetAmount;
 
         // We then account for the actual amount we were able to withdraw
         // In the instance of a realized slashing event, this will result in a drop in the rate.
@@ -599,22 +576,22 @@ contract SonicStaking is
         if (!emergency) {
             // In the instance of a slashing event, the amount withdrawn will not match the request amount.
             // The operator must acknowledge this by setting emergency to true and accept that a drop in the rate will occur.
-
-            // When emergency == false, we enforce the rate invariant
-            _enforceInvariant(rateBefore);
+            require(actualWithdrawnAmount == request.assetAmount, WithdrawnAmountTooSmall());
         }
 
-        emit OperatorClawBackWithdrawn(withdrawId, emergency, actualWithdrawnAmount);
+        emit OperatorClawBackExecuted(withdrawId, emergency, actualWithdrawnAmount);
     }
 
     /**
      * @notice Donate assets to the pool
      * @dev Donations are added to the pool, causing the rate to increase. Only the operator can donate.
      */
-    function donate() external payable onlyRole(OPERATOR_ROLE) enforceInvariantGrowth {
+    function donate() external payable onlyRole(OPERATOR_ROLE) {
         uint256 donationAmount = msg.value;
 
         require(donationAmount > 0, DonationAmountCannotBeZero());
+        // Since convertToAssets is a round down operation, very small donations can cause the rate to not grow.
+        // So, we enforce a minimum donation amount.
         require(donationAmount >= MIN_DONATION_AMOUNT, DonationAmountTooSmall());
 
         totalPool += donationAmount;
@@ -718,12 +695,7 @@ contract SonicStaking is
      * @notice Claim rewards from all contracts and add them to the pool
      * @param validatorIds an array of validator IDs to claim rewards from
      */
-    function claimRewards(uint256[] calldata validatorIds)
-        external
-        nonReentrant
-        onlyRole(CLAIM_ROLE)
-        enforceInvariantGrowth
-    {
+    function claimRewards(uint256[] calldata validatorIds) external nonReentrant onlyRole(CLAIM_ROLE) {
         uint256 balanceBefore = address(this).balance;
 
         for (uint256 i = 0; i < validatorIds.length; i++) {
@@ -811,14 +783,6 @@ contract SonicStaking is
         depositPaused = newValue;
 
         emit DepositPausedUpdated(msg.sender, newValue);
-    }
-
-    function _enforceInvariant(uint256 rateBefore) internal view {
-        uint256 rateAfter = getRate();
-
-        // In instances where rounding occours, we allow for the rate to be 1 wei higher than it was before.
-        // All operations should round in the favor of the protocol, resulting in a higher rate.
-        require(rateBefore == rateAfter || rateBefore + 1 == rateAfter, InvariantViolated());
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

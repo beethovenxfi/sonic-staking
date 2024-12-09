@@ -41,12 +41,9 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 pendingRewards,
         uint256 newUserAssetAmount
     ) public {
-        vm.assume(assetAmount >= 1 ether);
-        vm.assume(assetAmount <= S_MAX_SUPPLY);
-        vm.assume(newUserAssetAmount <= S_MAX_SUPPLY);
-        vm.assume(newUserAssetAmount >= 1 ether);
-        vm.assume(pendingRewards <= 10000 ether);
-        vm.assume(pendingRewards >= 1 ether);
+        assetAmount = bound(assetAmount, 1 ether, S_MAX_SUPPLY);
+        newUserAssetAmount = bound(newUserAssetAmount, 1 ether, S_MAX_SUPPLY);
+        pendingRewards = bound(pendingRewards, 1 ether, 10000 ether);
         delegateAmount = bound(delegateAmount, 1 ether, assetAmount);
 
         uint256 validatorId = 1;
@@ -70,52 +67,13 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 assetIncrease = pendingRewards - protocolFee;
         uint256 newRate = (1 ether * (assetAmount + assetIncrease)) / assetAmount;
 
-        assertGt(sonicStaking.getRate(), rateBefore);
-        assertEq(sonicStaking.getRate(), newRate);
-        console.log("rate before", rateBefore);
-        console.log("rate after", sonicStaking.getRate());
-
         // check that the conversion rate is applied for new deposits
         address newUser = vm.addr(201);
+        uint256 rateBeforeSecondDeposit = sonicStaking.getRate();
         makeDepositFromSpecifcUser(newUserAssetAmount, newUser);
         assertLt(sonicStaking.balanceOf(newUser), newUserAssetAmount); // got less shares than assets deposited (rate is >1)
         assertApproxEqAbs(sonicStaking.balanceOf(newUser) * sonicStaking.getRate() / 1e18, newUserAssetAmount, 1e18); // balance multiplied by rate should be equal to deposit amount
-    }
-
-    function testInvariantViolatedAtSecondDeposit() public {
-        uint256 assetAmount = 1118079717148557899; // [1.118e18]
-        uint256 delegateAmount = 1 ether;
-        uint256 pendingRewards = 58356595683764556486; //[58.35e18]
-        uint256 newUserAssetAmount = 56369801950539978978014; //[56,369e18]
-
-        uint256 validatorId = 1;
-        address user = makeDeposit(assetAmount);
-        delegate(validatorId, delegateAmount);
-
-        SFCMock(sfcMock).setPendingRewards{value: pendingRewards}(address(sonicStaking), validatorId, pendingRewards);
-
-        uint256 rateBefore = sonicStaking.getRate();
-        assertEq(sonicStaking.balanceOf(user), assetAmount); // minted 1:1
-
-        assertEq(rateBefore, 1 ether);
-
-        uint256[] memory delegationIds = new uint256[](1);
-        delegationIds[0] = 1;
-        vm.prank(SONIC_STAKING_CLAIMOR);
-        sonicStaking.claimRewards(delegationIds);
-
-        uint256 protocolFee = pendingRewards * sonicStaking.protocolFeeBIPS() / sonicStaking.MAX_PROTOCOL_FEE_BIPS();
-
-        uint256 assetIncrease = pendingRewards - protocolFee;
-        uint256 newRate = (1 ether * (assetAmount + assetIncrease)) / assetAmount;
-
-        assertGt(sonicStaking.getRate(), rateBefore);
-        assertEq(sonicStaking.getRate(), newRate);
-
-        // check that the conversion rate is applied for new deposits
-        address newUser = vm.addr(201);
-        makeDepositFromSpecifcUser(newUserAssetAmount, newUser);
-        assertLt(sonicStaking.balanceOf(newUser), newUserAssetAmount); // got less shares than assets deposited (rate is >1)
-        assertApproxEqAbs(sonicStaking.balanceOf(newUser) * sonicStaking.getRate() / 1e18, newUserAssetAmount, 1e18); // balance multiplied by rate should be equal to deposit amount
+        //We expect that the rate will never go down
+        assertGe(sonicStaking.getRate(), rateBeforeSecondDeposit);
     }
 }

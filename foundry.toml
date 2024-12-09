@@ -9,3 +9,6 @@ extra_output = ["storageLayout"]
 evm_version = 'shanghai'
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[fuzz]
+runs = 10000
