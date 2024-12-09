@@ -76,4 +76,50 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         //We expect that the rate will never go down
         assertGe(sonicStaking.getRate(), rateBeforeSecondDeposit);
     }
+
+    function testFuzzExtremeRatesAlwaysRoundInFavorOfProtocolUndelegateWithdraw(
+        uint256 depositAmount,
+        uint256 donationAmount,
+        uint256 undelegateAmount
+    ) public {
+        depositAmount = bound(depositAmount, sonicStaking.MIN_DEPOSIT(), 100 ether);
+        donationAmount = bound(donationAmount, 10_000 ether, S_MAX_SUPPLY);
+
+        // We burn 1 ether to make sure the supply cannot go back to zero
+        address burnAddress = vm.addr(1);
+        makeDepositFromSpecifcUser(1 ether, burnAddress);
+
+        address user = makeDeposit(depositAmount);
+        uint256 userShares = sonicStaking.balanceOf(user);
+
+        // This will blow up the rate
+        donate(donationAmount);
+
+        uint256 rateAfterDonate = sonicStaking.getRate();
+
+        // delegate everything
+        delegate(1, depositAmount + donationAmount);
+
+        undelegateAmount = bound(undelegateAmount, sonicStaking.MIN_UNDELEGATE_AMOUNT_SHARES(), userShares);
+
+        vm.prank(user);
+        uint256 withdrawId = sonicStaking.undelegate(1, undelegateAmount);
+
+        uint256 rateAfterUndelegate = sonicStaking.getRate();
+
+        // The rate should never go down after an undelegate
+        assertGe(rateAfterUndelegate, rateAfterDonate);
+
+        // need to increase time to allow for withdraw
+        vm.warp(block.timestamp + 14 days);
+
+        vm.prank(user);
+        // Withdraw the undelegated amount
+        sonicStaking.withdraw(withdrawId, false);
+
+        uint256 rateAfterWithdraw = sonicStaking.getRate();
+
+        // The rate should never go down after a withdraw
+        assertGe(rateAfterWithdraw, rateAfterUndelegate);
+    }
 }

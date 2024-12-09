@@ -130,9 +130,10 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(withdrawRequest.validatorId, validatorId);
     }
 
-    function testFuzzDepositsAgainstExtremeRatesAlwaysRoundInFavorOfProtocol(
+    function testFuzzExtremeRatesAlwaysRoundInFavorOfProtocol(
         uint256 depositAmount,
-        uint256 donationAmount
+        uint256 donationAmount,
+        uint256 undelegateAmount
     ) public {
         depositAmount = bound(depositAmount, sonicStaking.MIN_DEPOSIT(), S_MAX_SUPPLY);
         donationAmount = bound(donationAmount, 10_000 ether, S_MAX_SUPPLY);
@@ -151,11 +152,11 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         address newUser = vm.addr(201);
         makeDepositFromSpecifcUser(depositAmount, newUser);
 
-        uint256 rateAfter = sonicStaking.getRate();
+        uint256 raterAfterDeposit = sonicStaking.getRate();
         uint256 sharesActual = sonicStaking.balanceOf(newUser);
 
         // The rate should never go down after a deposit
-        assertGe(rateAfter, rateBefore);
+        assertGe(raterAfterDeposit, rateBefore);
         // The shares received should always equal what convertToShares returned
         assertEq(sharesActual, sharesExpected);
         // Any rounding should always favor the protocol, so the user should receive less than what was calculated
