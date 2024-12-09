@@ -154,8 +154,11 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         uint256 rateAfter = sonicStaking.getRate();
         uint256 sharesActual = sonicStaking.balanceOf(newUser);
 
+        // The rate should never go down after a deposit
         assertGe(rateAfter, rateBefore);
+        // The shares received should always equal what convertToShares returned
         assertEq(sharesActual, sharesExpected);
+        // Any rounding should always favor the protocol, so the user should receive less than what was calculated
         assertLe(sharesActual, sharesExpectedCalculated);
     }
 }
