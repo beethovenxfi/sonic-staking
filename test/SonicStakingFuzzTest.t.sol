@@ -129,4 +129,33 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(withdrawRequest.user, user);
         assertEq(withdrawRequest.validatorId, validatorId);
     }
+
+    function testFuzzDepositsAgainstExtremeRatesAlwaysRoundInFavorOfProtocol(
+        uint256 depositAmount,
+        uint256 donationAmount
+    ) public {
+        depositAmount = bound(depositAmount, sonicStaking.MIN_DEPOSIT(), S_MAX_SUPPLY);
+        donationAmount = bound(donationAmount, 10_000 ether, S_MAX_SUPPLY);
+
+        makeDeposit(sonicStaking.MIN_DEPOSIT());
+
+        // This will blow up the rate
+        donate(donationAmount);
+
+        uint256 rateBefore = sonicStaking.getRate();
+
+        uint256 sharesExpected = sonicStaking.convertToShares(depositAmount);
+        uint256 sharesExpectedCalculated = depositAmount * rateBefore / 1e18;
+
+        // Make a deposit of various sizes (min - Max s supply)
+        address newUser = vm.addr(201);
+        makeDepositFromSpecifcUser(depositAmount, newUser);
+
+        uint256 rateAfter = sonicStaking.getRate();
+        uint256 sharesActual = sonicStaking.balanceOf(newUser);
+
+        assertGe(rateAfter, rateBefore);
+        assertEq(sharesActual, sharesExpected);
+        assertLe(sharesActual, sharesExpectedCalculated);
+    }
 }
