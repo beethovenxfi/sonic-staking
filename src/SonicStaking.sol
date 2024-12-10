@@ -384,7 +384,7 @@ contract SonicStaking is
      * @dev While always possible to undelegate from the pool, the standard flow is to undelegate from a validator.
      * @param amountShares the amount of shares to undelegate
      */
-    function undelegateFromPool(uint256 amountShares) external returns (uint256 withdrawId) {
+    function undelegateFromPool(uint256 amountShares) external nonReentrant returns (uint256 withdrawId) {
         require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
         uint256 amountToUndelegate = convertToAssets(amountShares);
