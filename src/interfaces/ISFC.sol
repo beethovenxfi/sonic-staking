@@ -22,4 +22,8 @@ interface ISFC {
     function claimRewards(uint256 toValidatorID) external;
 
     function getSelfStake(uint256 validatorID) external view returns (uint256);
+
+    function isSlashed(uint256 validatorID) external view returns (bool);
+
+    function slashingRefundRatio(uint256) external view returns (uint256);
 }

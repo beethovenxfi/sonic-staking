@@ -592,6 +592,88 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         assertApproxEqAbs(sonicStaking.getRate(), rateBefore / 2, 1);
     }
 
+    function testFullySlashedValidatorImpactOnOperatorClawBack() public {
+        uint256 assetAmount = 1_000 ether;
+        uint256 delegateAmount = 500 ether;
+        uint256 undelegateAmount = 500 ether;
+        uint256 validatorId = 1;
+        makeDeposit(assetAmount);
+        delegate(validatorId, delegateAmount);
+
+        uint256 rateBefore = sonicStaking.getRate();
+
+        // slash the validator (slash the full stake)
+        sfcMock.setCheater(validatorId, true);
+        sfcMock.setSlashRefundRatio(validatorId, 0);
+
+        uint256 undelegateAmountAsset = sonicStaking.convertToAssets(undelegateAmount);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, undelegateAmount);
+
+        // need to increase time to allow for withdraw
+        vm.warp(block.timestamp + 14 days);
+
+        // emergency == false, should fail the invariant check
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawnAmountTooSmall.selector));
+        sonicStaking.operatorExecuteClawBack(withdrawId, false);
+
+        // emergency withdraw
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectEmit(true, true, true, true);
+        // the SFC rounds the penalty 1 wei up, so we need to account for this
+        emit SonicStaking.OperatorClawBackExecuted(withdrawId, true, 0);
+        sonicStaking.operatorExecuteClawBack(withdrawId, true);
+
+        assertEq(sonicStaking.totalDelegated(), 0);
+        assertEq(sonicStaking.totalPool(), assetAmount - delegateAmount);
+        assertEq(sonicStaking.totalAssets(), assetAmount - delegateAmount);
+        assertLt(sonicStaking.getRate(), rateBefore);
+        assertApproxEqAbs(sonicStaking.getRate(), rateBefore / 2, 1);
+    }
+
+    function testFullySlashedValidatorImpactOnOperatorClawBackFail() public {
+        uint256 assetAmount = 1_000 ether;
+        uint256 delegateAmount = 1_000 ether;
+        uint256 undelegateAmount = 1_000 ether;
+        uint256 validatorId = 1;
+        makeDeposit(assetAmount);
+        delegate(validatorId, delegateAmount);
+
+        uint256 rateBefore = sonicStaking.getRate();
+
+        // slash the validator (slash the full stake)
+        sfcMock.setCheater(validatorId, true);
+        sfcMock.setSlashRefundRatio(validatorId, 0);
+
+        uint256 undelegateAmountAsset = sonicStaking.convertToAssets(undelegateAmount);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, undelegateAmount);
+
+        // need to increase time to allow for withdraw
+        vm.warp(block.timestamp + 14 days);
+
+        // emergency == false, should fail the invariant check
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawnAmountTooSmall.selector));
+        sonicStaking.operatorExecuteClawBack(withdrawId, false);
+
+        // emergency withdraw
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectEmit(true, true, true, true);
+        // the SFC rounds the penalty 1 wei up, so we need to account for this
+        emit SonicStaking.OperatorClawBackExecuted(withdrawId, true, 0);
+        sonicStaking.operatorExecuteClawBack(withdrawId, true);
+
+        assertEq(sonicStaking.totalDelegated(), 0);
+        assertApproxEqAbs(sonicStaking.totalPool(), 0, 1);
+        assertApproxEqAbs(sonicStaking.totalAssets(), 0, 1);
+        assertLt(sonicStaking.getRate(), rateBefore);
+        assertApproxEqAbs(sonicStaking.getRate(), 0, 1);
+    }
+
     function testOperatorWithdrawUnsupportedWithdrawKind() public {
         uint256 amount = 1_000 ether;
         uint256 undelegateAmount = 100 ether;

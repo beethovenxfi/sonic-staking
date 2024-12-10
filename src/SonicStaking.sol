@@ -497,7 +497,18 @@ contract SonicStaking is
 
         uint256 balanceBefore = address(this).balance;
 
-        SFC.withdraw(request.validatorId, withdrawId);
+        // The SFC contract will revert with `StakeIsFullySlashed` if the validator has been fully slashed.
+        // We need to account for this by checking whether the validator has been slashed and if so, whether it has been fully slashed.
+        // If the validator has been fully slashed, we will not call `withdraw` on the SFC contract. It can only be
+        // withdrawn if the `emergency` flag is set to true.
+        if (!SFC.isSlashed(request.validatorId)) {
+            // If the validator has not been slashed, we can withdraw withour reverting.
+            SFC.withdraw(request.validatorId, withdrawId);
+        } else if (SFC.isSlashed(request.validatorId) && SFC.slashingRefundRatio(request.validatorId) != 0) {
+            // If the validator has been slashed but the refund ratio is > 0, it is not fully slashed and we
+            // can withdraw without reverting.
+            SFC.withdraw(request.validatorId, withdrawId);
+        }
 
         // in the instance of a slahing event, the amount withdrawn will not match the request amount.
         // We track the change of balance for the contract to get the actual amount withdrawn.
