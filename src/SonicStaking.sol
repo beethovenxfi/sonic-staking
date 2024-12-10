@@ -775,6 +775,11 @@ contract SonicStaking is
         emit DepositPausedUpdated(msg.sender, newValue);
     }
 
+    /**
+     *
+     * OWNER functions
+     *
+     */
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
