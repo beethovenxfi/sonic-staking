@@ -606,12 +606,12 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertTrue(sonicStaking.depositPaused());
 
         vm.expectEmit(true, true, true, true);
-        emit SonicStaking.TreasuryUpdated(address(this));
+        emit SonicStaking.TreasuryUpdated(address(SONIC_STAKING_ADMIN), address(this));
         sonicStaking.setTreasury(address(this));
         assertEq(sonicStaking.treasury(), address(this));
 
         vm.expectEmit(true, true, true, true);
-        emit SonicStaking.ProtocolFeeUpdated(100);
+        emit SonicStaking.ProtocolFeeUpdated(address(SONIC_STAKING_ADMIN), 100);
         sonicStaking.setProtocolFeeBIPS(100);
         assertEq(sonicStaking.protocolFeeBIPS(), 100);
     }
