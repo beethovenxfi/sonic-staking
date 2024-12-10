@@ -46,14 +46,15 @@ The default Admin role will be grant to a Timelock with 1 day lock and has the f
 4. Set protocol fees
 5. Pause/Unpause deposit
 6. Pause/Unpause undelegate
-7. Pause/Unpause withdraw
+7. Pause/Unpause undelegate from pool
+8. Pause/Unpause withdraw
 
 The Operator role will be granted to a multisig and has the following permissions:
 
 1. delegate
 2. operator undelegate to pool
 3. operator withdraw to pool
-4. pause (which pauses deposits, undelegations and withdraws)
+4. pause (which pauses deposits, undelegations, undelegations from pool and withdraws)
 
 The Claim role will be given to an EOA (for automation purposes) and has the following permissions:
 

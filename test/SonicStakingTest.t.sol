@@ -29,6 +29,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.protocolFeeBIPS(), 1000);
         assertEq(sonicStaking.withdrawDelay(), 14 * 24 * 60 * 60);
         assertFalse(sonicStaking.undelegatePaused());
+        assertFalse(sonicStaking.undelegateFromPoolPaused());
         assertFalse(sonicStaking.withdrawPaused());
         assertFalse(sonicStaking.depositPaused());
         assertEq(sonicStaking.totalDelegated(), 0);
@@ -573,10 +574,13 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.expectEmit(true, true, true, true);
         emit SonicStaking.UndelegatePausedUpdated(SONIC_STAKING_OPERATOR, true);
         vm.expectEmit(true, true, true, true);
+        emit SonicStaking.UndelegateFromPoolPausedUpdated(SONIC_STAKING_OPERATOR, true);
+        vm.expectEmit(true, true, true, true);
         emit SonicStaking.WithdrawPausedUpdated(SONIC_STAKING_OPERATOR, true);
         sonicStaking.pause();
 
         assertTrue(sonicStaking.undelegatePaused());
+        assertTrue(sonicStaking.undelegateFromPoolPaused());
         assertTrue(sonicStaking.withdrawPaused());
         assertTrue(sonicStaking.depositPaused());
     }
@@ -599,6 +603,9 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         sonicStaking.setUndelegatePaused(true);
         assertTrue(sonicStaking.undelegatePaused());
 
+        sonicStaking.setUndelegateFromPoolPaused(true);
+        assertTrue(sonicStaking.undelegateFromPoolPaused());
+
         sonicStaking.setWithdrawPaused(true);
         assertTrue(sonicStaking.withdrawPaused());
 
@@ -619,6 +626,13 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
             )
         );
         sonicStaking.setUndelegatePaused(false);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AccessControlUnauthorizedAccount.selector, address(this), sonicStaking.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        sonicStaking.setUndelegateFromPoolPaused(false);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -654,6 +668,9 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setUndelegatePaused(false);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
+        sonicStaking.setUndelegateFromPoolPaused(false);
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setWithdrawPaused(false);
