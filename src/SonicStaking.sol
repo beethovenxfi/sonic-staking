@@ -151,6 +151,7 @@ contract SonicStaking is
     error WithdrawAlreadyProcessed(uint256 withdrawId);
     error UnauthorizedWithdraw(uint256 withdrawId);
     error TreasuryAddressCannotBeZero();
+    error SFCAddressCannotBeZero();
     error ProtocolFeeTooHigh();
     error DepositTooSmall();
     error DepositPaused();
@@ -187,6 +188,9 @@ contract SonicStaking is
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+
+        require(address(_sfc) != address(0), SFCAddressCannotBeZero());
+        require(_treasury != address(0), TreasuryAddressCannotBeZero());
 
         SFC = _sfc;
         treasury = _treasury;
