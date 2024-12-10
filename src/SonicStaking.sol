@@ -138,6 +138,8 @@ contract SonicStaking is
     event RewardsClaimed(uint256 amountClaimed, uint256 protocolFee);
     event OperatorClawBackInitiated(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
     event OperatorClawBackExecuted(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssetsWithdrawn);
+    event ProtocolFeeUpdated(address indexed owner, uint256 indexed newFeeBIPS);
+    event TreasuryUpdated(address indexed owner, address indexed newTreasury);
 
     error DelegateAmountCannotBeZero();
     error DelegateAmountLargerThanPool();
@@ -652,6 +654,8 @@ contract SonicStaking is
         require(newTreasury != address(0), TreasuryAddressCannotBeZero());
 
         treasury = newTreasury;
+
+        emit TreasuryUpdated(msg.sender, newTreasury);
     }
 
     /**
@@ -662,6 +666,8 @@ contract SonicStaking is
         require(newFeeBIPS <= MAX_PROTOCOL_FEE_BIPS, ProtocolFeeTooHigh());
 
         protocolFeeBIPS = newFeeBIPS;
+
+        emit ProtocolFeeUpdated(msg.sender, newFeeBIPS);
     }
 
     /**
