@@ -315,7 +315,7 @@ contract SonicStaking is
     /**
      * @notice Deposit native assets and mint shares of stS.
      */
-    function deposit() external payable {
+    function deposit() external payable returns (uint256) {
         uint256 amount = msg.value;
         require(amount >= MIN_DEPOSIT, DepositTooSmall());
         require(!depositPaused, DepositPaused());
@@ -330,6 +330,8 @@ contract SonicStaking is
         _mint(user, sharesAmount);
 
         emit Deposited(user, amount, sharesAmount);
+
+        return sharesAmount;
     }
 
     /**
