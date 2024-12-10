@@ -338,24 +338,8 @@ contract SonicStaking is
      * @param validatorId the validator to undelegate from
      * @param amountShares the amount of shares to undelegate
      */
-    function undelegate(uint256 validatorId, uint256 amountShares) public nonReentrant returns (uint256 withdrawId) {
-        require(!undelegatePaused, UndelegatePaused());
-        require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
-
-        uint256 amountAssets = convertToAssets(amountShares);
-        uint256 amountDelegated = SFC.getStake(address(this), validatorId);
-
-        require(amountAssets <= amountDelegated, UndelegateAmountExceedsDelegated(validatorId));
-
-        _burn(msg.sender, amountShares);
-
-        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
-
-        totalDelegated -= amountAssets;
-
-        SFC.undelegate(validatorId, withdrawId, amountAssets);
-
-        emit Undelegated(msg.sender, withdrawId, validatorId, amountAssets, WithdrawKind.VALIDATOR);
+    function undelegate(uint256 validatorId, uint256 amountShares) public nonReentrant returns (uint256) {
+        return _undelegate(validatorId, amountShares);
     }
 
     /**
@@ -368,6 +352,7 @@ contract SonicStaking is
      */
     function undelegateMany(uint256[] calldata validatorIds, uint256[] calldata amountShares)
         external
+        nonReentrant
         returns (uint256[] memory withdrawIds)
     {
         require(validatorIds.length == amountShares.length, ArrayLengthMismatch());
@@ -375,7 +360,7 @@ contract SonicStaking is
         withdrawIds = new uint256[](validatorIds.length);
 
         for (uint256 i = 0; i < validatorIds.length; i++) {
-            withdrawIds[i] = undelegate(validatorIds[i], amountShares[i]);
+            withdrawIds[i] = _undelegate(validatorIds[i], amountShares[i]);
         }
     }
 
@@ -408,58 +393,8 @@ contract SonicStaking is
      * @param withdrawId the unique withdraw id for the undelegation request
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
-    function withdraw(uint256 withdrawId, bool emergency)
-        public
-        nonReentrant
-        withValidWithdrawId(withdrawId)
-        returns (uint256)
-    {
-        require(!withdrawPaused, WithdrawsPaused());
-
-        // We've already checked that the withdrawId exists and is valid, so we can safely access the request
-        WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
-
-        require(msg.sender == request.user, UnauthorizedWithdraw(withdrawId));
-
-        // Claw backs can only be executed by the operator via the operatorExecuteClawBack function
-        require(request.kind != WithdrawKind.CLAW_BACK, UnsupportedWithdrawKind());
-
-        request.isWithdrawn = true;
-
-        uint256 amountWithdrawn = 0;
-
-        if (request.kind == WithdrawKind.POOL) {
-            // An undelegate from the pool only effects the internal accounting of this contract.
-            // The amount has already been subtracted from the pool and the assets were already owned by this contract.
-            // The amount withdrawn is always the same as the request amount.
-            amountWithdrawn = request.assetAmount;
-        } else {
-            //The only WithdrawKind left is VALIDATOR
-
-            // The SFC sends the native assets to this contract, increasing it's balance
-            // We measure the change in balance to get the actual amount withdrawn.
-            uint256 balanceBefore = address(this).balance;
-
-            SFC.withdraw(request.validatorId, withdrawId);
-
-            amountWithdrawn = address(this).balance - balanceBefore;
-
-            if (!emergency) {
-                // In the instance of a slashing event, the amount withdrawn will not match the request amount.
-                // The user must acknowledge this by setting emergency to true. Since the user is absorbing
-                // this loss, there is no impact on the rate.
-                require(request.assetAmount == amountWithdrawn, WithdrawnAmountTooSmall());
-            }
-        }
-
-        address user = msg.sender;
-        (bool withdrawnToUser,) = user.call{value: amountWithdrawn}("");
-        require(withdrawnToUser, NativeTransferFailed());
-
-        emit Withdrawn(user, withdrawId, amountWithdrawn, request.kind, emergency);
-
-        // Return the actual amount withdrawn
-        return amountWithdrawn;
+    function withdraw(uint256 withdrawId, bool emergency) public nonReentrant returns (uint256) {
+        return _withdraw(withdrawId, emergency);
     }
 
     /**
@@ -468,9 +403,15 @@ contract SonicStaking is
      * @param withdrawIds the unique withdraw ids for the undelegation requests
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
-    function withdrawMany(uint256[] calldata withdrawIds, bool emergency) external {
+    function withdrawMany(uint256[] calldata withdrawIds, bool emergency)
+        external
+        nonReentrant
+        returns (uint256[] memory amountsWithdrawn)
+    {
+        amountsWithdrawn = new uint256[](withdrawIds.length);
+
         for (uint256 i = 0; i < withdrawIds.length; i++) {
-            withdraw(withdrawIds[i], emergency);
+            amountsWithdrawn[i] = _withdraw(withdrawIds[i], emergency);
         }
     }
 
@@ -701,6 +642,75 @@ contract SonicStaking is
      * Internal functions
      *
      */
+    function _undelegate(uint256 validatorId, uint256 amountShares) internal returns (uint256 withdrawId) {
+        require(!undelegatePaused, UndelegatePaused());
+        require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
+
+        uint256 amountAssets = convertToAssets(amountShares);
+        uint256 amountDelegated = SFC.getStake(address(this), validatorId);
+
+        require(amountAssets <= amountDelegated, UndelegateAmountExceedsDelegated(validatorId));
+
+        _burn(msg.sender, amountShares);
+
+        withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.VALIDATOR, validatorId, amountAssets);
+
+        totalDelegated -= amountAssets;
+
+        SFC.undelegate(validatorId, withdrawId, amountAssets);
+
+        emit Undelegated(msg.sender, withdrawId, validatorId, amountAssets, WithdrawKind.VALIDATOR);
+    }
+
+    function _withdraw(uint256 withdrawId, bool emergency) internal withValidWithdrawId(withdrawId) returns (uint256) {
+        require(!withdrawPaused, WithdrawsPaused());
+
+        // We've already checked that the withdrawId exists and is valid, so we can safely access the request
+        WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
+
+        require(msg.sender == request.user, UnauthorizedWithdraw(withdrawId));
+
+        // Claw backs can only be executed by the operator via the operatorExecuteClawBack function
+        require(request.kind != WithdrawKind.CLAW_BACK, UnsupportedWithdrawKind());
+
+        request.isWithdrawn = true;
+
+        uint256 amountWithdrawn = 0;
+
+        if (request.kind == WithdrawKind.POOL) {
+            // An undelegate from the pool only effects the internal accounting of this contract.
+            // The amount has already been subtracted from the pool and the assets were already owned by this contract.
+            // The amount withdrawn is always the same as the request amount.
+            amountWithdrawn = request.assetAmount;
+        } else {
+            //The only WithdrawKind left is VALIDATOR
+
+            // The SFC sends the native assets to this contract, increasing it's balance
+            // We measure the change in balance to get the actual amount withdrawn.
+            uint256 balanceBefore = address(this).balance;
+
+            SFC.withdraw(request.validatorId, withdrawId);
+
+            amountWithdrawn = address(this).balance - balanceBefore;
+
+            if (!emergency) {
+                // In the instance of a slashing event, the amount withdrawn will not match the request amount.
+                // The user must acknowledge this by setting emergency to true. Since the user is absorbing
+                // this loss, there is no impact on the rate.
+                require(request.assetAmount == amountWithdrawn, WithdrawnAmountTooSmall());
+            }
+        }
+
+        address user = msg.sender;
+        (bool withdrawnToUser,) = user.call{value: amountWithdrawn}("");
+        require(withdrawnToUser, NativeTransferFailed());
+
+        emit Withdrawn(user, withdrawId, amountWithdrawn, request.kind, emergency);
+
+        // Return the actual amount withdrawn
+        return amountWithdrawn;
+    }
+
     function _createAndPersistWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
         internal
         returns (uint256 withdrawId)
