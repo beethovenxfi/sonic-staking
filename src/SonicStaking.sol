@@ -605,7 +605,7 @@ contract SonicStaking is
 
     /**
      *
-     * OWNER functions
+     * DEFAULT_ADMIN_ROLE functions
      *
      */
 
