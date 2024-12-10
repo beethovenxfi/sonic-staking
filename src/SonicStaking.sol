@@ -142,7 +142,6 @@ contract SonicStaking is
     event TreasuryUpdated(address indexed owner, address indexed newTreasury);
 
     error DelegateAmountCannotBeZero();
-    error DelegateAmountLargerThanPool();
     error UndelegateAmountCannotBeZero();
     error NoDelegationForValidator(uint256 validatorId);
     error UndelegateAmountExceedsDelegated(uint256 validatorId);
@@ -431,8 +430,10 @@ contract SonicStaking is
      * @param amount the amount of assets to delegate
      */
     function delegate(uint256 validatorId, uint256 amount) external nonReentrant onlyRole(OPERATOR_ROLE) {
+        if (amount > totalPool) {
+            amount = totalPool;
+        }
         require(amount > 0, DelegateAmountCannotBeZero());
-        require(amount <= totalPool, DelegateAmountLargerThanPool());
 
         totalPool -= amount;
         totalDelegated += amount;
