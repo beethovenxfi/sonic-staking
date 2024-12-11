@@ -368,11 +368,12 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 delegateAmount = 1_000 ether;
         uint256 validatorId = 1;
         address user = makeDeposit(assetAmount);
+        uint256 slashRatio = 5 * 1e17;
         delegate(validatorId, delegateAmount);
 
         // slash the validator (slash half of the stake)
         sfcMock.setCheater(validatorId, true);
-        sfcMock.setSlashRefundRatio(validatorId, 5 * 1e17);
+        sfcMock.setSlashRefundRatio(validatorId, slashRatio);
 
         vm.prank(user);
         uint256 withdrawId = sonicStaking.undelegate(validatorId, delegateAmount);
@@ -384,7 +385,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         // do not emergency withdraw, will revert
         vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawnAmountTooSmall.selector));
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.SfcSlashMustBeAccepted.selector, slashRatio));
         sonicStaking.withdraw(withdrawId, false);
 
         // emergency withdraw
@@ -531,6 +532,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 assetAmount = 1_000 ether;
         uint256 delegateAmount = 1_000 ether;
         uint256 validatorId = 1;
+        uint256 slashRatio = 5 * 1e17;
         makeDeposit(assetAmount);
         delegate(validatorId, delegateAmount);
 
@@ -541,7 +543,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         // slash the validator (slash half of the stake)
         sfcMock.setCheater(validatorId, true);
-        sfcMock.setSlashRefundRatio(validatorId, 5 * 1e17);
+        sfcMock.setSlashRefundRatio(validatorId, slashRatio);
 
         assertEq(SFC.getStake(address(sonicStaking), validatorId), delegateAmount);
 
@@ -556,6 +558,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 delegateAmount = 1_000 ether;
         uint256 undelegateAmount = 1_000 ether;
         uint256 validatorId = 1;
+        uint256 slashRatio = 5 * 1e17;
         makeDeposit(assetAmount);
         delegate(validatorId, delegateAmount);
 
@@ -563,7 +566,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         // slash the validator (slash half of the stake)
         sfcMock.setCheater(validatorId, true);
-        sfcMock.setSlashRefundRatio(validatorId, 5 * 1e17);
+        sfcMock.setSlashRefundRatio(validatorId, slashRatio);
 
         uint256 undelegateAmountAsset = sonicStaking.convertToAssets(undelegateAmount);
 
@@ -575,7 +578,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
 
         // emergency == false, should fail the invariant check
         vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawnAmountTooSmall.selector));
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.SfcSlashMustBeAccepted.selector, slashRatio));
         sonicStaking.operatorExecuteClawBack(withdrawId, false);
 
         // emergency withdraw
@@ -676,6 +679,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 assetAmount = 1_000 ether;
         uint256 delegateAmount = 1_000 ether;
         uint256 validatorId = 1;
+        uint256 slashRatio = 0;
 
         makeDeposit(assetAmount);
         delegate(validatorId, delegateAmount);
@@ -692,7 +696,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 totalPoolBefore = sonicStaking.totalPool();
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.SfcSlashMustBeAccepted.selector));
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.SfcSlashMustBeAccepted.selector, slashRatio));
         sonicStaking.operatorExecuteClawBack(withdrawId, false);
 
         vm.prank(SONIC_STAKING_OPERATOR);
