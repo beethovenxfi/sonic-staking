@@ -107,6 +107,10 @@ contract SFCMock is ISFC {
 
         uint256 penalty = getSlashingPenalty(amount, cheaters[toValidatorID], slashingRefundRatio[toValidatorID]);
 
+        if (amount <= penalty) {
+            revert StakeIsFullySlashed();
+        }
+
         payable(msg.sender).transfer(amount - penalty);
     }
 

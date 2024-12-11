@@ -672,6 +672,36 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sonicStaking.claimRewards(delegationIds);
     }
 
+    function testValidatorFullySlashed() public {
+        uint256 assetAmount = 1_000 ether;
+        uint256 delegateAmount = 1_000 ether;
+        uint256 validatorId = 1;
+
+        makeDeposit(assetAmount);
+        delegate(validatorId, delegateAmount);
+
+        // slash the validator's full stake
+        sfcMock.setCheater(validatorId, true);
+        sfcMock.setSlashRefundRatio(validatorId, 0);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, delegateAmount);
+
+        vm.warp(block.timestamp + 14 days);
+
+        uint256 totalPoolBefore = sonicStaking.totalPool();
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.SfcSlashMustBeAccepted.selector));
+        sonicStaking.operatorExecuteClawBack(withdrawId, false);
+
+        vm.prank(SONIC_STAKING_OPERATOR);
+        uint256 amountWithdrawn = sonicStaking.operatorExecuteClawBack(withdrawId, true);
+
+        assertEq(amountWithdrawn, 0);
+        assertEq(totalPoolBefore, sonicStaking.totalPool());
+    }
+
     function getState()
         public
         view

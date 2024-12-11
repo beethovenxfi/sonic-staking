@@ -487,6 +487,7 @@ contract SonicStaking is
         nonReentrant
         onlyRole(OPERATOR_ROLE)
         withValidWithdrawId(withdrawId)
+        returns (uint256)
     {
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
 
@@ -520,6 +521,8 @@ contract SonicStaking is
         }
 
         emit OperatorClawBackExecuted(withdrawId, emergency, actualWithdrawnAmount);
+
+        return actualWithdrawnAmount;
     }
 
     /**
@@ -725,7 +728,7 @@ contract SonicStaking is
         try SFC.withdraw(validatorId, withdrawId) {
             // Successful withdraw from the SFC, nothing to do.
         } catch (bytes memory reason) {
-            bytes4 errorSelector = abi.decode(reason, (bytes4));
+            bytes4 errorSelector = bytes4(reason);
 
             if (errorSelector == ISFC.StakeIsFullySlashed.selector) {
                 // In the instance that the validator's stake has been fully slashed, the SFC will revert with
