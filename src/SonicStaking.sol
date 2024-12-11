@@ -169,6 +169,8 @@ contract SonicStaking is
     error DonationAmountTooSmall();
     error UnsupportedWithdrawKind();
     error RewardsClaimedTooSmall();
+    error SfcSlashMustBeAccepted();
+    error SfcWithdrawFailed(bytes4 errorSelector);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -497,7 +499,7 @@ contract SonicStaking is
 
         uint256 balanceBefore = address(this).balance;
 
-        SFC.withdraw(request.validatorId, withdrawId);
+        _withdrawFromSFC(request.validatorId, withdrawId, emergency);
 
         // in the instance of a slahing event, the amount withdrawn will not match the request amount.
         // We track the change of balance for the contract to get the actual amount withdrawn.
@@ -697,7 +699,7 @@ contract SonicStaking is
             // We measure the change in balance to get the actual amount withdrawn.
             uint256 balanceBefore = address(this).balance;
 
-            SFC.withdraw(request.validatorId, withdrawId);
+            _withdrawFromSFC(request.validatorId, withdrawId, emergency);
 
             amountWithdrawn = address(this).balance - balanceBefore;
 
@@ -717,6 +719,24 @@ contract SonicStaking is
 
         // Return the actual amount withdrawn
         return amountWithdrawn;
+    }
+
+    function _withdrawFromSFC(uint256 validatorId, uint256 withdrawId, bool emergency) internal {
+        try SFC.withdraw(validatorId, withdrawId) {
+            // Successful withdraw from the SFC, nothing to do.
+        } catch (bytes memory reason) {
+            bytes4 errorSelector = abi.decode(reason, (bytes4));
+
+            if (errorSelector == ISFC.StakeIsFullySlashed.selector) {
+                // In the instance that the validator's stake has been fully slashed, the SFC will revert with
+                // StakeIsFullySlashed. We catch this error and allow the user/operator to accept the loss
+                // by setting emergency to true.
+                require(emergency, SfcSlashMustBeAccepted());
+            } else {
+                // For any other error, we revert and pass the error selector on
+                revert SfcWithdrawFailed(errorSelector);
+            }
+        }
     }
 
     function _createAndPersistWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
