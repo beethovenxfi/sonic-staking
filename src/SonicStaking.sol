@@ -137,7 +137,7 @@ contract SonicStaking is
     event Donated(address indexed user, uint256 amountAssets);
     event RewardsClaimed(uint256 amountClaimed, uint256 protocolFee);
     event OperatorClawBackInitiated(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
-    event OperatorClawBackExecuted(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssetsWithdrawn);
+    event OperatorClawBackExecuted(uint256 indexed withdrawId, uint256 amountAssetsWithdrawn, bool indexed emergency);
     event ProtocolFeeUpdated(address indexed owner, uint256 indexed newFeeBIPS);
     event TreasuryUpdated(address indexed owner, address indexed newTreasury);
 
@@ -151,6 +151,7 @@ contract SonicStaking is
     error WithdrawAlreadyProcessed(uint256 withdrawId);
     error UnauthorizedWithdraw(uint256 withdrawId);
     error TreasuryAddressCannotBeZero();
+    error SFCAddressCannotBeZero();
     error ProtocolFeeTooHigh();
     error DepositTooSmall();
     error DepositPaused();
@@ -187,6 +188,9 @@ contract SonicStaking is
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+
+        require(address(_sfc) != address(0), SFCAddressCannotBeZero());
+        require(_treasury != address(0), TreasuryAddressCannotBeZero());
 
         SFC = _sfc;
         treasury = _treasury;
@@ -512,7 +516,7 @@ contract SonicStaking is
         // In the instance of a realized slashing event, this will result in a drop in the rate.
         totalPool += actualWithdrawnAmount;
 
-        emit OperatorClawBackExecuted(withdrawId, emergency, actualWithdrawnAmount);
+        emit OperatorClawBackExecuted(withdrawId, actualWithdrawnAmount, emergency);
 
         return actualWithdrawnAmount;
     }
@@ -630,7 +634,7 @@ contract SonicStaking is
 
         uint256 protocolFee = 0;
 
-        if (totalRewardsClaimed > 0 && protocolFeeBIPS > 0) {
+        if (protocolFeeBIPS > 0) {
             protocolFee = (totalRewardsClaimed * protocolFeeBIPS) / MAX_PROTOCOL_FEE_BIPS;
 
             (bool protocolFeesClaimed,) = treasury.call{value: protocolFee}("");
@@ -795,6 +799,11 @@ contract SonicStaking is
         emit DepositPausedUpdated(msg.sender, newValue);
     }
 
+    /**
+     *
+     * OWNER functions
+     *
+     */
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
