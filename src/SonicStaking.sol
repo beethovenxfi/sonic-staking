@@ -36,7 +36,7 @@ contract SonicStaking is
 
     uint256 public constant MAX_PROTOCOL_FEE_BIPS = 10_000;
     uint256 public constant MIN_DEPOSIT = 1 ether;
-    uint256 public constant MIN_UNDELEGATE_AMOUNT_SHARES = 1 ether;
+    uint256 public constant MIN_UNDELEGATE_AMOUNT_SHARES = 1e12;
     uint256 public constant MIN_DONATION_AMOUNT = 1e12;
     uint256 public constant MIN_CLAIM_REWARDS_AMOUNT = 1e12;
 
