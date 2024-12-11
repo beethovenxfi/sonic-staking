@@ -710,4 +710,15 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.convertToAssets(1 ether), finalRate);
         assertEq(sonicStaking.convertToShares(finalRate), 1 ether);
     }
+
+    function testReceive() public {
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.SenderNotSFC.selector));
+        (bool sentFalse,) = address(sonicStaking).call{value: 1 ether}("");
+
+        vm.deal(address(SFC), 1 ether);
+        vm.prank(address(SFC));
+        (bool sentTrue,) = address(sonicStaking).call{value: 1 ether}("");
+        assertTrue(sentTrue);
+        assertEq(address(sonicStaking).balance, 1 ether);
+    }
 }

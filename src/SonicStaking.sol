@@ -170,6 +170,7 @@ contract SonicStaking is
     error DonationAmountTooSmall();
     error UnsupportedWithdrawKind();
     error RewardsClaimedTooSmall();
+    error SenderNotSFC();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -789,5 +790,7 @@ contract SonicStaking is
     /**
      * @notice To receive native asset rewards from SFC
      */
-    receive() external payable {}
+    receive() external payable {
+        require(msg.sender == address(SFC), SenderNotSFC());
+    }
 }
