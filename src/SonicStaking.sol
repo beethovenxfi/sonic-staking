@@ -169,7 +169,7 @@ contract SonicStaking is
     error DonationAmountTooSmall();
     error UnsupportedWithdrawKind();
     error RewardsClaimedTooSmall();
-    error SfcSlashMustBeAccepted();
+    error SfcSlashMustBeAccepted(uint256 refundRatio);
     error SfcWithdrawFailed(bytes4 errorSelector);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -725,20 +725,32 @@ contract SonicStaking is
     }
 
     function _withdrawFromSFC(uint256 validatorId, uint256 withdrawId, bool emergency) internal {
-        try SFC.withdraw(validatorId, withdrawId) {
-            // Successful withdraw from the SFC, nothing to do.
-        } catch (bytes memory reason) {
-            bytes4 errorSelector = bytes4(reason);
+        bool isSlashed = SFC.isSlashed(validatorId);
 
-            if (errorSelector == ISFC.StakeIsFullySlashed.selector) {
-                // In the instance that the validator's stake has been fully slashed, the SFC will revert with
-                // StakeIsFullySlashed. We catch this error and allow the user/operator to accept the loss
-                // by setting emergency to true.
-                require(emergency, SfcSlashMustBeAccepted());
-            } else {
-                // For any other error, we revert and pass the error selector on
-                revert SfcWithdrawFailed(errorSelector);
+        if (isSlashed) {
+            uint256 refundRatio = SFC.slashingRefundRatio(validatorId);
+
+            // The caller is required to acknowledge they understand that their stake has been slashed
+            // by setting emergency to true.
+            require(emergency, SfcSlashMustBeAccepted(refundRatio));
+
+            // When a validator isSlashed, a refundRatio of 0 can have two different meanings:
+            // 1. The validator has been slashed but the percentage has not yet been set
+            // 2. The validator has been fully slashed
+
+            // In either case, a call to SFC.withdraw when isSlashed && refundRatio == 0 will revert with
+            // StakeIsFullySlashed. So, we cannot make the call to SFC.withdraw.
+
+            // In the instance that isSlashed == true && refundRatio == 0 && emergency == true, the caller is
+            // acknowledging that their delegation has been fully slashed.
+
+            // In the instance that refundRatio != 0, a slashing refund ratio has been set and can now be realized
+            // by calling withdraw
+            if (refundRatio != 0) {
+                SFC.withdraw(validatorId, withdrawId);
             }
+        } else {
+            SFC.withdraw(validatorId, withdrawId);
         }
     }
 
