@@ -138,4 +138,12 @@ contract SFCMock is ISFC {
     function getSelfStake(uint256 validatorID) external view returns (uint256) {
         return 1;
     }
+
+    function constsAddress() external view returns (address) {
+        return address(this);
+    }
+
+    function withdrawalPeriodTime() external view returns (uint256) {
+        return 14 days;
+    }
 }

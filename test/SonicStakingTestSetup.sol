@@ -19,7 +19,7 @@ contract SonicStakingTestSetup is Test {
     ISFC SFC;
 
     string SONIC_FORK_URL = "https://rpc.soniclabs.com";
-    uint256 INITIAL_FORK_BLOCK_NUMBER = 10000;
+    uint256 INITIAL_FORK_BLOCK_NUMBER = 309478;
 
     uint256 sonicFork;
 

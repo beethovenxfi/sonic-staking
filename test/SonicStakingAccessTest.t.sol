@@ -51,11 +51,7 @@ contract SonicStakingAccessTest is Test, SonicStakingTestSetup {
         vm.expectRevert(
             abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.DEFAULT_ADMIN_ROLE())
         );
-        sonicStaking.setWithdrawDelay(7);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, sonicStaking.DEFAULT_ADMIN_ROLE())
-        );
         sonicStaking.setUndelegatePaused(true);
 
         vm.expectRevert(

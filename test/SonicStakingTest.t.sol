@@ -27,7 +27,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         // make sure initital set is set properly
         assertEq(sonicStaking.treasury(), TREASURY_ADDRESS);
         assertEq(sonicStaking.protocolFeeBIPS(), 1000);
-        assertEq(sonicStaking.withdrawDelay(), 14 * 24 * 60 * 60);
         assertFalse(sonicStaking.undelegatePaused());
         assertFalse(sonicStaking.withdrawPaused());
         assertFalse(sonicStaking.depositPaused());
@@ -593,9 +592,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
     function testStateSetters() public {
         vm.startPrank(SONIC_STAKING_ADMIN);
 
-        sonicStaking.setWithdrawDelay(1);
-        assertEq(sonicStaking.withdrawDelay(), 1);
-
         sonicStaking.setUndelegatePaused(true);
         assertTrue(sonicStaking.undelegatePaused());
 
@@ -709,5 +705,22 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.getRate(), finalRate);
         assertEq(sonicStaking.convertToAssets(1 ether), finalRate);
         assertEq(sonicStaking.convertToShares(finalRate), 1 ether);
+    }
+
+    function testWithdrawTooEarlyFork() public {
+        uint256 assetAmount = 10_000 ether;
+        uint256 delegateAmount = 10_000 ether;
+        uint256 undelegateAmount = 10_000 ether;
+        uint256 validatorId = 1;
+
+        address user = makeDeposit(assetAmount);
+        delegate(validatorId, delegateAmount);
+
+        vm.prank(user);
+        sonicStaking.undelegate(validatorId, undelegateAmount);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.WithdrawDelayNotElapsed.selector, 101));
+        sonicStaking.withdraw(101, false);
     }
 }

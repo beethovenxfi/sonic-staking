@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {ISFC} from "./interfaces/ISFC.sol";
+import {IConstantsManager} from "./interfaces/IConstantsManager.sol";
 import {IRateProvider} from "./interfaces/IRateProvider.sol";
 
 import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -83,11 +84,6 @@ contract SonicStaking is
     uint256 public protocolFeeBIPS;
 
     /**
-     * The delay between undelegation & withdraw
-     */
-    uint256 public withdrawDelay;
-
-    /**
      * @dev When true, no new deposits are allowed
      */
     bool public depositPaused;
@@ -124,7 +120,6 @@ contract SonicStaking is
      */
     uint256 public withdrawCounter;
 
-    event WithdrawDelaySet(address indexed owner, uint256 delay);
     event UndelegatePausedUpdated(address indexed owner, bool newValue);
     event WithdrawPausedUpdated(address indexed owner, bool newValue);
     event DepositPausedUpdated(address indexed owner, bool newValue);
@@ -194,7 +189,6 @@ contract SonicStaking is
 
         SFC = _sfc;
         treasury = _treasury;
-        withdrawDelay = 604800 * 2; // 14 days
         undelegatePaused = false;
         withdrawPaused = false;
         depositPaused = false;
@@ -210,7 +204,8 @@ contract SonicStaking is
      */
     modifier withValidWithdrawId(uint256 withdrawId) {
         WithdrawRequest storage request = _allWithdrawRequests[withdrawId];
-        uint256 earliestWithdrawTime = request.requestTimestamp + withdrawDelay;
+        uint256 earliestWithdrawTime =
+            request.requestTimestamp + IConstantsManager(SFC.constsAddress()).withdrawalPeriodTime();
 
         require(request.requestTimestamp > 0, WithdrawIdDoesNotExist(withdrawId));
         require(_now() >= earliestWithdrawTime, WithdrawDelayNotElapsed(withdrawId));
@@ -310,6 +305,10 @@ contract SonicStaking is
 
     function getWithdrawRequest(uint256 withdrawId) external view returns (WithdrawRequest memory) {
         return _allWithdrawRequests[withdrawId];
+    }
+
+    function getWithdrawDelay() external view returns (uint256) {
+        return IConstantsManager(SFC.constsAddress()).withdrawalPeriodTime();
     }
 
     /**
@@ -557,15 +556,6 @@ contract SonicStaking is
      * DEFAULT_ADMIN_ROLE functions
      *
      */
-
-    /**
-     * @notice Set withdraw delay
-     * @param delay the new delay
-     */
-    function setWithdrawDelay(uint256 delay) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        withdrawDelay = delay;
-        emit WithdrawDelaySet(msg.sender, delay);
-    }
 
     /**
      * @notice Pause/unpause user undelegations

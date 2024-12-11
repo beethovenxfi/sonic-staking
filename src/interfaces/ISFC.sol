@@ -22,4 +22,6 @@ interface ISFC {
     function claimRewards(uint256 toValidatorID) external;
 
     function getSelfStake(uint256 validatorID) external view returns (uint256);
+
+    function constsAddress() external view returns (address);
 }
