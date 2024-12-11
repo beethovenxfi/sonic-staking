@@ -137,7 +137,7 @@ contract SonicStaking is
     event Donated(address indexed user, uint256 amountAssets);
     event RewardsClaimed(uint256 amountClaimed, uint256 protocolFee);
     event OperatorClawBackInitiated(uint256 indexed withdrawId, uint256 indexed validatorId, uint256 amountAssets);
-    event OperatorClawBackExecuted(uint256 indexed withdrawId, bool indexed emergency, uint256 amountAssetsWithdrawn);
+    event OperatorClawBackExecuted(uint256 indexed withdrawId, uint256 amountAssetsWithdrawn, bool indexed emergency);
     event ProtocolFeeUpdated(address indexed owner, uint256 indexed newFeeBIPS);
     event TreasuryUpdated(address indexed owner, address indexed newTreasury);
 
@@ -521,7 +521,7 @@ contract SonicStaking is
             require(actualWithdrawnAmount == request.assetAmount, WithdrawnAmountTooSmall());
         }
 
-        emit OperatorClawBackExecuted(withdrawId, emergency, actualWithdrawnAmount);
+        emit OperatorClawBackExecuted(withdrawId, actualWithdrawnAmount, emergency);
     }
 
     /**

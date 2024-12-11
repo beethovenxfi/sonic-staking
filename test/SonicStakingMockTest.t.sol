@@ -582,7 +582,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectEmit(true, true, true, true);
         // the SFC rounds the penalty 1 wei up, so we need to account for this
-        emit SonicStaking.OperatorClawBackExecuted(withdrawId, true, undelegateAmount / 2 - 1);
+        emit SonicStaking.OperatorClawBackExecuted(withdrawId, undelegateAmount / 2 - 1, true);
         sonicStaking.operatorExecuteClawBack(withdrawId, true);
 
         assertEq(sonicStaking.totalDelegated(), 0);
