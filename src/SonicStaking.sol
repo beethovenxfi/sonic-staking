@@ -633,7 +633,7 @@ contract SonicStaking is
 
         uint256 protocolFee = 0;
 
-        if (totalRewardsClaimed > 0 && protocolFeeBIPS > 0) {
+        if (protocolFeeBIPS > 0) {
             protocolFee = (totalRewardsClaimed * protocolFeeBIPS) / MAX_PROTOCOL_FEE_BIPS;
 
             (bool protocolFeesClaimed,) = treasury.call{value: protocolFee}("");
