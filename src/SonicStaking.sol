@@ -161,6 +161,7 @@ contract SonicStaking is
     error DepositTooSmall();
     error DepositPaused();
     error UndelegatePaused();
+    error UndelegateFromPoolPaused();
     error WithdrawsPaused();
     error WithdrawnAmountTooSmall();
     error NativeTransferFailed();
@@ -381,6 +382,7 @@ contract SonicStaking is
      * @param amountShares the amount of shares to undelegate
      */
     function undelegateFromPool(uint256 amountShares) external nonReentrant returns (uint256 withdrawId) {
+        require(!undelegateFromPoolPaused, UndelegateFromPoolPaused());
         require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
         uint256 amountToUndelegate = convertToAssets(amountShares);

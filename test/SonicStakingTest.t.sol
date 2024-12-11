@@ -393,6 +393,28 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.balanceOf(user), userSharesBefore - undelegateAmountShares);
     }
 
+    function testUndelegateFromPoolPaused() public {
+        uint256 depositAmountAsset = 100_000 ether;
+        uint256 undelegateAmountShares = 5 ether;
+
+        address user = makeDeposit(depositAmountAsset);
+
+        vm.prank(SONIC_STAKING_ADMIN);
+        sonicStaking.setUndelegateFromPoolPaused(true);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateFromPoolPaused.selector));
+        sonicStaking.undelegateFromPool(undelegateAmountShares);
+
+        vm.prank(SONIC_STAKING_ADMIN);
+        sonicStaking.setUndelegateFromPoolPaused(false);
+
+        vm.prank(user);
+        sonicStaking.undelegateFromPool(undelegateAmountShares);
+
+        assertEq(sonicStaking.totalPool(), depositAmountAsset - sonicStaking.convertToAssets(undelegateAmountShares));
+    }
+
     function testUndelegateFromPoolMinAmountError() public {
         uint256 depositAmountAsset = 100_000 ether;
         uint256 undelegateAmountShares = 1;
