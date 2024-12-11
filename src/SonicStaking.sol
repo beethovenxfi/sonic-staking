@@ -156,7 +156,6 @@ contract SonicStaking is
     error DepositPaused();
     error UndelegatePaused();
     error WithdrawsPaused();
-    error WithdrawnAmountTooSmall();
     error NativeTransferFailed();
     error ProtocolFeeTransferFailed();
     error PausedValueDidNotChange();
@@ -170,7 +169,6 @@ contract SonicStaking is
     error UnsupportedWithdrawKind();
     error RewardsClaimedTooSmall();
     error SfcSlashMustBeAccepted(uint256 refundRatio);
-    error SfcWithdrawFailed(bytes4 errorSelector);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -514,12 +512,6 @@ contract SonicStaking is
         // In the instance of a realized slashing event, this will result in a drop in the rate.
         totalPool += actualWithdrawnAmount;
 
-        if (!emergency) {
-            // In the instance of a slashing event, the amount withdrawn will not match the request amount.
-            // The operator must acknowledge this by setting emergency to true and accept that a drop in the rate will occur.
-            require(actualWithdrawnAmount == request.assetAmount, WithdrawnAmountTooSmall());
-        }
-
         emit OperatorClawBackExecuted(withdrawId, emergency, actualWithdrawnAmount);
 
         return actualWithdrawnAmount;
@@ -705,13 +697,6 @@ contract SonicStaking is
             _withdrawFromSFC(request.validatorId, withdrawId, emergency);
 
             amountWithdrawn = address(this).balance - balanceBefore;
-
-            if (!emergency) {
-                // In the instance of a slashing event, the amount withdrawn will not match the request amount.
-                // The user must acknowledge this by setting emergency to true. Since the user is absorbing
-                // this loss, there is no impact on the rate.
-                require(request.assetAmount == amountWithdrawn, WithdrawnAmountTooSmall());
-            }
         }
 
         address user = msg.sender;
