@@ -500,13 +500,8 @@ contract SonicStaking is
 
         request.isWithdrawn = true;
 
-        uint256 balanceBefore = address(this).balance;
-
-        _withdrawFromSFC(request.validatorId, withdrawId, emergency);
-
-        // in the instance of a slahing event, the amount withdrawn will not match the request amount.
-        // We track the change of balance for the contract to get the actual amount withdrawn.
-        uint256 actualWithdrawnAmount = address(this).balance - balanceBefore;
+        // Potential slashing events are handled by _withdrawFromSFC
+        uint256 actualWithdrawnAmount = _withdrawFromSFC(request.validatorId, withdrawId, emergency);
 
         // we need to subtract the request amount from the pending amount since that is the value that was added during
         // the initiate claw back operation.
@@ -694,13 +689,8 @@ contract SonicStaking is
         } else {
             //The only WithdrawKind left is VALIDATOR
 
-            // The SFC sends the native assets to this contract, increasing it's balance
-            // We measure the change in balance to get the actual amount withdrawn.
-            uint256 balanceBefore = address(this).balance;
-
-            _withdrawFromSFC(request.validatorId, withdrawId, emergency);
-
-            amountWithdrawn = address(this).balance - balanceBefore;
+            // potential slashing events are handled by _withdrawFromSFC
+            amountWithdrawn = _withdrawFromSFC(request.validatorId, withdrawId, emergency);
         }
 
         address user = msg.sender;
@@ -713,13 +703,17 @@ contract SonicStaking is
         return amountWithdrawn;
     }
 
-    function _withdrawFromSFC(uint256 validatorId, uint256 withdrawId, bool emergency) internal {
+    function _withdrawFromSFC(uint256 validatorId, uint256 withdrawId, bool emergency)
+        internal
+        returns (uint256 actualAmountWithdrawn)
+    {
+        uint256 balanceBefore = address(this).balance;
         bool isSlashed = SFC.isSlashed(validatorId);
 
         if (isSlashed) {
             uint256 refundRatio = SFC.slashingRefundRatio(validatorId);
 
-            // The caller is required to acknowledge they understand that their stake has been slashed
+            // The caller is required to acknowledge they understand their stake has been slashed
             // by setting emergency to true.
             require(emergency, SfcSlashMustBeAccepted(refundRatio));
 
@@ -734,13 +728,17 @@ contract SonicStaking is
             // acknowledging that their delegation has been fully slashed.
 
             // In the instance that refundRatio != 0, a slashing refund ratio has been set and can now be realized
-            // by calling withdraw
+            // by calling SFC.withdraw
             if (refundRatio != 0) {
                 SFC.withdraw(validatorId, withdrawId);
             }
         } else {
             SFC.withdraw(validatorId, withdrawId);
         }
+
+        // The SFC sends native assets to this contract, increasing it's balance. We measure the change
+        // in balance before and after the call to get the actual amount withdrawn.
+        actualAmountWithdrawn = address(this).balance - balanceBefore;
     }
 
     function _createAndPersistWithdrawRequest(WithdrawKind kind, uint256 validatorId, uint256 amount)
