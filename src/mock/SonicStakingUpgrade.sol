@@ -30,7 +30,7 @@ contract SonicStakingUpgrade is
     SonicStaking
 {
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    constructor() {}
 
     /// Add random function for testing
     function testUpgrade() public pure returns (uint256) {

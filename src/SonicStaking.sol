@@ -180,7 +180,9 @@ contract SonicStaking is
     error SenderNotSFC();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @notice Initializer
