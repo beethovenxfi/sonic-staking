@@ -39,14 +39,15 @@ The default Admin role will be grant to a Timelock with multisig and a 1 day loc
 4. Set protocol fees
 5. Pause/Unpause deposit
 6. Pause/Unpause undelegate
-7. Pause/Unpause withdraw
+7. Pause/Unpause undelegate from pool
+8. Pause/Unpause withdraw
 
 The Operator role will be granted to a multisig and has the following permissions:
 
 1. delegate
 2. initiate clawback to the pool
 3. execute clawback to the pool
-4. pause (which pauses deposits, undelegations and withdraws)
+4. pause (which pauses deposits, undelegations, undelegations from pool and withdraws)
 5. Donate to increase the rate
 
 The Claim role will be given to an EOA (for automation purposes) and has the following permissions:
