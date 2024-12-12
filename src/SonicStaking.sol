@@ -478,8 +478,11 @@ contract SonicStaking is
 
         uint256 amountDelegated = SFC.getStake(address(this), validatorId);
 
+        if (amountAssets > amountDelegated) {
+            amountAssets = amountDelegated;
+        }
+
         require(amountDelegated > 0, NoDelegationForValidator(validatorId));
-        require(amountAssets <= amountDelegated, UndelegateAmountExceedsDelegated(validatorId));
 
         withdrawId = _createAndPersistWithdrawRequest(WithdrawKind.CLAW_BACK, validatorId, amountAssets);
 
