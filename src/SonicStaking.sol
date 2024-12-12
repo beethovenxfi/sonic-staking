@@ -427,12 +427,16 @@ contract SonicStaking is
     /**
      * @notice Delegate from the pool to a specific validator
      * @param validatorId the ID of the validator to delegate to
-     * @param amount the amount of assets to delegate
+     * @param amount the amount of assets to delegate. If an amount greater than the pool is provided, the entire pool
+     * is delegated.
      */
     function delegate(uint256 validatorId, uint256 amount) external nonReentrant onlyRole(OPERATOR_ROLE) {
+        // To prevent DoS vectors and improve operator UX, if an amount larger than the pool is provided,
+        // we default to the entire pool.
         if (amount > totalPool) {
             amount = totalPool;
         }
+
         require(amount > 0, DelegateAmountCannotBeZero());
 
         totalPool -= amount;
