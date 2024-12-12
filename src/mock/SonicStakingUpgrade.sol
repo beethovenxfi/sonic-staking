@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import "../interfaces/ISFC.sol";
 
-import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "openzeppelin-contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {AccessControlUpgradeable} from "openzeppelin-contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {ERC20Upgradeable} from "openzeppelin-contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {ERC20BurnableUpgradeable} from
@@ -24,7 +24,7 @@ contract SonicStakingUpgrade is
     ERC20Upgradeable,
     ERC20BurnableUpgradeable,
     ERC20PermitUpgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     UUPSUpgradeable,
     AccessControlUpgradeable,
     SonicStaking

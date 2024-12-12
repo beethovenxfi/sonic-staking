@@ -39,12 +39,12 @@ contract SonicStakingTestSetup is Test {
         SONIC_STAKING_CLAIMOR = vm.addr(4);
 
         address sonicStakingAddress = Upgrades.deployUUPSProxy(
-            "SonicStaking.sol:SonicStaking", abi.encodeCall(SonicStaking.initialize, (SFC, TREASURY_ADDRESS))
+            "SonicStaking.sol:SonicStaking",
+            abi.encodeCall(SonicStaking.initialize, (SFC, TREASURY_ADDRESS, SONIC_STAKING_OWNER))
         );
         sonicStaking = SonicStaking(payable(sonicStakingAddress));
 
         // setup sonicStaking access control
-        sonicStaking.transferOwnership(SONIC_STAKING_OWNER);
         sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), SONIC_STAKING_OPERATOR);
         sonicStaking.grantRole(sonicStaking.CLAIM_ROLE(), SONIC_STAKING_CLAIMOR);
         sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), SONIC_STAKING_ADMIN);

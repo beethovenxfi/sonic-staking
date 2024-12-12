@@ -20,16 +20,6 @@ contract DeploySonicStaking is Script {
     ) public returns (SonicStaking) {
         vm.startBroadcast();
 
-        address sonicStakingAddress = Upgrades.deployUUPSProxy(
-            "SonicStaking.sol:SonicStaking",
-            abi.encodeCall(SonicStaking.initialize, (ISFC(sfcAddress), treasuryAddress))
-        );
-        SonicStaking sonicStaking = SonicStaking(payable(sonicStakingAddress));
-
-        // grant initial roles
-        sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), sonicStakingOperator);
-        sonicStaking.grantRole(sonicStaking.CLAIM_ROLE(), sonicStakingClaimor);
-
         // Deploy owner timelock (three week delay) that becomes owner of sonicStaking and can upgrade the contract
         address[] memory ownerProposers = new address[](0);
         ownerProposers[0] = sonicStakingOwner;
@@ -40,8 +30,17 @@ contract DeploySonicStaking is Script {
         adminProposers[0] = sonicStakingAdmin;
         TimelockController adminTimelock = new TimelockController(1 days, adminProposers, adminProposers, address(0));
 
+        address sonicStakingAddress = Upgrades.deployUUPSProxy(
+            "SonicStaking.sol:SonicStaking",
+            abi.encodeCall(SonicStaking.initialize, (ISFC(sfcAddress), treasuryAddress, address(ownerTimelock)))
+        );
+        SonicStaking sonicStaking = SonicStaking(payable(sonicStakingAddress));
+
+        // grant initial roles
+        sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), sonicStakingOperator);
+        sonicStaking.grantRole(sonicStaking.CLAIM_ROLE(), sonicStakingClaimor);
+
         // setup sonicStaking access control
-        sonicStaking.transferOwnership(address(ownerTimelock));
         sonicStaking.grantRole(sonicStaking.DEFAULT_ADMIN_ROLE(), address(adminTimelock));
         sonicStaking.renounceRole(sonicStaking.DEFAULT_ADMIN_ROLE(), msg.sender);
 

@@ -29,6 +29,7 @@ contract SonicStakingTestSetupFail is Test {
 
     function testZeroSFC() public virtual {
         address TREASURY_ADDRESS = 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7;
+        address OWNER = address(1);
         ISFC SFC = ISFC(address(0));
 
         sonicFork = vm.createSelectFork(SONIC_FORK_URL, INITIAL_FORK_BLOCK_NUMBER);
@@ -37,13 +38,14 @@ contract SonicStakingTestSetupFail is Test {
         vm.expectRevert();
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.SFCAddressCannotBeZero.selector));
         Upgrades.deployUUPSProxy(
-            "SonicStaking.sol:SonicStaking", abi.encodeCall(SonicStaking.initialize, (SFC, TREASURY_ADDRESS))
+            "SonicStaking.sol:SonicStaking", abi.encodeCall(SonicStaking.initialize, (SFC, TREASURY_ADDRESS, OWNER))
         );
     }
 
     function testZeroTreasury() public virtual {
         address TREASURY_ADDRESS = address(0);
         ISFC SFC = ISFC(0xFC00FACE00000000000000000000000000000000);
+        address OWNER = address(1);
 
         sonicFork = vm.createSelectFork(SONIC_FORK_URL, INITIAL_FORK_BLOCK_NUMBER);
 
@@ -51,7 +53,22 @@ contract SonicStakingTestSetupFail is Test {
         vm.expectRevert();
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.SFCAddressCannotBeZero.selector));
         Upgrades.deployUUPSProxy(
-            "SonicStaking.sol:SonicStaking", abi.encodeCall(SonicStaking.initialize, (SFC, TREASURY_ADDRESS))
+            "SonicStaking.sol:SonicStaking", abi.encodeCall(SonicStaking.initialize, (SFC, TREASURY_ADDRESS, OWNER))
+        );
+    }
+
+    function testZeroOwner() public virtual {
+        address TREASURY_ADDRESS = 0xa1E849B1d6c2Fd31c63EEf7822e9E0632411ada7;
+        ISFC SFC = ISFC(0xFC00FACE00000000000000000000000000000000);
+        address OWNER = address(0);
+
+        sonicFork = vm.createSelectFork(SONIC_FORK_URL, INITIAL_FORK_BLOCK_NUMBER);
+
+        // the Upgrades.deployUUPSProxy call reverts with two errors. One internally and one with our require in the initialize() function
+        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.OwnerAddressCannotBeZero.selector));
+        Upgrades.deployUUPSProxy(
+            "SonicStaking.sol:SonicStaking", abi.encodeCall(SonicStaking.initialize, (SFC, TREASURY_ADDRESS, OWNER))
         );
     }
 }

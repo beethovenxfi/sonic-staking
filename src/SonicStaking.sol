@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {ISFC} from "./interfaces/ISFC.sol";
 import {IRateProvider} from "./interfaces/IRateProvider.sol";
 
-import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "openzeppelin-contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {AccessControlUpgradeable} from "openzeppelin-contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {ERC20Upgradeable} from "openzeppelin-contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {ERC20BurnableUpgradeable} from
@@ -26,7 +26,7 @@ contract SonicStaking is
     ERC20Upgradeable,
     ERC20BurnableUpgradeable,
     ERC20PermitUpgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     UUPSUpgradeable,
     AccessControlUpgradeable,
     ReentrancyGuardUpgradeable
@@ -152,6 +152,7 @@ contract SonicStaking is
     error UnauthorizedWithdraw(uint256 withdrawId);
     error TreasuryAddressCannotBeZero();
     error SFCAddressCannotBeZero();
+    error OwnerAddressCannotBeZero();
     error ProtocolFeeTooHigh();
     error DepositTooSmall();
     error DepositPaused();
@@ -179,18 +180,20 @@ contract SonicStaking is
      * @param _sfc the address of the SFC contract (is NOT modifiable)
      * @param _treasury The address of the treasury where fees are sent to (is modifiable)
      */
-    function initialize(ISFC _sfc, address _treasury) public initializer {
+    function initialize(ISFC _sfc, address _treasury, address _owner) public initializer {
+        require(address(_sfc) != address(0), SFCAddressCannotBeZero());
+        require(_treasury != address(0), TreasuryAddressCannotBeZero());
+        require(_owner != address(0), OwnerAddressCannotBeZero());
+
         __ERC20_init("Beets Staked Sonic", "stS");
         __ERC20Burnable_init();
         __ERC20Permit_init("Beets Staked Sonic");
 
-        __Ownable_init(msg.sender);
+        __Ownable2Step_init();
+        __Ownable_init(_owner);
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
-        require(address(_sfc) != address(0), SFCAddressCannotBeZero());
-        require(_treasury != address(0), TreasuryAddressCannotBeZero());
 
         SFC = _sfc;
         treasury = _treasury;
