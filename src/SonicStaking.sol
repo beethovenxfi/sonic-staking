@@ -346,7 +346,7 @@ contract SonicStaking is
      * @param validatorId the validator to undelegate from
      * @param amountShares the amount of shares to undelegate
      */
-    function undelegate(uint256 validatorId, uint256 amountShares) public nonReentrant returns (uint256) {
+    function undelegate(uint256 validatorId, uint256 amountShares) external nonReentrant returns (uint256) {
         return _undelegate(validatorId, amountShares);
     }
 
@@ -401,7 +401,7 @@ contract SonicStaking is
      * @param withdrawId the unique withdraw id for the undelegation request
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
-    function withdraw(uint256 withdrawId, bool emergency) public nonReentrant returns (uint256) {
+    function withdraw(uint256 withdrawId, bool emergency) external nonReentrant returns (uint256) {
         return _withdraw(withdrawId, emergency);
     }
 
