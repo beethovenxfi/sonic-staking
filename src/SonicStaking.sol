@@ -172,7 +172,9 @@ contract SonicStaking is
     error RewardsClaimedTooSmall();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @notice Initializer
