@@ -689,7 +689,7 @@ contract SonicStaking is
         } else {
             //The only WithdrawKind left is VALIDATOR
 
-            // potential slashing events are handled by _withdrawFromSFC
+            // Potential slashing events are handled by _withdrawFromSFC
             amountWithdrawn = _withdrawFromSFC(request.validatorId, withdrawId, emergency);
         }
 
