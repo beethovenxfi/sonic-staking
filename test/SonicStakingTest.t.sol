@@ -547,6 +547,27 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.pendingClawBackAmount(), amountAssetsToUndelegate);
     }
 
+    function testOperatorInitiateClawBackAmountTooBig() public {
+        uint256 amountAssets = 500 ether;
+        uint256 amountAssetsToUndelegate = 1_000 ether;
+        uint256 validatorId = 1;
+
+        makeDeposit(amountAssets);
+
+        vm.startPrank(SONIC_STAKING_OPERATOR);
+        sonicStaking.delegate(validatorId, amountAssets);
+
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.OperatorClawBackInitiated(101, validatorId, amountAssets);
+        uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, amountAssetsToUndelegate);
+
+        SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
+        assertEq(withdraw.kind == SonicStaking.WithdrawKind.CLAW_BACK, true);
+
+        assertEq(sonicStaking.totalDelegated(), 0);
+        assertEq(sonicStaking.pendingClawBackAmount(), amountAssets);
+    }
+
     function testOperatorInitiateClawbackErrors() public {
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountCannotBeZero.selector));
@@ -558,10 +579,6 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.prank(SONIC_STAKING_OPERATOR);
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.NoDelegationForValidator.selector, 2));
         sonicStaking.operatorInitiateClawBack(2, 100 ether);
-
-        vm.prank(SONIC_STAKING_OPERATOR);
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateAmountExceedsDelegated.selector, 1));
-        sonicStaking.operatorInitiateClawBack(1, 200 ether);
     }
 
     function testDonate() public {
