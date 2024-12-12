@@ -501,12 +501,26 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(SFC.getStake(address(sonicStaking), validatorId2), delegateAmountAsset2);
     }
 
+    function testDelegateMoreThanPoolAmount() public {
+        uint256 depositAmountAsset = 1_000 ether;
+        uint256 delegateAmountAsset = 2_000 ether;
+        uint256 validatorId = 1;
+
+        makeDeposit(depositAmountAsset);
+
+        vm.expectEmit(true, true, true, true);
+        emit SonicStaking.Delegated(validatorId, depositAmountAsset);
+        delegate(validatorId, delegateAmountAsset);
+
+        assertEq(sonicStaking.totalPool(), 0);
+        assertEq(sonicStaking.totalDelegated(), depositAmountAsset);
+        assertEq(sonicStaking.totalAssets(), depositAmountAsset);
+        assertEq(SFC.getStake(address(sonicStaking), validatorId), depositAmountAsset);
+    }
+
     function testDelegateErrors() public {
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountCannotBeZero.selector));
         delegate(1, 0);
-
-        vm.expectRevert(abi.encodeWithSelector(SonicStaking.DelegateAmountLargerThanPool.selector));
-        delegate(1, 100 ether);
     }
 
     function testOperatorInitiateClawBack() public {
