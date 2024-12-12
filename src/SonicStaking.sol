@@ -36,7 +36,7 @@ contract SonicStaking is
 
     uint256 public constant MAX_PROTOCOL_FEE_BIPS = 10_000;
     uint256 public constant MIN_DEPOSIT = 1 ether;
-    uint256 public constant MIN_UNDELEGATE_AMOUNT_SHARES = 1 ether;
+    uint256 public constant MIN_UNDELEGATE_AMOUNT_SHARES = 1e12;
     uint256 public constant MIN_DONATION_AMOUNT = 1e12;
     uint256 public constant MIN_CLAIM_REWARDS_AMOUNT = 1e12;
 
@@ -93,9 +93,14 @@ contract SonicStaking is
     bool public depositPaused;
 
     /**
-     * @dev When true, user undelegations are paused. Only the operator can undelegate.
+     * @dev When true, user undelegations are paused.
      */
     bool public undelegatePaused;
+
+    /**
+     * @dev When true, user undelegations from pool are paused.
+     */
+    bool public undelegateFromPoolPaused;
 
     /**
      * @dev When true, no withdraws are allowed
@@ -126,6 +131,7 @@ contract SonicStaking is
 
     event WithdrawDelaySet(address indexed owner, uint256 delay);
     event UndelegatePausedUpdated(address indexed owner, bool newValue);
+    event UndelegateFromPoolPausedUpdated(address indexed owner, bool newValue);
     event WithdrawPausedUpdated(address indexed owner, bool newValue);
     event DepositPausedUpdated(address indexed owner, bool newValue);
     event Deposited(address indexed user, uint256 amountAssets, uint256 amountShares);
@@ -156,6 +162,7 @@ contract SonicStaking is
     error DepositTooSmall();
     error DepositPaused();
     error UndelegatePaused();
+    error UndelegateFromPoolPaused();
     error WithdrawsPaused();
     error NativeTransferFailed();
     error ProtocolFeeTransferFailed();
@@ -170,9 +177,12 @@ contract SonicStaking is
     error UnsupportedWithdrawKind();
     error RewardsClaimedTooSmall();
     error SfcSlashMustBeAccepted(uint256 refundRatio);
+    error SenderNotSFC();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @notice Initializer
@@ -196,6 +206,7 @@ contract SonicStaking is
         treasury = _treasury;
         withdrawDelay = 604800 * 2; // 14 days
         undelegatePaused = false;
+        undelegateFromPoolPaused = false;
         withdrawPaused = false;
         depositPaused = false;
         protocolFeeBIPS = 1000; // 10%
@@ -321,7 +332,7 @@ contract SonicStaking is
     /**
      * @notice Deposit native assets and mint shares of stS.
      */
-    function deposit() external payable returns (uint256) {
+    function deposit() external payable nonReentrant returns (uint256) {
         uint256 amount = msg.value;
         require(amount >= MIN_DEPOSIT, DepositTooSmall());
         require(!depositPaused, DepositPaused());
@@ -346,7 +357,7 @@ contract SonicStaking is
      * @param validatorId the validator to undelegate from
      * @param amountShares the amount of shares to undelegate
      */
-    function undelegate(uint256 validatorId, uint256 amountShares) public nonReentrant returns (uint256) {
+    function undelegate(uint256 validatorId, uint256 amountShares) external nonReentrant returns (uint256) {
         return _undelegate(validatorId, amountShares);
     }
 
@@ -378,6 +389,7 @@ contract SonicStaking is
      * @param amountShares the amount of shares to undelegate
      */
     function undelegateFromPool(uint256 amountShares) external nonReentrant returns (uint256 withdrawId) {
+        require(!undelegateFromPoolPaused, UndelegateFromPoolPaused());
         require(amountShares >= MIN_UNDELEGATE_AMOUNT_SHARES, UndelegateAmountTooSmall());
 
         uint256 amountToUndelegate = convertToAssets(amountShares);
@@ -401,7 +413,7 @@ contract SonicStaking is
      * @param withdrawId the unique withdraw id for the undelegation request
      * @param emergency flag to withdraw without checking the amount, risk to get less assets than what is owed
      */
-    function withdraw(uint256 withdrawId, bool emergency) public nonReentrant returns (uint256) {
+    function withdraw(uint256 withdrawId, bool emergency) external nonReentrant returns (uint256) {
         return _withdraw(withdrawId, emergency);
     }
 
@@ -541,6 +553,7 @@ contract SonicStaking is
     function pause() external onlyRole(OPERATOR_ROLE) {
         _setDepositPaused(true);
         _setUndelegatePaused(true);
+        _setUndelegateFromPoolPaused(true);
         _setWithdrawPaused(true);
     }
 
@@ -565,6 +578,14 @@ contract SonicStaking is
      */
     function setUndelegatePaused(bool newValue) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setUndelegatePaused(newValue);
+    }
+
+    /**
+     * @notice Pause/unpause user undelegations from pool
+     * @param newValue the desired value of the switch
+     */
+    function setUndelegateFromPoolPaused(bool newValue) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setUndelegateFromPoolPaused(newValue);
     }
 
     /**
@@ -631,12 +652,13 @@ contract SonicStaking is
 
         if (protocolFeeBIPS > 0) {
             protocolFee = (totalRewardsClaimed * protocolFeeBIPS) / MAX_PROTOCOL_FEE_BIPS;
+            totalPool += totalRewardsClaimed - protocolFee;
 
             (bool protocolFeesClaimed,) = treasury.call{value: protocolFee}("");
             require(protocolFeesClaimed, ProtocolFeeTransferFailed());
+        } else {
+            totalPool += totalRewardsClaimed;
         }
-
-        totalPool += totalRewardsClaimed - protocolFee;
 
         emit RewardsClaimed(totalRewardsClaimed, protocolFee);
     }
@@ -782,6 +804,13 @@ contract SonicStaking is
         emit UndelegatePausedUpdated(msg.sender, newValue);
     }
 
+    function _setUndelegateFromPoolPaused(bool newValue) internal {
+        require(undelegateFromPoolPaused != newValue, PausedValueDidNotChange());
+
+        undelegateFromPoolPaused = newValue;
+        emit UndelegateFromPoolPausedUpdated(msg.sender, newValue);
+    }
+
     function _setWithdrawPaused(bool newValue) internal {
         require(withdrawPaused != newValue, PausedValueDidNotChange());
 
@@ -807,5 +836,7 @@ contract SonicStaking is
     /**
      * @notice To receive native asset rewards from SFC
      */
-    receive() external payable {}
+    receive() external payable {
+        require(msg.sender == address(SFC), SenderNotSFC());
+    }
 }

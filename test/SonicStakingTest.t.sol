@@ -29,6 +29,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.protocolFeeBIPS(), 1000);
         assertEq(sonicStaking.withdrawDelay(), 14 * 24 * 60 * 60);
         assertFalse(sonicStaking.undelegatePaused());
+        assertFalse(sonicStaking.undelegateFromPoolPaused());
         assertFalse(sonicStaking.withdrawPaused());
         assertFalse(sonicStaking.depositPaused());
         assertEq(sonicStaking.totalDelegated(), 0);
@@ -392,6 +393,28 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.balanceOf(user), userSharesBefore - undelegateAmountShares);
     }
 
+    function testUndelegateFromPoolPaused() public {
+        uint256 depositAmountAsset = 100_000 ether;
+        uint256 undelegateAmountShares = 5 ether;
+
+        address user = makeDeposit(depositAmountAsset);
+
+        vm.prank(SONIC_STAKING_ADMIN);
+        sonicStaking.setUndelegateFromPoolPaused(true);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.UndelegateFromPoolPaused.selector));
+        sonicStaking.undelegateFromPool(undelegateAmountShares);
+
+        vm.prank(SONIC_STAKING_ADMIN);
+        sonicStaking.setUndelegateFromPoolPaused(false);
+
+        vm.prank(user);
+        sonicStaking.undelegateFromPool(undelegateAmountShares);
+
+        assertEq(sonicStaking.totalPool(), depositAmountAsset - sonicStaking.convertToAssets(undelegateAmountShares));
+    }
+
     function testUndelegateFromPoolMinAmountError() public {
         uint256 depositAmountAsset = 100_000 ether;
         uint256 undelegateAmountShares = 1;
@@ -573,10 +596,13 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         vm.expectEmit(true, true, true, true);
         emit SonicStaking.UndelegatePausedUpdated(SONIC_STAKING_OPERATOR, true);
         vm.expectEmit(true, true, true, true);
+        emit SonicStaking.UndelegateFromPoolPausedUpdated(SONIC_STAKING_OPERATOR, true);
+        vm.expectEmit(true, true, true, true);
         emit SonicStaking.WithdrawPausedUpdated(SONIC_STAKING_OPERATOR, true);
         sonicStaking.pause();
 
         assertTrue(sonicStaking.undelegatePaused());
+        assertTrue(sonicStaking.undelegateFromPoolPaused());
         assertTrue(sonicStaking.withdrawPaused());
         assertTrue(sonicStaking.depositPaused());
     }
@@ -598,6 +624,9 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         sonicStaking.setUndelegatePaused(true);
         assertTrue(sonicStaking.undelegatePaused());
+
+        sonicStaking.setUndelegateFromPoolPaused(true);
+        assertTrue(sonicStaking.undelegateFromPoolPaused());
 
         sonicStaking.setWithdrawPaused(true);
         assertTrue(sonicStaking.withdrawPaused());
@@ -623,6 +652,13 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
             )
         );
         sonicStaking.setUndelegatePaused(false);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AccessControlUnauthorizedAccount.selector, address(this), sonicStaking.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        sonicStaking.setUndelegateFromPoolPaused(false);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -658,6 +694,9 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setUndelegatePaused(false);
+
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
+        sonicStaking.setUndelegateFromPoolPaused(false);
 
         vm.expectRevert(abi.encodeWithSelector(SonicStaking.PausedValueDidNotChange.selector));
         sonicStaking.setWithdrawPaused(false);
@@ -709,5 +748,16 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
         assertEq(sonicStaking.getRate(), finalRate);
         assertEq(sonicStaking.convertToAssets(1 ether), finalRate);
         assertEq(sonicStaking.convertToShares(finalRate), 1 ether);
+    }
+
+    function testReceive() public {
+        vm.expectRevert(abi.encodeWithSelector(SonicStaking.SenderNotSFC.selector));
+        (bool sentFalse,) = address(sonicStaking).call{value: 1 ether}("");
+
+        vm.deal(address(SFC), 1 ether);
+        vm.prank(address(SFC));
+        (bool sentTrue,) = address(sonicStaking).call{value: 1 ether}("");
+        assertTrue(sentTrue);
+        assertEq(address(sonicStaking).balance, 1 ether);
     }
 }

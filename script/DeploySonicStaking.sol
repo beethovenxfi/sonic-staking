@@ -31,12 +31,12 @@ contract DeploySonicStaking is Script {
         sonicStaking.grantRole(sonicStaking.CLAIM_ROLE(), sonicStakingClaimor);
 
         // Deploy owner timelock (three week delay) that becomes owner of sonicStaking and can upgrade the contract
-        address[] memory ownerProposers = new address[](0);
+        address[] memory ownerProposers = new address[](1);
         ownerProposers[0] = sonicStakingOwner;
         TimelockController ownerTimelock = new TimelockController(21 days, ownerProposers, ownerProposers, address(0));
 
         // Deploy admin timelock (1 day delay) that can administer the protocol and roles on the staking contract
-        address[] memory adminProposers = new address[](0);
+        address[] memory adminProposers = new address[](1);
         adminProposers[0] = sonicStakingAdmin;
         TimelockController adminTimelock = new TimelockController(1 days, adminProposers, adminProposers, address(0));
 
