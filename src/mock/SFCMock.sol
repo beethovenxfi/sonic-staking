@@ -107,6 +107,10 @@ contract SFCMock is ISFC {
 
         uint256 penalty = getSlashingPenalty(amount, cheaters[toValidatorID], slashingRefundRatio[toValidatorID]);
 
+        if (amount <= penalty) {
+            revert StakeIsFullySlashed();
+        }
+
         payable(msg.sender).transfer(amount - penalty);
     }
 
@@ -137,5 +141,9 @@ contract SFCMock is ISFC {
 
     function getSelfStake(uint256 validatorID) external view returns (uint256) {
         return 1;
+    }
+
+    function isSlashed(uint256 validatorID) external view returns (bool) {
+        return cheaters[validatorID];
     }
 }

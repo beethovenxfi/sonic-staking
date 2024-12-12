@@ -7,6 +7,8 @@ pragma solidity ^0.8.27;
  * @custom:security-contact security@fantom.foundation
  */
 interface ISFC {
+    error StakeIsFullySlashed();
+
     function currentEpoch() external view returns (uint256);
 
     function getStake(address, uint256) external view returns (uint256);
@@ -22,4 +24,8 @@ interface ISFC {
     function claimRewards(uint256 toValidatorID) external;
 
     function getSelfStake(uint256 validatorID) external view returns (uint256);
+
+    function isSlashed(uint256 validatorID) external view returns (bool);
+
+    function slashingRefundRatio(uint256 validatorID) external view returns (uint256);
 }
