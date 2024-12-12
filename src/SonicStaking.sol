@@ -639,12 +639,13 @@ contract SonicStaking is
 
         if (protocolFeeBIPS > 0) {
             protocolFee = (totalRewardsClaimed * protocolFeeBIPS) / MAX_PROTOCOL_FEE_BIPS;
+            totalPool += totalRewardsClaimed - protocolFee;
 
             (bool protocolFeesClaimed,) = treasury.call{value: protocolFee}("");
             require(protocolFeesClaimed, ProtocolFeeTransferFailed());
+        } else {
+            totalPool += totalRewardsClaimed;
         }
-
-        totalPool += totalRewardsClaimed - protocolFee;
 
         emit RewardsClaimed(totalRewardsClaimed, protocolFee);
     }
