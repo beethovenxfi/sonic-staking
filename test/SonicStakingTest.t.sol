@@ -510,12 +510,13 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         vm.expectEmit(true, true, true, true);
         emit SonicStaking.Delegated(validatorId, depositAmountAsset);
-        delegate(validatorId, delegateAmountAsset);
+        uint256 actualAmountDelegated = delegate(validatorId, delegateAmountAsset);
 
         assertEq(sonicStaking.totalPool(), 0);
         assertEq(sonicStaking.totalDelegated(), depositAmountAsset);
         assertEq(sonicStaking.totalAssets(), depositAmountAsset);
         assertEq(SFC.getStake(address(sonicStaking), validatorId), depositAmountAsset);
+        assertEq(actualAmountDelegated, depositAmountAsset);
     }
 
     function testDelegateErrors() public {
