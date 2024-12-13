@@ -538,7 +538,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         vm.expectEmit(true, true, true, true);
         emit SonicStaking.OperatorClawBackInitiated(101, validatorId, amountAssetsToUndelegate);
-        uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, amountAssetsToUndelegate);
+        (uint256 withdrawId,) = sonicStaking.operatorInitiateClawBack(validatorId, amountAssetsToUndelegate);
 
         SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
         assertEq(withdraw.kind == SonicStaking.WithdrawKind.CLAW_BACK, true);
@@ -559,13 +559,15 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         vm.expectEmit(true, true, true, true);
         emit SonicStaking.OperatorClawBackInitiated(101, validatorId, amountAssets);
-        uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, amountAssetsToUndelegate);
+        (uint256 withdrawId, uint256 actualAmountUndelegated) =
+            sonicStaking.operatorInitiateClawBack(validatorId, amountAssetsToUndelegate);
 
         SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
         assertEq(withdraw.kind == SonicStaking.WithdrawKind.CLAW_BACK, true);
 
         assertEq(sonicStaking.totalDelegated(), 0);
         assertEq(sonicStaking.pendingClawBackAmount(), amountAssets);
+        assertEq(actualAmountUndelegated, amountAssets);
     }
 
     function testOperatorInitiateClawbackErrors() public {

@@ -353,7 +353,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         delegate(validatorId, delegateAmount);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, delegateAmount);
+        (uint256 withdrawId,) = sonicStaking.operatorInitiateClawBack(validatorId, delegateAmount);
 
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
@@ -571,7 +571,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         uint256 undelegateAmountAsset = sonicStaking.convertToAssets(undelegateAmount);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, undelegateAmount);
+        (uint256 withdrawId,) = sonicStaking.operatorInitiateClawBack(validatorId, undelegateAmount);
 
         // need to increase time to allow for withdraw
         vm.warp(block.timestamp + 14 days);
@@ -606,7 +606,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         delegate(validatorId, amount);
 
         vm.startPrank(SONIC_STAKING_OPERATOR);
-        uint256 operatorWithdrawId = sonicStaking.operatorInitiateClawBack(validatorId, undelegateAmount);
+        (uint256 operatorWithdrawId,) = sonicStaking.operatorInitiateClawBack(validatorId, undelegateAmount);
 
         uint256 userWithdrawId = sonicStaking.undelegate(validatorId, undelegateAmountShares);
 
@@ -689,7 +689,7 @@ contract SonicStakingMockTest is Test, SonicStakingTest {
         sfcMock.setSlashRefundRatio(validatorId, 0);
 
         vm.prank(SONIC_STAKING_OPERATOR);
-        uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, delegateAmount);
+        (uint256 withdrawId,) = sonicStaking.operatorInitiateClawBack(validatorId, delegateAmount);
 
         vm.warp(block.timestamp + 14 days);
 

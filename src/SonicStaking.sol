@@ -446,7 +446,12 @@ contract SonicStaking is
      * @param amount the amount of assets to delegate. If an amount greater than the pool is provided, the entire pool
      * is delegated.
      */
-    function delegate(uint256 validatorId, uint256 amount) external nonReentrant onlyRole(OPERATOR_ROLE) {
+    function delegate(uint256 validatorId, uint256 amount)
+        external
+        nonReentrant
+        onlyRole(OPERATOR_ROLE)
+        returns (uint256)
+    {
         // To prevent DoS vectors and improve operator UX, if an amount larger than the pool is provided,
         // we default to the entire pool.
         if (amount > totalPool) {
@@ -461,6 +466,9 @@ contract SonicStaking is
         SFC.delegate{value: amount}(validatorId);
 
         emit Delegated(validatorId, amount);
+
+        // Return the actual amount delegated since it could be less than the amount provided
+        return amount;
     }
 
     /**
@@ -472,7 +480,7 @@ contract SonicStaking is
         external
         nonReentrant
         onlyRole(OPERATOR_ROLE)
-        returns (uint256 withdrawId)
+        returns (uint256 withdrawId, uint256 actualAmountUndelegated)
     {
         require(amountAssets > 0, UndelegateAmountCannotBeZero());
 
@@ -495,6 +503,8 @@ contract SonicStaking is
         SFC.undelegate(validatorId, withdrawId, amountAssets);
 
         emit OperatorClawBackInitiated(withdrawId, validatorId, amountAssets);
+
+        actualAmountUndelegated = amountAssets;
     }
 
     /**
