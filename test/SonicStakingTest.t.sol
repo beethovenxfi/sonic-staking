@@ -510,12 +510,13 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         vm.expectEmit(true, true, true, true);
         emit SonicStaking.Delegated(validatorId, depositAmountAsset);
-        delegate(validatorId, delegateAmountAsset);
+        uint256 actualAmountDelegated = delegate(validatorId, delegateAmountAsset);
 
         assertEq(sonicStaking.totalPool(), 0);
         assertEq(sonicStaking.totalDelegated(), depositAmountAsset);
         assertEq(sonicStaking.totalAssets(), depositAmountAsset);
         assertEq(SFC.getStake(address(sonicStaking), validatorId), depositAmountAsset);
+        assertEq(actualAmountDelegated, depositAmountAsset);
     }
 
     function testDelegateErrors() public {
@@ -538,7 +539,7 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         vm.expectEmit(true, true, true, true);
         emit SonicStaking.OperatorClawBackInitiated(101, validatorId, amountAssetsToUndelegate);
-        uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, amountAssetsToUndelegate);
+        (uint256 withdrawId,) = sonicStaking.operatorInitiateClawBack(validatorId, amountAssetsToUndelegate);
 
         SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
         assertEq(withdraw.kind == SonicStaking.WithdrawKind.CLAW_BACK, true);
@@ -559,13 +560,15 @@ contract SonicStakingTest is Test, SonicStakingTestSetup {
 
         vm.expectEmit(true, true, true, true);
         emit SonicStaking.OperatorClawBackInitiated(101, validatorId, amountAssets);
-        uint256 withdrawId = sonicStaking.operatorInitiateClawBack(validatorId, amountAssetsToUndelegate);
+        (uint256 withdrawId, uint256 actualAmountUndelegated) =
+            sonicStaking.operatorInitiateClawBack(validatorId, amountAssetsToUndelegate);
 
         SonicStaking.WithdrawRequest memory withdraw = sonicStaking.getWithdrawRequest(withdrawId);
         assertEq(withdraw.kind == SonicStaking.WithdrawKind.CLAW_BACK, true);
 
         assertEq(sonicStaking.totalDelegated(), 0);
         assertEq(sonicStaking.pendingClawBackAmount(), amountAssets);
+        assertEq(actualAmountUndelegated, amountAssets);
     }
 
     function testOperatorInitiateClawbackErrors() public {
