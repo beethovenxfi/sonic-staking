@@ -16,6 +16,7 @@ contract DeploySonicStaking is Script {
         address sonicStakingOwner,
         address sonicStakingAdmin,
         address sonicStakingOperator,
+        address sonicStakingOperator2,
         address sonicStakingClaimor
     ) public returns (SonicStaking) {
         vm.startBroadcast();
@@ -28,6 +29,7 @@ contract DeploySonicStaking is Script {
 
         // grant initial roles
         sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), sonicStakingOperator);
+        sonicStaking.grantRole(sonicStaking.OPERATOR_ROLE(), sonicStakingOperator2);
         sonicStaking.grantRole(sonicStaking.CLAIM_ROLE(), sonicStakingClaimor);
 
         // Deploy owner timelock (three week delay) that becomes owner of sonicStaking and can upgrade the contract
