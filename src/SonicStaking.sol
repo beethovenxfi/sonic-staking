@@ -189,7 +189,7 @@ contract SonicStaking is
      * @param _treasury The address of the treasury where fees are sent to (is modifiable)
      */
     function initialize(ISFC _sfc, address _treasury) public initializer {
-        __ERC20_init("Beets Staked Sonic", "stS");
+        __ERC20_init("Beets Staked Sonic", "Sx");
         __ERC20Burnable_init();
         __ERC20Permit_init("Beets Staked Sonic");
 
