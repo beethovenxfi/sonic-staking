@@ -35,7 +35,7 @@ contract SonicStaking is
     bytes32 public constant CLAIM_ROLE = keccak256("CLAIM_ROLE");
 
     uint256 public constant MAX_PROTOCOL_FEE_BIPS = 10_000;
-    uint256 public constant MIN_DEPOSIT = 1 ether;
+    uint256 public constant MIN_DEPOSIT = 1e16;
     uint256 public constant MIN_UNDELEGATE_AMOUNT_SHARES = 1e12;
     uint256 public constant MIN_DONATION_AMOUNT = 1e12;
     uint256 public constant MIN_CLAIM_REWARDS_AMOUNT = 1e12;
