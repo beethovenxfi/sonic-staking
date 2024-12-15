@@ -12,3 +12,6 @@ evm_version = 'shanghai'
 
 [fuzz]
 runs = 10000
+
+[etherscan]
+sonic = { key = "${ETHERSCAN_API_KEY}", chain = 146, url = "https://api.sonicscan.org/api"}
