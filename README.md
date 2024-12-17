@@ -13,6 +13,9 @@ The general flow of this LST is the following:
 - A protocol fee is deducted from the rewards, the remainder is added to the pool.
 - A user can undelegate $stS and can withdraw the $S two weeks later.
 
+## Audit
+The code has been audited by Spearbit, the report can seen [here](./audits/report-cantinacode-sonic-1209.pdf) or on [Spearbit](https://cantina.xyz/portfolio/71a6f59b-7533-4ae9-87c5-d1d1bf6d675a)
+
 ## Dev notes
 
 Requires node version >18
