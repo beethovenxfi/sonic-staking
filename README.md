@@ -16,6 +16,9 @@ The general flow of this LST is the following:
 ## Audit
 The code has been audited by Spearbit, the report can seen [here](./audits/report-cantinacode-sonic-1209.pdf) or on [Spearbit](https://cantina.xyz/portfolio/71a6f59b-7533-4ae9-87c5-d1d1bf6d675a)
 
+## Deployment
+[Beets Staked Sonic - stS](https://sonicscan.org/address/0xe5da20f15420ad15de0fa650600afc998bbe3955)
+
 ## Dev notes
 
 Requires node version >18
