@@ -14,9 +14,12 @@ The general flow of this LST is the following:
 - A user can undelegate $stS and can withdraw the $S two weeks later.
 
 ## Audit
+
 The code has been audited by Spearbit, the report can seen [here](./audits/report-cantinacode-sonic-1209.pdf) or on [Spearbit](https://cantina.xyz/portfolio/71a6f59b-7533-4ae9-87c5-d1d1bf6d675a)
+The code has been audited by Trail of Bits, the report can seen [here](./audits/2025-01-beethovenx-sonicstaking-securityreview.pdf) or on [Trail of Bits](https://github.com/trailofbits/publications/blob/master/reviews/2025-01-beethovenx-sonicstaking-securityreview.pdf)
 
 ## Deployment
+
 [Beets Staked Sonic - stS](https://sonicscan.org/address/0xe5da20f15420ad15de0fa650600afc998bbe3955)
 
 ## Dev notes
