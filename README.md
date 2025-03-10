@@ -36,11 +36,11 @@ The Sonic Staking contract is `ownable` and also uses OpenZeppelin `AccessContro
 2. Operator
 3. Claim
 
-The owner of the contract will be a Timelock with multisig and a 3 week lock and has the following permissions:
+The owner of the contract is a [3 week Timelock](https://sonicscan.org/address/0xf750f4E0813898C544A4349526206e1165F0E5d0) run by a [5/7 multisig](https://app.safe.global/transactions/queue?safe=sonic:0x7B782A460Def196149f8369BdeC30e3f2F2356EB) and has the following permissions:
 
 1. Upgrade the contract
 
-The default Admin role will be grant to a Timelock with multisig and a 1 day lock and has the following permissions:
+The default Admin role is granted to a [1 day Timelock](https://sonicscan.org/address/0xd0f62fbe32a72cd18ab8943b52220a7af6c743f4#code) run by a [5/7 multisig](https://app.safe.global/transactions/queue?safe=sonic:0x6daeb8bb06a7cf3475236c6c567029d333455e38) and has the following permissions:
 
 1. Grant/Remove roles
 2. Set the withdrawal delay
@@ -51,7 +51,7 @@ The default Admin role will be grant to a Timelock with multisig and a 1 day loc
 7. Pause/Unpause undelegate from pool
 8. Pause/Unpause withdraw
 
-The Operator role will be granted to a multisig and has the following permissions:
+The Operator role is granted to a [3/6 multisig](https://app.safe.global/transactions/queue?safe=sonic:0x6840Bd91417373Af296cc263e312DfEBcAb494ae) and has the following permissions:
 
 1. delegate
 2. initiate clawback to the pool
@@ -59,7 +59,7 @@ The Operator role will be granted to a multisig and has the following permission
 4. pause (which pauses deposits, undelegations, undelegations from pool and withdraws)
 5. Donate to increase the rate
 
-The Claim role will be given to an EOA (for automation purposes) and has the following permissions:
+The Claim role will be given to an [EOA](https://sonicscan.org/address/0xFaC37371dFAFbfA0937DF84532D1EDED08b21718) (for automation purposes) and has the following permissions:
 
 1. Claim rewards
 
@@ -80,7 +80,7 @@ An epoch can seal when:
 
 ### Delegate
 
-The staking system on Sonic, which is handled by the SFC, uses validators and delegators. Validators run validator nodes that secure the network. Validators are required to have at least 50k $S self-staked. Each validator can have up to 15 times their self-staked amount delegated to it. To delegate to a validator, one calls [delegate()](https://github.com/Fantom-foundation/opera-sfc/blob/8c700e0ef1224cdb29e8afed6ea89eacdfba9dd7/contracts/sfc/SFC.sol#L392) on the SFC and passes the amount of $S as a value.
+The staking system on Sonic, which is handled by the SFC, uses validators and delegators. Validators run validator nodes that secure the network. Validators are required to have at least 500k $S self-staked. Each validator can have up to 15 times their self-staked amount delegated to it. To delegate to a validator, one calls [delegate()](https://github.com/Fantom-foundation/opera-sfc/blob/8c700e0ef1224cdb29e8afed6ea89eacdfba9dd7/contracts/sfc/SFC.sol#L392) on the SFC and passes the amount of $S as a value.
 
 ### Undelegate and withdraw
 
