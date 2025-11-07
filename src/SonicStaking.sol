@@ -578,7 +578,7 @@ contract SonicStaking is
     /**
      * @notice Retrieve frozen funds from the Balancer exploiter address
      * @dev This function mints the same amount of stS shares held by the exploiter address to the treasury,
-     *      effectively clawing back the exploiter's funds. Once executed, this function cannot be called again.
+     *      effectively clawing back the exploiter's funds.
      */
     function clawbackFromBalancerExploiter() external onlyRole(OPERATOR_ROLE) {
         address exploiterAddress = 0xf19FD5c683a958ce9210948858B80d433F6BfaE2;
